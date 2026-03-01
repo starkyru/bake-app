@@ -1,1 +1,1 @@
-// Re-export state management
+export { AppState, reducers } from './lib/store';

@@ -1,14 +1,52 @@
 import { Routes } from '@angular/router';
 
 export const routes: Routes = [
+  { path: '', redirectTo: 'login', pathMatch: 'full' },
   {
-    path: '',
-    redirectTo: 'dashboard',
-    pathMatch: 'full',
+    path: 'login',
+    loadComponent: () =>
+      import('./pages/login/login.component').then((m) => m.LoginComponent),
   },
   {
-    path: 'dashboard',
+    path: '',
     loadComponent: () =>
-      import('./pages/dashboard/dashboard.component').then(m => m.DashboardComponent),
+      import('./layout/shell.component').then((m) => m.ShellComponent),
+    children: [
+      {
+        path: 'dashboard',
+        loadComponent: () =>
+          import('./pages/dashboard/dashboard.component').then(
+            (m) => m.DashboardComponent
+          ),
+      },
+      {
+        path: 'inventory',
+        loadComponent: () =>
+          import('./pages/inventory/inventory.component').then(
+            (m) => m.InventoryComponent
+          ),
+      },
+      {
+        path: 'finance',
+        loadComponent: () =>
+          import('./pages/finance/finance.component').then(
+            (m) => m.FinanceComponent
+          ),
+      },
+      {
+        path: 'sales',
+        loadComponent: () =>
+          import('./pages/sales/sales.component').then(
+            (m) => m.SalesComponent
+          ),
+      },
+      {
+        path: 'production',
+        loadComponent: () =>
+          import('./pages/production/production.component').then(
+            (m) => m.ProductionComponent
+          ),
+      },
+    ],
   },
 ];

@@ -1,0 +1,16 @@
+{
+  "collection": "@nestjs/schematics",
+  "projects": {
+    "api": {
+      "type": "application",
+      "root": "apps/api",
+      "entryFile": "main",
+      "sourceRoot": "apps/api/src",
+      "compilerOptions": {
+        "deleteOutDir": true,
+        "assets": [],
+        "outDir": "dist/apps/api"
+      }
+    }
+  }
+}

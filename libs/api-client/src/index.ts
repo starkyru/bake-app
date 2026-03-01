@@ -1,1 +1,1 @@
-// Re-export API client services
+export { ApiClientService } from './lib/services/api-client.service';

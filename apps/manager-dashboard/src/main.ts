@@ -3,8 +3,8 @@ import { provideAnimations } from '@angular/platform-browser/animations';
 import { provideRouter } from '@angular/router';
 import { provideHttpClient } from '@angular/common/http';
 import { provideStoreDevtools } from '@ngrx/store-devtools';
-import { StoreModule } from '@ngrx/store';
-import { EffectsModule } from '@ngrx/effects';
+import { provideStore } from '@ngrx/store';
+import { provideEffects } from '@ngrx/effects';
 import { AppComponent } from './app/app.component';
 import { routes } from './app/app.routes';
 import { environment } from './environments/environment';
@@ -14,9 +14,8 @@ bootstrapApplication(AppComponent, {
     provideAnimations(),
     provideRouter(routes),
     provideHttpClient(),
-    StoreModule.forRoot({}, {
+    provideStore({}, {
       initialState: {},
-      metaReducers: [],
       runtimeChecks: {
         strictStateImmutability: true,
         strictActionImmutability: true,
@@ -24,7 +23,7 @@ bootstrapApplication(AppComponent, {
         strictActionSerializability: true,
       }
     }),
-    EffectsModule.forRoot([]),
+    provideEffects([]),
     provideStoreDevtools({ 
       maxAge: 25,
       logOnly: environment.production 

@@ -1,0 +1,1485 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bake App — Manager Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --primary: #8B4513;
+    --primary-light: #A0522D;
+    --secondary: #D4A574;
+    --secondary-light: #E8CBB0;
+    --accent: #2E7D32;
+    --accent-light: #E8F5E9;
+    --warn: #C62828;
+    --warn-light: #FFEBEE;
+    --amber: #F57F17;
+    --amber-light: #FFF8E1;
+    --bg: #FAF3E8;
+    --surface: #FFFFFF;
+    --text: #1A1A1A;
+    --text-secondary: #6B6B6B;
+    --border: #E8E0D8;
+    --sidebar-w: 240px;
+    --radius: 10px;
+    --shadow: 0 1px 3px rgba(0,0,0,.08), 0 1px 2px rgba(0,0,0,.04);
+    --shadow-md: 0 4px 12px rgba(0,0,0,.08);
+  }
+
+  body {
+    font-family: 'Inter', -apple-system, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    display: flex;
+    min-height: 100vh;
+    font-size: 14px;
+    line-height: 1.5;
+  }
+
+  .mono { font-family: 'JetBrains Mono', monospace; }
+
+  /* ── Sidebar ── */
+  .sidebar {
+    width: var(--sidebar-w);
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    position: fixed;
+    top: 0; left: 0; bottom: 0;
+    display: flex;
+    flex-direction: column;
+    z-index: 100;
+  }
+
+  .sidebar-logo {
+    padding: 24px 20px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .sidebar-logo .logo-icon {
+    width: 40px; height: 40px;
+    background: var(--primary);
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 20px;
+  }
+
+  .sidebar-logo .logo-text {
+    font-weight: 700;
+    font-size: 18px;
+    color: var(--primary);
+  }
+
+  .sidebar-logo .logo-sub {
+    font-size: 11px;
+    color: var(--text-secondary);
+    margin-top: -2px;
+  }
+
+  .sidebar-nav { flex: 1; padding: 12px 10px; overflow-y: auto; }
+
+  .sidebar-nav .nav-label {
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: .8px;
+    color: var(--text-secondary);
+    padding: 16px 12px 6px;
+  }
+
+  .nav-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 12px;
+    border-radius: 8px;
+    cursor: pointer;
+    color: var(--text-secondary);
+    font-weight: 500;
+    font-size: 13px;
+    transition: all .15s;
+    user-select: none;
+  }
+
+  .nav-item:hover { background: var(--bg); color: var(--text); }
+
+  .nav-item.active {
+    background: linear-gradient(135deg, var(--primary), var(--primary-light));
+    color: white;
+  }
+
+  .nav-item .nav-icon {
+    width: 20px; height: 20px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px; flex-shrink: 0;
+  }
+
+  .nav-item .badge {
+    margin-left: auto;
+    background: var(--warn);
+    color: white;
+    font-size: 10px;
+    font-weight: 600;
+    padding: 2px 7px;
+    border-radius: 10px;
+  }
+
+  .nav-item.active .badge { background: rgba(255,255,255,.3); }
+
+  .sidebar-footer {
+    padding: 16px 20px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .sidebar-footer .avatar {
+    width: 34px; height: 34px;
+    border-radius: 50%;
+    background: var(--secondary);
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 600; font-size: 13px; color: var(--primary);
+  }
+
+  .sidebar-footer .user-name { font-weight: 600; font-size: 13px; }
+  .sidebar-footer .user-role { font-size: 11px; color: var(--text-secondary); }
+
+  /* ── Main ── */
+  .main {
+    margin-left: var(--sidebar-w);
+    flex: 1;
+    min-height: 100vh;
+  }
+
+  .topbar {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 16px 32px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    z-index: 50;
+  }
+
+  .topbar h1 { font-size: 20px; font-weight: 700; }
+  .topbar .date { font-size: 13px; color: var(--text-secondary); }
+
+  .topbar-actions { display: flex; align-items: center; gap: 12px; }
+
+  .topbar-actions .btn-icon {
+    width: 36px; height: 36px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px;
+    position: relative;
+  }
+
+  .topbar-actions .notif-dot {
+    position: absolute; top: 6px; right: 6px;
+    width: 8px; height: 8px;
+    background: var(--warn);
+    border-radius: 50%;
+    border: 2px solid var(--surface);
+  }
+
+  .content { padding: 24px 32px 48px; }
+
+  .tab-content { display: none; }
+  .tab-content.active { display: block; }
+
+  /* ── Cards & Grid ── */
+  .card {
+    background: var(--surface);
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+    padding: 20px;
+    box-shadow: var(--shadow);
+  }
+
+  .card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 16px;
+  }
+
+  .card-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text);
+  }
+
+  .card-subtitle {
+    font-size: 12px;
+    color: var(--text-secondary);
+  }
+
+  .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 24px; }
+  .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 24px; }
+  .grid-2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; margin-bottom: 24px; }
+  .grid-2-1 { display: grid; grid-template-columns: 2fr 1fr; gap: 16px; margin-bottom: 24px; }
+  .grid-1-2 { display: grid; grid-template-columns: 1fr 2fr; gap: 16px; margin-bottom: 24px; }
+
+  /* ── KPI Cards ── */
+  .kpi-card { position: relative; overflow: hidden; }
+
+  .kpi-card .kpi-icon {
+    width: 42px; height: 42px;
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px;
+    margin-bottom: 14px;
+  }
+
+  .kpi-card .kpi-label { font-size: 12px; color: var(--text-secondary); font-weight: 500; margin-bottom: 4px; }
+
+  .kpi-card .kpi-value { font-size: 26px; font-weight: 700; margin-bottom: 6px; }
+
+  .kpi-card .kpi-trend {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 12px;
+    font-weight: 600;
+    padding: 3px 8px;
+    border-radius: 6px;
+  }
+
+  .kpi-trend.up { background: var(--accent-light); color: var(--accent); }
+  .kpi-trend.down { background: var(--warn-light); color: var(--warn); }
+
+  /* ── Alerts ── */
+  .alert-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    border-radius: 8px;
+    margin-bottom: 8px;
+    font-size: 13px;
+    font-weight: 500;
+  }
+
+  .alert-item:last-child { margin-bottom: 0; }
+  .alert-item.alert-red { background: var(--warn-light); color: var(--warn); border-left: 3px solid var(--warn); }
+  .alert-item.alert-amber { background: var(--amber-light); color: #E65100; border-left: 3px solid var(--amber); }
+  .alert-item.alert-green { background: var(--accent-light); color: var(--accent); border-left: 3px solid var(--accent); }
+  .alert-item .alert-icon { font-size: 18px; flex-shrink: 0; }
+  .alert-item .alert-time { margin-left: auto; font-size: 11px; opacity: .7; white-space: nowrap; }
+
+  /* ── Bar Chart ── */
+  .bar-chart {
+    display: flex;
+    align-items: flex-end;
+    gap: 8px;
+    height: 180px;
+    padding-top: 10px;
+  }
+
+  .bar-chart .bar-col {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    height: 100%;
+    justify-content: flex-end;
+  }
+
+  .bar-chart .bar-val {
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    margin-bottom: 4px;
+  }
+
+  .bar-chart .bar {
+    width: 100%;
+    max-width: 48px;
+    border-radius: 6px 6px 0 0;
+    background: linear-gradient(180deg, var(--primary), var(--primary-light));
+    transition: height .4s ease;
+    min-height: 4px;
+  }
+
+  .bar-chart .bar-label {
+    font-size: 11px;
+    color: var(--text-secondary);
+    margin-top: 8px;
+    font-weight: 500;
+  }
+
+  /* ── Tables ── */
+  table { width: 100%; border-collapse: collapse; }
+  th {
+    text-align: left;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: .5px;
+    color: var(--text-secondary);
+    padding: 10px 12px;
+    border-bottom: 2px solid var(--border);
+  }
+  td {
+    padding: 12px;
+    font-size: 13px;
+    border-bottom: 1px solid var(--border);
+    vertical-align: middle;
+  }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: var(--bg); }
+
+  .badge {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 600;
+  }
+
+  .badge-green { background: var(--accent-light); color: var(--accent); }
+  .badge-amber { background: var(--amber-light); color: #E65100; }
+  .badge-red { background: var(--warn-light); color: var(--warn); }
+  .badge-blue { background: #E3F2FD; color: #1565C0; }
+  .badge-gray { background: #F5F5F5; color: #757575; }
+
+  /* ── Progress Bars ── */
+  .progress-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 14px;
+  }
+
+  .progress-row:last-child { margin-bottom: 0; }
+  .progress-label { width: 80px; font-size: 13px; font-weight: 500; flex-shrink: 0; }
+
+  .progress-track {
+    flex: 1;
+    height: 10px;
+    background: #F0E8DE;
+    border-radius: 5px;
+    overflow: hidden;
+  }
+
+  .progress-fill {
+    height: 100%;
+    border-radius: 5px;
+    transition: width .6s ease;
+  }
+
+  .progress-pct { width: 40px; text-align: right; font-weight: 600; font-size: 13px; }
+
+  /* ── Donut Chart (CSS) ── */
+  .donut-wrap { display: flex; align-items: center; gap: 32px; }
+
+  .donut {
+    width: 180px; height: 180px;
+    border-radius: 50%;
+    position: relative;
+    flex-shrink: 0;
+  }
+
+  .donut-center {
+    position: absolute;
+    inset: 30px;
+    background: var(--surface);
+    border-radius: 50%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .donut-center .donut-total { font-size: 20px; font-weight: 700; }
+  .donut-center .donut-label { font-size: 11px; color: var(--text-secondary); }
+
+  .donut-legend { flex: 1; }
+  .legend-item { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; font-size: 13px; }
+  .legend-dot { width: 12px; height: 12px; border-radius: 3px; flex-shrink: 0; }
+  .legend-pct { margin-left: auto; font-weight: 600; }
+
+  /* ── Horizontal Bars ── */
+  .hbar-row { margin-bottom: 12px; }
+  .hbar-row:last-child { margin-bottom: 0; }
+
+  .hbar-head { display: flex; justify-content: space-between; margin-bottom: 4px; }
+  .hbar-name { font-size: 13px; font-weight: 500; }
+  .hbar-val { font-size: 13px; font-weight: 600; }
+
+  .hbar-track {
+    height: 8px;
+    background: #F0E8DE;
+    border-radius: 4px;
+    overflow: hidden;
+  }
+
+  .hbar-fill {
+    height: 100%;
+    border-radius: 4px;
+    transition: width .5s;
+  }
+
+  /* ── Inventory summary cards ── */
+  .inv-summary { display: flex; gap: 12px; }
+
+  .inv-summary .inv-box {
+    flex: 1;
+    text-align: center;
+    padding: 16px;
+    border-radius: 8px;
+  }
+
+  .inv-box .inv-num { font-size: 28px; font-weight: 700; }
+  .inv-box .inv-label { font-size: 12px; font-weight: 500; margin-top: 2px; }
+
+  /* ── Toggle Buttons ── */
+  .toggle-group { display: inline-flex; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+
+  .toggle-btn {
+    padding: 6px 16px;
+    font-size: 12px;
+    font-weight: 600;
+    background: var(--surface);
+    border: none;
+    cursor: pointer;
+    color: var(--text-secondary);
+    border-right: 1px solid var(--border);
+  }
+
+  .toggle-btn:last-child { border-right: none; }
+
+  .toggle-btn.active {
+    background: var(--primary);
+    color: white;
+  }
+
+  /* ── Form Elements ── */
+  .form-row { display: flex; gap: 16px; margin-bottom: 16px; flex-wrap: wrap; }
+
+  .form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    flex: 1;
+    min-width: 180px;
+  }
+
+  .form-group label {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-secondary);
+  }
+
+  .form-group input, .form-group select {
+    padding: 8px 12px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-size: 13px;
+    font-family: 'Inter', sans-serif;
+    background: var(--surface);
+    outline: none;
+    transition: border-color .15s;
+  }
+
+  .form-group input:focus, .form-group select:focus { border-color: var(--primary); }
+
+  .btn {
+    padding: 8px 20px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    border: none;
+    cursor: pointer;
+    transition: opacity .15s;
+  }
+
+  .btn:hover { opacity: .85; }
+  .btn-primary { background: var(--primary); color: white; }
+  .btn-outline { background: transparent; border: 1px solid var(--border); color: var(--text); }
+
+  /* ── Schedule Grid ── */
+  .schedule-grid {
+    display: grid;
+    grid-template-columns: 120px repeat(7, 1fr);
+    gap: 1px;
+    background: var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+
+  .schedule-grid .sg-cell {
+    background: var(--surface);
+    padding: 10px 8px;
+    font-size: 12px;
+    text-align: center;
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .schedule-grid .sg-header {
+    background: var(--bg);
+    font-weight: 600;
+    color: var(--text-secondary);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: .3px;
+  }
+
+  .schedule-grid .sg-name {
+    justify-content: flex-start;
+    font-weight: 600;
+    padding-left: 12px;
+  }
+
+  .schedule-grid .sg-shift {
+    font-size: 11px;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-weight: 500;
+  }
+
+  .shift-morning { background: #FFF3E0; color: #E65100; }
+  .shift-day { background: #E3F2FD; color: #1565C0; }
+  .shift-evening { background: #F3E5F5; color: #7B1FA2; }
+  .shift-off { color: #BDBDBD; }
+
+  /* ── Misc ── */
+  .section-title {
+    font-size: 16px;
+    font-weight: 700;
+    margin-bottom: 16px;
+  }
+
+  .text-right { text-align: right; }
+  .text-center { text-align: center; }
+  .mb-24 { margin-bottom: 24px; }
+  .mb-16 { margin-bottom: 16px; }
+  .mt-16 { margin-top: 16px; }
+  .gap-16 { gap: 16px; }
+  .flex { display: flex; }
+  .items-center { align-items: center; }
+  .justify-between { justify-content: space-between; }
+  .flex-1 { flex: 1; }
+
+  .action-btn {
+    padding: 4px 10px;
+    font-size: 12px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    cursor: pointer;
+    color: var(--text-secondary);
+  }
+
+  .action-btn:hover { background: var(--bg); color: var(--text); }
+
+  .rank-num {
+    width: 24px; height: 24px;
+    border-radius: 6px;
+    background: var(--bg);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 12px;
+    color: var(--primary);
+  }
+
+  .status-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    display: inline-block;
+    margin-right: 6px;
+  }
+
+  .dot-green { background: var(--accent); }
+  .dot-gray { background: #BDBDBD; }
+  .dot-amber { background: var(--amber); }
+</style>
+</head>
+<body>
+
+<!-- ═══════════ SIDEBAR ═══════════ -->
+<aside class="sidebar">
+  <div class="sidebar-logo">
+    <div class="logo-icon">&#x1F35E;</div>
+    <div>
+      <div class="logo-text">Bake App</div>
+      <div class="logo-sub">Manager Dashboard</div>
+    </div>
+  </div>
+
+  <nav class="sidebar-nav">
+    <div class="nav-label">Main</div>
+    <div class="nav-item active" data-tab="overview">
+      <span class="nav-icon">&#9632;</span> Overview
+    </div>
+    <div class="nav-item" data-tab="inventory">
+      <span class="nav-icon">&#9881;</span> Inventory
+      <span class="badge">8</span>
+    </div>
+    <div class="nav-item" data-tab="finance">
+      <span class="nav-icon">&#8366;</span> Finance
+    </div>
+    <div class="nav-item" data-tab="sales">
+      <span class="nav-icon">&#9733;</span> Sales Analytics
+    </div>
+    <div class="nav-label">Operations</div>
+    <div class="nav-item" data-tab="production">
+      <span class="nav-icon">&#9202;</span> Production
+    </div>
+    <div class="nav-item" data-tab="staff">
+      <span class="nav-icon">&#9786;</span> Staff
+    </div>
+  </nav>
+
+  <div class="sidebar-footer">
+    <div class="avatar">AK</div>
+    <div>
+      <div class="user-name">Aigerim K.</div>
+      <div class="user-role">Manager</div>
+    </div>
+  </div>
+</aside>
+
+<!-- ═══════════ MAIN CONTENT ═══════════ -->
+<div class="main">
+  <header class="topbar">
+    <div>
+      <h1 id="page-title">Overview</h1>
+      <div class="date">Saturday, 1 March 2026</div>
+    </div>
+    <div class="topbar-actions">
+      <button class="btn-icon" title="Refresh">&#8635;</button>
+      <button class="btn-icon" title="Notifications">
+        &#128276;
+        <span class="notif-dot"></span>
+      </button>
+    </div>
+  </header>
+
+  <div class="content">
+
+    <!-- ============ 1. OVERVIEW ============ -->
+    <div class="tab-content active" id="tab-overview">
+      <!-- KPI Cards -->
+      <div class="grid-4">
+        <div class="card kpi-card">
+          <div class="kpi-icon" style="background:#FFF3E0;color:#E65100;">&#8366;</div>
+          <div class="kpi-label">Revenue Today</div>
+          <div class="kpi-value mono">&#8376;1,245,000</div>
+          <span class="kpi-trend up">&#9650; +12.5%</span>
+        </div>
+        <div class="card kpi-card">
+          <div class="kpi-icon" style="background:var(--accent-light);color:var(--accent);">&#9650;</div>
+          <div class="kpi-label">Net Profit</div>
+          <div class="kpi-value mono">&#8376;312,000</div>
+          <span class="kpi-trend up">&#9650; +8.3%</span>
+        </div>
+        <div class="card kpi-card">
+          <div class="kpi-icon" style="background:#E3F2FD;color:#1565C0;">&#9776;</div>
+          <div class="kpi-label">Orders Today</div>
+          <div class="kpi-value mono">156</div>
+          <span class="kpi-trend down">&#9660; -3.2%</span>
+        </div>
+        <div class="card kpi-card">
+          <div class="kpi-icon" style="background:#F3E5F5;color:#7B1FA2;">&#10022;</div>
+          <div class="kpi-label">Avg Check</div>
+          <div class="kpi-value mono">&#8376;7,980</div>
+          <span class="kpi-trend up">&#9650; +5.1%</span>
+        </div>
+      </div>
+
+      <!-- Alerts + Revenue Chart -->
+      <div class="grid-2 mb-24">
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title">Active Alerts</span>
+            <span class="card-subtitle">4 alerts</span>
+          </div>
+          <div class="alert-item alert-red">
+            <span class="alert-icon">&#9888;</span>
+            Flour stock critically low &mdash; 2 days left
+            <span class="alert-time">12 min ago</span>
+          </div>
+          <div class="alert-item alert-red">
+            <span class="alert-icon">&#9888;</span>
+            Butter expires tomorrow &mdash; 5 kg remaining
+            <span class="alert-time">45 min ago</span>
+          </div>
+          <div class="alert-item alert-amber">
+            <span class="alert-icon">&#9888;</span>
+            3 products below margin target (< 30%)
+            <span class="alert-time">1 hr ago</span>
+          </div>
+          <div class="alert-item alert-green">
+            <span class="alert-icon">&#10004;</span>
+            Daily revenue target achieved (102%)
+            <span class="alert-time">2 hrs ago</span>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title">Revenue &mdash; Last 7 Days</span>
+            <span class="card-subtitle mono">&#8376; thousands</span>
+          </div>
+          <div class="bar-chart">
+            <div class="bar-col"><span class="bar-val mono">980</span><div class="bar" style="height:65%"></div><span class="bar-label">Mon</span></div>
+            <div class="bar-col"><span class="bar-val mono">1,120</span><div class="bar" style="height:75%"></div><span class="bar-label">Tue</span></div>
+            <div class="bar-col"><span class="bar-val mono">1,050</span><div class="bar" style="height:70%"></div><span class="bar-label">Wed</span></div>
+            <div class="bar-col"><span class="bar-val mono">1,310</span><div class="bar" style="height:87%"></div><span class="bar-label">Thu</span></div>
+            <div class="bar-col"><span class="bar-val mono">1,420</span><div class="bar" style="height:95%"></div><span class="bar-label">Fri</span></div>
+            <div class="bar-col"><span class="bar-val mono">1,500</span><div class="bar" style="height:100%"></div><span class="bar-label">Sat</span></div>
+            <div class="bar-col"><span class="bar-val mono">890</span><div class="bar" style="height:59%"></div><span class="bar-label">Sun</span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Top Products + Plan Execution + Inventory -->
+      <div class="grid-3">
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title">Top Products</span>
+          </div>
+          <table>
+            <thead><tr><th>#</th><th>Product</th><th class="text-right">Qty</th><th class="text-right">Revenue</th></tr></thead>
+            <tbody>
+              <tr><td><span class="rank-num">1</span></td><td>Croissant</td><td class="text-right mono">84</td><td class="text-right mono">&#8376;67,200</td></tr>
+              <tr><td><span class="rank-num">2</span></td><td>Americano</td><td class="text-right mono">72</td><td class="text-right mono">&#8376;57,600</td></tr>
+              <tr><td><span class="rank-num">3</span></td><td>Sourdough Loaf</td><td class="text-right mono">45</td><td class="text-right mono">&#8376;49,500</td></tr>
+              <tr><td><span class="rank-num">4</span></td><td>Napoleon Cake</td><td class="text-right mono">18</td><td class="text-right mono">&#8376;43,200</td></tr>
+              <tr><td><span class="rank-num">5</span></td><td>Cappuccino</td><td class="text-right mono">65</td><td class="text-right mono">&#8376;39,000</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title">Plan Execution</span>
+            <span class="card-subtitle">Today</span>
+          </div>
+          <div style="margin-top: 8px;">
+            <div class="progress-row">
+              <span class="progress-label">Bread</span>
+              <div class="progress-track"><div class="progress-fill" style="width:95%;background:var(--accent)"></div></div>
+              <span class="progress-pct mono">95%</span>
+            </div>
+            <div class="progress-row">
+              <span class="progress-label">Pastries</span>
+              <div class="progress-track"><div class="progress-fill" style="width:78%;background:var(--primary)"></div></div>
+              <span class="progress-pct mono">78%</span>
+            </div>
+            <div class="progress-row">
+              <span class="progress-label">Cakes</span>
+              <div class="progress-track"><div class="progress-fill" style="width:60%;background:var(--amber)"></div></div>
+              <span class="progress-pct mono">60%</span>
+            </div>
+            <div class="progress-row">
+              <span class="progress-label">Drinks</span>
+              <div class="progress-track"><div class="progress-fill" style="width:88%;background:#1565C0"></div></div>
+              <span class="progress-pct mono">88%</span>
+            </div>
+            <div class="progress-row">
+              <span class="progress-label">Sandwiches</span>
+              <div class="progress-track"><div class="progress-fill" style="width:72%;background:#7B1FA2"></div></div>
+              <span class="progress-pct mono">72%</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title">Inventory Status</span>
+          </div>
+          <div class="inv-summary" style="flex-direction:column;">
+            <div class="inv-box" style="background:var(--accent-light);">
+              <div class="inv-num mono" style="color:var(--accent);">45</div>
+              <div class="inv-label" style="color:var(--accent);">In Stock</div>
+            </div>
+            <div class="inv-box" style="background:var(--amber-light);">
+              <div class="inv-num mono" style="color:#E65100;">8</div>
+              <div class="inv-label" style="color:#E65100;">Low Stock</div>
+            </div>
+            <div class="inv-box" style="background:var(--warn-light);">
+              <div class="inv-num mono" style="color:var(--warn);">2</div>
+              <div class="inv-label" style="color:var(--warn);">Out of Stock</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ 2. INVENTORY ============ -->
+    <div class="tab-content" id="tab-inventory">
+      <!-- Low Stock Alerts -->
+      <div class="card mb-24">
+        <div class="card-header">
+          <span class="card-title">Low Stock Alerts</span>
+          <span class="badge badge-red">8 items</span>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <div class="alert-item alert-red" style="flex:1;min-width:220px;">
+            <span class="alert-icon">&#9888;</span> Flour &mdash; 5 kg left (min: 25 kg)
+          </div>
+          <div class="alert-item alert-red" style="flex:1;min-width:220px;">
+            <span class="alert-icon">&#9888;</span> Vanilla Extract &mdash; 0 ml (out of stock)
+          </div>
+          <div class="alert-item alert-amber" style="flex:1;min-width:220px;">
+            <span class="alert-icon">&#9888;</span> Butter &mdash; 8 kg left (min: 10 kg)
+          </div>
+        </div>
+      </div>
+
+      <!-- Expiring Soon + Movement Summary -->
+      <div class="grid-2 mb-24">
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title">Expiring Within 3 Days</span>
+            <span class="badge badge-amber">4 items</span>
+          </div>
+          <table>
+            <thead><tr><th>Item</th><th>Qty</th><th>Expires</th><th>Action</th></tr></thead>
+            <tbody>
+              <tr><td>Butter (Unsalted)</td><td class="mono">5 kg</td><td class="mono">Mar 2</td><td><button class="action-btn">Use First</button></td></tr>
+              <tr><td>Fresh Cream</td><td class="mono">12 L</td><td class="mono">Mar 3</td><td><button class="action-btn">Use First</button></td></tr>
+              <tr><td>Milk (Whole)</td><td class="mono">20 L</td><td class="mono">Mar 3</td><td><button class="action-btn">Use First</button></td></tr>
+              <tr><td>Strawberries</td><td class="mono">3 kg</td><td class="mono">Mar 4</td><td><button class="action-btn">Use First</button></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title">Movement Summary</span>
+            <span class="card-subtitle">Today</span>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:16px;margin-top:8px;">
+            <div style="display:flex;align-items:center;gap:12px;">
+              <div class="kpi-icon" style="background:var(--accent-light);color:var(--accent);width:38px;height:38px;font-size:16px;">&#8595;</div>
+              <div><div style="font-weight:600;">Deliveries</div><div style="font-size:12px;color:var(--text-secondary);">3 deliveries received</div></div>
+              <div class="mono" style="margin-left:auto;font-weight:600;">&#8376;185,000</div>
+            </div>
+            <div style="display:flex;align-items:center;gap:12px;">
+              <div class="kpi-icon" style="background:var(--warn-light);color:var(--warn);width:38px;height:38px;font-size:16px;">&#8593;</div>
+              <div><div style="font-weight:600;">Write-offs</div><div style="font-size:12px;color:var(--text-secondary);">Expired / damaged</div></div>
+              <div class="mono" style="margin-left:auto;font-weight:600;">&#8376;12,400</div>
+            </div>
+            <div style="display:flex;align-items:center;gap:12px;">
+              <div class="kpi-icon" style="background:#E3F2FD;color:#1565C0;width:38px;height:38px;font-size:16px;">&#8644;</div>
+              <div><div style="font-weight:600;">Transfers</div><div style="font-size:12px;color:var(--text-secondary);">Between storage areas</div></div>
+              <div class="mono" style="margin-left:auto;font-weight:600;">5 items</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Stock Table -->
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">Stock Levels</span>
+          <div style="display:flex;gap:8px;">
+            <button class="btn btn-outline" style="font-size:12px;">Export</button>
+            <button class="btn btn-primary" style="font-size:12px;">+ Add Item</button>
+          </div>
+        </div>
+        <div style="overflow-x:auto;">
+          <table>
+            <thead>
+              <tr>
+                <th>Ingredient</th><th>Category</th><th class="text-right">Current Qty</th><th>Unit</th>
+                <th class="text-right">Min Level</th><th>Status</th><th>Last Updated</th><th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td>Wheat Flour</td><td>Dry Goods</td><td class="text-right mono">5</td><td>kg</td><td class="text-right mono">25</td><td><span class="badge badge-red">Out of Stock</span></td><td class="mono">10:30</td><td><button class="action-btn">Order</button></td></tr>
+              <tr><td>Sugar</td><td>Dry Goods</td><td class="text-right mono">18</td><td>kg</td><td class="text-right mono">15</td><td><span class="badge badge-amber">Low Stock</span></td><td class="mono">09:15</td><td><button class="action-btn">Order</button></td></tr>
+              <tr><td>Butter (Unsalted)</td><td>Dairy</td><td class="text-right mono">8</td><td>kg</td><td class="text-right mono">10</td><td><span class="badge badge-amber">Low Stock</span></td><td class="mono">10:00</td><td><button class="action-btn">Order</button></td></tr>
+              <tr><td>Whole Milk</td><td>Dairy</td><td class="text-right mono">45</td><td>L</td><td class="text-right mono">20</td><td><span class="badge badge-green">In Stock</span></td><td class="mono">08:30</td><td><button class="action-btn">Edit</button></td></tr>
+              <tr><td>Eggs (Large)</td><td>Dairy</td><td class="text-right mono">120</td><td>pcs</td><td class="text-right mono">60</td><td><span class="badge badge-green">In Stock</span></td><td class="mono">08:00</td><td><button class="action-btn">Edit</button></td></tr>
+              <tr><td>Coffee Beans (Arabica)</td><td>Beverages</td><td class="text-right mono">12</td><td>kg</td><td class="text-right mono">5</td><td><span class="badge badge-green">In Stock</span></td><td class="mono">09:00</td><td><button class="action-btn">Edit</button></td></tr>
+              <tr><td>Dark Chocolate</td><td>Dry Goods</td><td class="text-right mono">6</td><td>kg</td><td class="text-right mono">4</td><td><span class="badge badge-green">In Stock</span></td><td class="mono">08:45</td><td><button class="action-btn">Edit</button></td></tr>
+              <tr><td>Vanilla Extract</td><td>Flavoring</td><td class="text-right mono">0</td><td>ml</td><td class="text-right mono">500</td><td><span class="badge badge-red">Out of Stock</span></td><td class="mono">11:00</td><td><button class="action-btn">Order</button></td></tr>
+              <tr><td>Dry Yeast</td><td>Dry Goods</td><td class="text-right mono">3</td><td>kg</td><td class="text-right mono">2</td><td><span class="badge badge-green">In Stock</span></td><td class="mono">10:15</td><td><button class="action-btn">Edit</button></td></tr>
+              <tr><td>Fresh Cream</td><td>Dairy</td><td class="text-right mono">15</td><td>L</td><td class="text-right mono">10</td><td><span class="badge badge-green">In Stock</span></td><td class="mono">08:30</td><td><button class="action-btn">Edit</button></td></tr>
+              <tr><td>Salt</td><td>Dry Goods</td><td class="text-right mono">10</td><td>kg</td><td class="text-right mono">3</td><td><span class="badge badge-green">In Stock</span></td><td class="mono">07:30</td><td><button class="action-btn">Edit</button></td></tr>
+              <tr><td>Baking Powder</td><td>Dry Goods</td><td class="text-right mono">4</td><td>kg</td><td class="text-right mono">2</td><td><span class="badge badge-green">In Stock</span></td><td class="mono">09:30</td><td><button class="action-btn">Edit</button></td></tr>
+              <tr><td>Almond Flour</td><td>Dry Goods</td><td class="text-right mono">7</td><td>kg</td><td class="text-right mono">5</td><td><span class="badge badge-amber">Low Stock</span></td><td class="mono">08:00</td><td><button class="action-btn">Order</button></td></tr>
+              <tr><td>Strawberries</td><td>Produce</td><td class="text-right mono">3</td><td>kg</td><td class="text-right mono">5</td><td><span class="badge badge-amber">Low Stock</span></td><td class="mono">07:00</td><td><button class="action-btn">Order</button></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ 3. FINANCE ============ -->
+    <div class="tab-content" id="tab-finance">
+      <!-- Revenue Summary -->
+      <div class="card mb-24">
+        <div class="card-header">
+          <span class="card-title">Revenue Summary</span>
+          <div class="toggle-group">
+            <button class="toggle-btn active" onclick="this.parentElement.querySelectorAll('.toggle-btn').forEach(b=>b.classList.remove('active'));this.classList.add('active');">Daily</button>
+            <button class="toggle-btn" onclick="this.parentElement.querySelectorAll('.toggle-btn').forEach(b=>b.classList.remove('active'));this.classList.add('active');">Weekly</button>
+            <button class="toggle-btn" onclick="this.parentElement.querySelectorAll('.toggle-btn').forEach(b=>b.classList.remove('active'));this.classList.add('active');">Monthly</button>
+          </div>
+        </div>
+        <div class="grid-4" style="margin-bottom:0;">
+          <div>
+            <div style="font-size:12px;color:var(--text-secondary);margin-bottom:4px;">Gross Revenue</div>
+            <div class="mono" style="font-size:24px;font-weight:700;">&#8376;1,245,000</div>
+          </div>
+          <div>
+            <div style="font-size:12px;color:var(--text-secondary);margin-bottom:4px;">Total Costs</div>
+            <div class="mono" style="font-size:24px;font-weight:700;color:var(--warn);">&#8376;933,000</div>
+          </div>
+          <div>
+            <div style="font-size:12px;color:var(--text-secondary);margin-bottom:4px;">Net Profit</div>
+            <div class="mono" style="font-size:24px;font-weight:700;color:var(--accent);">&#8376;312,000</div>
+          </div>
+          <div>
+            <div style="font-size:12px;color:var(--text-secondary);margin-bottom:4px;">Profit Margin</div>
+            <div class="mono" style="font-size:24px;font-weight:700;">25.1%</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="grid-2 mb-24">
+        <!-- Revenue Trend -->
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title">Revenue Trend &mdash; Last 7 Days</span>
+          </div>
+          <div class="bar-chart">
+            <div class="bar-col"><span class="bar-val mono">980</span><div class="bar" style="height:65%;background:linear-gradient(180deg,var(--accent),#43A047);"></div><span class="bar-label">Mon</span></div>
+            <div class="bar-col"><span class="bar-val mono">1,120</span><div class="bar" style="height:75%;background:linear-gradient(180deg,var(--accent),#43A047);"></div><span class="bar-label">Tue</span></div>
+            <div class="bar-col"><span class="bar-val mono">1,050</span><div class="bar" style="height:70%;background:linear-gradient(180deg,var(--accent),#43A047);"></div><span class="bar-label">Wed</span></div>
+            <div class="bar-col"><span class="bar-val mono">1,310</span><div class="bar" style="height:87%;background:linear-gradient(180deg,var(--accent),#43A047);"></div><span class="bar-label">Thu</span></div>
+            <div class="bar-col"><span class="bar-val mono">1,420</span><div class="bar" style="height:95%;background:linear-gradient(180deg,var(--accent),#43A047);"></div><span class="bar-label">Fri</span></div>
+            <div class="bar-col"><span class="bar-val mono">1,500</span><div class="bar" style="height:100%;background:linear-gradient(180deg,var(--accent),#43A047);"></div><span class="bar-label">Sat</span></div>
+            <div class="bar-col"><span class="bar-val mono">890</span><div class="bar" style="height:59%;background:linear-gradient(180deg,var(--accent),#43A047);"></div><span class="bar-label">Sun</span></div>
+          </div>
+        </div>
+
+        <!-- Cost Breakdown Donut -->
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title">Cost Breakdown</span>
+          </div>
+          <div class="donut-wrap">
+            <div class="donut" style="background: conic-gradient(
+              var(--primary) 0deg 162deg,
+              var(--secondary) 162deg 252deg,
+              var(--accent) 252deg 306deg,
+              #1565C0 306deg 342deg,
+              #9E9E9E 342deg 360deg
+            );">
+              <div class="donut-center">
+                <div class="donut-total mono">&#8376;933K</div>
+                <div class="donut-label">Total Costs</div>
+              </div>
+            </div>
+            <div class="donut-legend">
+              <div class="legend-item"><div class="legend-dot" style="background:var(--primary);"></div> Ingredients <span class="legend-pct mono">45%</span></div>
+              <div class="legend-item"><div class="legend-dot" style="background:var(--secondary);"></div> Labor <span class="legend-pct mono">25%</span></div>
+              <div class="legend-item"><div class="legend-dot" style="background:var(--accent);"></div> Rent <span class="legend-pct mono">15%</span></div>
+              <div class="legend-item"><div class="legend-dot" style="background:#1565C0;"></div> Utilities <span class="legend-pct mono">10%</span></div>
+              <div class="legend-item"><div class="legend-dot" style="background:#9E9E9E;"></div> Other <span class="legend-pct mono">5%</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Food Cost by Category -->
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">Food Cost by Category</span>
+        </div>
+        <table>
+          <thead>
+            <tr><th>Category</th><th class="text-right">Revenue</th><th class="text-right">Cost</th><th class="text-right">Food Cost %</th><th class="text-right">Target</th><th>Status</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>Coffee &amp; Drinks</td><td class="text-right mono">&#8376;435,750</td><td class="text-right mono">&#8376;87,150</td><td class="text-right mono">20.0%</td><td class="text-right mono">25%</td><td><span class="badge badge-green">On Target</span></td></tr>
+            <tr><td>Pastries</td><td class="text-right mono">&#8376;311,250</td><td class="text-right mono">&#8376;99,600</td><td class="text-right mono">32.0%</td><td class="text-right mono">30%</td><td><span class="badge badge-amber">Over</span></td></tr>
+            <tr><td>Bread</td><td class="text-right mono">&#8376;249,000</td><td class="text-right mono">&#8376;72,210</td><td class="text-right mono">29.0%</td><td class="text-right mono">28%</td><td><span class="badge badge-amber">Over</span></td></tr>
+            <tr><td>Sandwiches</td><td class="text-right mono">&#8376;186,750</td><td class="text-right mono">&#8376;65,363</td><td class="text-right mono">35.0%</td><td class="text-right mono">32%</td><td><span class="badge badge-red">High</span></td></tr>
+            <tr><td>Cakes</td><td class="text-right mono">&#8376;62,250</td><td class="text-right mono">&#8376;17,430</td><td class="text-right mono">28.0%</td><td class="text-right mono">30%</td><td><span class="badge badge-green">On Target</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ============ 4. SALES ANALYTICS ============ -->
+    <div class="tab-content" id="tab-sales">
+      <!-- Sales by Hour -->
+      <div class="card mb-24">
+        <div class="card-header">
+          <span class="card-title">Sales by Hour</span>
+          <span class="card-subtitle">Today</span>
+        </div>
+        <div class="bar-chart" style="height:160px;">
+          <div class="bar-col"><span class="bar-val mono">8</span><div class="bar" style="height:15%;background:var(--secondary);"></div><span class="bar-label">7am</span></div>
+          <div class="bar-col"><span class="bar-val mono">22</span><div class="bar" style="height:35%;background:var(--secondary);"></div><span class="bar-label">8</span></div>
+          <div class="bar-col"><span class="bar-val mono">35</span><div class="bar" style="height:55%;background:var(--primary);"></div><span class="bar-label">9</span></div>
+          <div class="bar-col"><span class="bar-val mono">28</span><div class="bar" style="height:44%;background:var(--secondary);"></div><span class="bar-label">10</span></div>
+          <div class="bar-col"><span class="bar-val mono">18</span><div class="bar" style="height:28%;background:var(--secondary);"></div><span class="bar-label">11</span></div>
+          <div class="bar-col"><span class="bar-val mono">52</span><div class="bar" style="height:82%;background:var(--primary);"></div><span class="bar-label">12</span></div>
+          <div class="bar-col"><span class="bar-val mono">64</span><div class="bar" style="height:100%;background:linear-gradient(180deg,var(--warn),#E53935);"></div><span class="bar-label">1pm</span></div>
+          <div class="bar-col"><span class="bar-val mono">45</span><div class="bar" style="height:70%;background:var(--primary);"></div><span class="bar-label">2</span></div>
+          <div class="bar-col"><span class="bar-val mono">30</span><div class="bar" style="height:47%;background:var(--secondary);"></div><span class="bar-label">3</span></div>
+          <div class="bar-col"><span class="bar-val mono">25</span><div class="bar" style="height:39%;background:var(--secondary);"></div><span class="bar-label">4</span></div>
+          <div class="bar-col"><span class="bar-val mono">38</span><div class="bar" style="height:59%;background:var(--primary);"></div><span class="bar-label">5</span></div>
+          <div class="bar-col"><span class="bar-val mono">42</span><div class="bar" style="height:66%;background:var(--primary);"></div><span class="bar-label">6</span></div>
+          <div class="bar-col"><span class="bar-val mono">28</span><div class="bar" style="height:44%;background:var(--secondary);"></div><span class="bar-label">7</span></div>
+          <div class="bar-col"><span class="bar-val mono">15</span><div class="bar" style="height:23%;background:var(--secondary);"></div><span class="bar-label">8</span></div>
+          <div class="bar-col"><span class="bar-val mono">6</span><div class="bar" style="height:9%;background:var(--secondary);"></div><span class="bar-label">9pm</span></div>
+        </div>
+      </div>
+
+      <div class="grid-2 mb-24">
+        <!-- Category Breakdown -->
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title">Category Breakdown</span>
+          </div>
+          <div style="margin-top:4px;">
+            <div class="hbar-row">
+              <div class="hbar-head"><span class="hbar-name">Coffee &amp; Drinks</span><span class="hbar-val mono">35%</span></div>
+              <div class="hbar-track"><div class="hbar-fill" style="width:100%;background:var(--primary);"></div></div>
+            </div>
+            <div class="hbar-row">
+              <div class="hbar-head"><span class="hbar-name">Pastries</span><span class="hbar-val mono">25%</span></div>
+              <div class="hbar-track"><div class="hbar-fill" style="width:71%;background:var(--secondary);"></div></div>
+            </div>
+            <div class="hbar-row">
+              <div class="hbar-head"><span class="hbar-name">Bread</span><span class="hbar-val mono">20%</span></div>
+              <div class="hbar-track"><div class="hbar-fill" style="width:57%;background:var(--accent);"></div></div>
+            </div>
+            <div class="hbar-row">
+              <div class="hbar-head"><span class="hbar-name">Sandwiches</span><span class="hbar-val mono">15%</span></div>
+              <div class="hbar-track"><div class="hbar-fill" style="width:43%;background:#1565C0;"></div></div>
+            </div>
+            <div class="hbar-row">
+              <div class="hbar-head"><span class="hbar-name">Other</span><span class="hbar-val mono">5%</span></div>
+              <div class="hbar-track"><div class="hbar-fill" style="width:14%;background:#9E9E9E;"></div></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Weekly Comparison -->
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title">Weekly Comparison</span>
+          </div>
+          <table>
+            <thead><tr><th>Metric</th><th class="text-right">This Week</th><th class="text-right">Last Week</th><th class="text-right">Change</th></tr></thead>
+            <tbody>
+              <tr><td>Revenue</td><td class="text-right mono">&#8376;8,270K</td><td class="text-right mono">&#8376;7,650K</td><td class="text-right"><span class="badge badge-green">+8.1%</span></td></tr>
+              <tr><td>Orders</td><td class="text-right mono">1,085</td><td class="text-right mono">1,120</td><td class="text-right"><span class="badge badge-red">-3.1%</span></td></tr>
+              <tr><td>Avg Check</td><td class="text-right mono">&#8376;7,622</td><td class="text-right mono">&#8376;6,830</td><td class="text-right"><span class="badge badge-green">+11.6%</span></td></tr>
+              <tr><td>Items Sold</td><td class="text-right mono">3,240</td><td class="text-right mono">3,105</td><td class="text-right"><span class="badge badge-green">+4.3%</span></td></tr>
+              <tr><td>Waste</td><td class="text-right mono">&#8376;45K</td><td class="text-right mono">&#8376;62K</td><td class="text-right"><span class="badge badge-green">-27.4%</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Top Products + Bottom Products -->
+      <div class="grid-2">
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title">Top Products</span>
+            <span class="badge badge-green">Best Sellers</span>
+          </div>
+          <table>
+            <thead><tr><th>#</th><th>Product</th><th class="text-right">Qty</th><th class="text-right">Revenue</th><th>Trend</th></tr></thead>
+            <tbody>
+              <tr><td><span class="rank-num">1</span></td><td>Croissant</td><td class="text-right mono">84</td><td class="text-right mono">&#8376;67,200</td><td><span class="kpi-trend up" style="font-size:11px;">&#9650; 12%</span></td></tr>
+              <tr><td><span class="rank-num">2</span></td><td>Americano</td><td class="text-right mono">72</td><td class="text-right mono">&#8376;57,600</td><td><span class="kpi-trend up" style="font-size:11px;">&#9650; 5%</span></td></tr>
+              <tr><td><span class="rank-num">3</span></td><td>Sourdough Loaf</td><td class="text-right mono">45</td><td class="text-right mono">&#8376;49,500</td><td><span class="kpi-trend up" style="font-size:11px;">&#9650; 8%</span></td></tr>
+              <tr><td><span class="rank-num">4</span></td><td>Napoleon Cake</td><td class="text-right mono">18</td><td class="text-right mono">&#8376;43,200</td><td><span class="kpi-trend up" style="font-size:11px;">&#9650; 15%</span></td></tr>
+              <tr><td><span class="rank-num">5</span></td><td>Cappuccino</td><td class="text-right mono">65</td><td class="text-right mono">&#8376;39,000</td><td><span class="kpi-trend down" style="font-size:11px;">&#9660; 2%</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title">Bottom Products</span>
+            <span class="badge badge-red">Underperforming</span>
+          </div>
+          <table>
+            <thead><tr><th>#</th><th>Product</th><th class="text-right">Qty</th><th class="text-right">Revenue</th><th>Trend</th></tr></thead>
+            <tbody>
+              <tr><td><span class="rank-num" style="background:var(--warn-light);color:var(--warn);">1</span></td><td>Rye Bread</td><td class="text-right mono">4</td><td class="text-right mono">&#8376;3,200</td><td><span class="kpi-trend down" style="font-size:11px;">&#9660; 45%</span></td></tr>
+              <tr><td><span class="rank-num" style="background:var(--warn-light);color:var(--warn);">2</span></td><td>Fruit Tart</td><td class="text-right mono">6</td><td class="text-right mono">&#8376;7,800</td><td><span class="kpi-trend down" style="font-size:11px;">&#9660; 30%</span></td></tr>
+              <tr><td><span class="rank-num" style="background:var(--warn-light);color:var(--warn);">3</span></td><td>Matcha Latte</td><td class="text-right mono">8</td><td class="text-right mono">&#8376;8,000</td><td><span class="kpi-trend down" style="font-size:11px;">&#9660; 22%</span></td></tr>
+              <tr><td><span class="rank-num" style="background:var(--warn-light);color:var(--warn);">4</span></td><td>Bran Muffin</td><td class="text-right mono">5</td><td class="text-right mono">&#8376;3,500</td><td><span class="kpi-trend down" style="font-size:11px;">&#9660; 18%</span></td></tr>
+              <tr><td><span class="rank-num" style="background:var(--warn-light);color:var(--warn);">5</span></td><td>Herbal Tea</td><td class="text-right mono">9</td><td class="text-right mono">&#8376;5,400</td><td><span class="kpi-trend down" style="font-size:11px;">&#9660; 15%</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ 5. PRODUCTION PLANNING ============ -->
+    <div class="tab-content" id="tab-production">
+      <!-- Add Plan Form -->
+      <div class="card mb-24">
+        <div class="card-header">
+          <span class="card-title">Add Production Plan</span>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Date</label>
+            <input type="date" value="2026-03-01">
+          </div>
+          <div class="form-group">
+            <label>Recipe</label>
+            <select>
+              <option>Croissant</option>
+              <option>Sourdough Loaf</option>
+              <option>Napoleon Cake</option>
+              <option>Baguette</option>
+              <option>Cinnamon Roll</option>
+              <option>Chocolate Eclair</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Quantity</label>
+            <input type="number" placeholder="e.g. 50" value="50">
+          </div>
+          <div class="form-group">
+            <label>Assign To</label>
+            <select>
+              <option>Marat S. (Baker)</option>
+              <option>Dinara T. (Baker)</option>
+              <option>Bolat K. (Chef)</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Schedule Time</label>
+            <input type="time" value="06:00">
+          </div>
+        </div>
+        <div style="display:flex;gap:8px;justify-content:flex-end;">
+          <button class="btn btn-outline">Cancel</button>
+          <button class="btn btn-primary">Add to Plan</button>
+        </div>
+      </div>
+
+      <!-- Daily Plan Table -->
+      <div class="card mb-24">
+        <div class="card-header">
+          <span class="card-title">Daily Production Plan</span>
+          <span class="card-subtitle">1 March 2026</span>
+        </div>
+        <table>
+          <thead>
+            <tr><th>Time</th><th>Recipe</th><th class="text-right">Planned Qty</th><th>Status</th><th>Assigned To</th><th>Notes</th></tr>
+          </thead>
+          <tbody>
+            <tr><td class="mono">05:00</td><td>Sourdough Loaf</td><td class="text-right mono">40</td><td><span class="badge badge-green">Completed</span></td><td>Marat S.</td><td>Starter prepared night before</td></tr>
+            <tr><td class="mono">05:30</td><td>Baguette</td><td class="text-right mono">30</td><td><span class="badge badge-green">Completed</span></td><td>Marat S.</td><td>&mdash;</td></tr>
+            <tr><td class="mono">06:00</td><td>Croissant</td><td class="text-right mono">80</td><td><span class="badge badge-blue">In Progress</span></td><td>Dinara T.</td><td>Laminated dough ready</td></tr>
+            <tr><td class="mono">07:00</td><td>Cinnamon Roll</td><td class="text-right mono">40</td><td><span class="badge badge-blue">In Progress</span></td><td>Dinara T.</td><td>&mdash;</td></tr>
+            <tr><td class="mono">08:00</td><td>Napoleon Cake</td><td class="text-right mono">12</td><td><span class="badge badge-amber">Pending</span></td><td>Bolat K.</td><td>Need fresh cream</td></tr>
+            <tr><td class="mono">09:00</td><td>Chocolate Eclair</td><td class="text-right mono">36</td><td><span class="badge badge-amber">Pending</span></td><td>Bolat K.</td><td>&mdash;</td></tr>
+            <tr><td class="mono">10:00</td><td>Sandwich Bread</td><td class="text-right mono">20</td><td><span class="badge badge-gray">Scheduled</span></td><td>Marat S.</td><td>Whole wheat variant</td></tr>
+            <tr><td class="mono">14:00</td><td>Afternoon Pastries</td><td class="text-right mono">25</td><td><span class="badge badge-gray">Scheduled</span></td><td>Dinara T.</td><td>Mini croissants + Danish</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Ingredient Requirements -->
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">Ingredient Requirements</span>
+          <span class="card-subtitle">For today's production plan</span>
+        </div>
+        <table>
+          <thead>
+            <tr><th>Ingredient</th><th class="text-right">Required</th><th class="text-right">Available</th><th>Unit</th><th>Status</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>Wheat Flour</td><td class="text-right mono">22</td><td class="text-right mono">5</td><td>kg</td><td style="color:var(--warn);font-weight:600;">&#10007; Insufficient</td></tr>
+            <tr><td>Butter (Unsalted)</td><td class="text-right mono">10</td><td class="text-right mono">8</td><td>kg</td><td style="color:var(--warn);font-weight:600;">&#10007; Insufficient</td></tr>
+            <tr><td>Sugar</td><td class="text-right mono">8</td><td class="text-right mono">18</td><td>kg</td><td style="color:var(--accent);font-weight:600;">&#10003; Available</td></tr>
+            <tr><td>Eggs</td><td class="text-right mono">90</td><td class="text-right mono">120</td><td>pcs</td><td style="color:var(--accent);font-weight:600;">&#10003; Available</td></tr>
+            <tr><td>Fresh Cream</td><td class="text-right mono">8</td><td class="text-right mono">15</td><td>L</td><td style="color:var(--accent);font-weight:600;">&#10003; Available</td></tr>
+            <tr><td>Milk</td><td class="text-right mono">12</td><td class="text-right mono">45</td><td>L</td><td style="color:var(--accent);font-weight:600;">&#10003; Available</td></tr>
+            <tr><td>Dry Yeast</td><td class="text-right mono">1.5</td><td class="text-right mono">3</td><td>kg</td><td style="color:var(--accent);font-weight:600;">&#10003; Available</td></tr>
+            <tr><td>Dark Chocolate</td><td class="text-right mono">4</td><td class="text-right mono">6</td><td>kg</td><td style="color:var(--accent);font-weight:600;">&#10003; Available</td></tr>
+            <tr><td>Vanilla Extract</td><td class="text-right mono">200</td><td class="text-right mono">0</td><td>ml</td><td style="color:var(--warn);font-weight:600;">&#10007; Out of Stock</td></tr>
+            <tr><td>Salt</td><td class="text-right mono">0.5</td><td class="text-right mono">10</td><td>kg</td><td style="color:var(--accent);font-weight:600;">&#10003; Available</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ============ 6. STAFF ============ -->
+    <div class="tab-content" id="tab-staff">
+      <!-- Staff Table -->
+      <div class="card mb-24">
+        <div class="card-header">
+          <span class="card-title">Staff Overview</span>
+          <span class="card-subtitle">8 on shift today</span>
+        </div>
+        <table>
+          <thead>
+            <tr><th>Name</th><th>Role</th><th>Status</th><th>Current Task</th><th>Shift</th><th>Performance</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td style="font-weight:600;"><span class="status-dot dot-green"></span>Aigerim K.</td>
+              <td><span class="badge badge-blue">Manager</span></td>
+              <td><span class="badge badge-green">On Shift</span></td>
+              <td>Floor supervision</td>
+              <td class="mono">08:00 &ndash; 17:00</td>
+              <td>&mdash;</td>
+            </tr>
+            <tr>
+              <td style="font-weight:600;"><span class="status-dot dot-green"></span>Marat S.</td>
+              <td><span class="badge badge-amber">Baker</span></td>
+              <td><span class="badge badge-green">On Shift</span></td>
+              <td>Sourdough baking</td>
+              <td class="mono">05:00 &ndash; 13:00</td>
+              <td class="mono">38 items</td>
+            </tr>
+            <tr>
+              <td style="font-weight:600;"><span class="status-dot dot-green"></span>Dinara T.</td>
+              <td><span class="badge badge-amber">Baker</span></td>
+              <td><span class="badge badge-green">On Shift</span></td>
+              <td>Croissant lamination</td>
+              <td class="mono">06:00 &ndash; 14:00</td>
+              <td class="mono">24 items</td>
+            </tr>
+            <tr>
+              <td style="font-weight:600;"><span class="status-dot dot-green"></span>Bolat K.</td>
+              <td><span class="badge" style="background:#F3E5F5;color:#7B1FA2;">Chef</span></td>
+              <td><span class="badge badge-green">On Shift</span></td>
+              <td>Prep for cakes</td>
+              <td class="mono">07:00 &ndash; 15:00</td>
+              <td class="mono">12 items</td>
+            </tr>
+            <tr>
+              <td style="font-weight:600;"><span class="status-dot dot-green"></span>Saule M.</td>
+              <td><span class="badge badge-green">Cashier</span></td>
+              <td><span class="badge badge-green">On Shift</span></td>
+              <td>POS Register 1</td>
+              <td class="mono">08:00 &ndash; 16:00</td>
+              <td class="mono">52 orders &bull; 3.2 min avg</td>
+            </tr>
+            <tr>
+              <td style="font-weight:600;"><span class="status-dot dot-green"></span>Arman B.</td>
+              <td><span class="badge" style="background:#E3F2FD;color:#1565C0;">Barista</span></td>
+              <td><span class="badge badge-green">On Shift</span></td>
+              <td>Drink station</td>
+              <td class="mono">07:00 &ndash; 15:00</td>
+              <td class="mono">68 drinks &bull; 2.1 min avg</td>
+            </tr>
+            <tr>
+              <td style="font-weight:600;"><span class="status-dot dot-green"></span>Nursultan D.</td>
+              <td><span class="badge" style="background:#E3F2FD;color:#1565C0;">Barista</span></td>
+              <td><span class="badge badge-green">On Shift</span></td>
+              <td>Drink station</td>
+              <td class="mono">10:00 &ndash; 18:00</td>
+              <td class="mono">41 drinks &bull; 2.4 min avg</td>
+            </tr>
+            <tr>
+              <td style="font-weight:600;"><span class="status-dot dot-green"></span>Gulnara R.</td>
+              <td><span class="badge badge-green">Cashier</span></td>
+              <td><span class="badge badge-green">On Shift</span></td>
+              <td>POS Register 2</td>
+              <td class="mono">10:00 &ndash; 18:00</td>
+              <td class="mono">38 orders &bull; 2.8 min avg</td>
+            </tr>
+            <tr>
+              <td style="font-weight:600;"><span class="status-dot dot-gray"></span>Timur A.</td>
+              <td><span class="badge badge-amber">Baker</span></td>
+              <td><span class="badge badge-gray">Off</span></td>
+              <td>&mdash;</td>
+              <td class="mono">&mdash;</td>
+              <td>&mdash;</td>
+            </tr>
+            <tr>
+              <td style="font-weight:600;"><span class="status-dot dot-gray"></span>Zhanna L.</td>
+              <td><span class="badge badge-green">Cashier</span></td>
+              <td><span class="badge badge-gray">Off</span></td>
+              <td>&mdash;</td>
+              <td class="mono">&mdash;</td>
+              <td>&mdash;</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Weekly Schedule -->
+      <div class="card mb-24">
+        <div class="card-header">
+          <span class="card-title">Weekly Schedule</span>
+          <span class="card-subtitle">1 &ndash; 7 March 2026</span>
+        </div>
+        <div class="schedule-grid">
+          <!-- Header -->
+          <div class="sg-cell sg-header">Staff</div>
+          <div class="sg-cell sg-header">Mon</div>
+          <div class="sg-cell sg-header">Tue</div>
+          <div class="sg-cell sg-header">Wed</div>
+          <div class="sg-cell sg-header">Thu</div>
+          <div class="sg-cell sg-header">Fri</div>
+          <div class="sg-cell sg-header">Sat</div>
+          <div class="sg-cell sg-header">Sun</div>
+
+          <!-- Marat -->
+          <div class="sg-cell sg-name">Marat S.</div>
+          <div class="sg-cell"><span class="sg-shift shift-morning">5-13</span></div>
+          <div class="sg-cell"><span class="sg-shift shift-morning">5-13</span></div>
+          <div class="sg-cell"><span class="sg-shift shift-off">Off</span></div>
+          <div class="sg-cell"><span class="sg-shift shift-morning">5-13</span></div>
+          <div class="sg-cell"><span class="sg-shift shift-morning">5-13</span></div>
+          <div class="sg-cell"><span class="sg-shift shift-morning">5-13</span></div>
+          <div class="sg-cell"><span class="sg-shift shift-off">Off</span></div>
+
+          <!-- Dinara -->
+          <div class="sg-cell sg-name">Dinara T.</div>
+          <div class="sg-cell"><span class="sg-shift shift-morning">6-14</span></div>
+          <div class="sg-cell"><span class="sg-shift shift-off">Off</span></div>
+          <div class="sg-cell"><span class="sg-shift shift-morning">6-14</span></div>
+          <div class="sg-cell"><span class="sg-shift shift-morning">6-14</span></div>
+          <div class="sg-cell"><span class="sg-shift shift-morning">6-14</span></div>
+          <div class="sg-cell"><span class="sg-shift shift-morning">6-14</span></div>
+          <div class="sg-cell"><span class="sg-shift shift-off">Off</span></div>
+
+          <!-- Bolat -->
+          <div class="sg-cell sg-name">Bolat K.</div>
+          <div class="sg-cell"><span class="sg-shift shift-day">7-15</span></div>
+          <div class="sg-cell"><span class="sg-shift shift-day">7-15</span></div>
+          <div class="sg-cell"><span class="sg-shift shift-day">7-15</span></div>
+          <div class="sg-cell"><span class="sg-shift shift-off">Off</span></div>
+          <div class="sg-cell"><span class="sg-shift shift-day">7-15</span></div>
+          <div class="sg-cell"><span class="sg-shift shift-day">7-15</span></div>
+          <div class="sg-cell"><span class="sg-shift shift-off">Off</span></div>
+
+          <!-- Saule -->
+          <div class="sg-cell sg-name">Saule M.</div>
+          <div class="sg-cell"><span class="sg-shift shift-day">8-16</span></div>
+          <div class="sg-cell"><span class="sg-shift shift-day">8-16</span></div>
+          <div class="sg-cell"><span class="sg-shift shift-day">8-16</span></div>
+          <div class="sg-cell"><span class="sg-shift shift-day">8-16</span></div>
+          <div class="sg-cell"><span class="sg-shift shift-off">Off</span></div>
+          <div class="sg-cell"><span class="sg-shift shift-day">8-16</span></div>
+          <div class="sg-cell"><span class="sg-shift shift-off">Off</span></div>
+
+          <!-- Arman -->
+          <div class="sg-cell sg-name">Arman B.</div>
+          <div class="sg-cell"><span class="sg-shift shift-day">7-15</span></div>
+          <div class="sg-cell"><span class="sg-shift shift-day">7-15</span></div>
+          <div class="sg-cell"><span class="sg-shift shift-off">Off</span></div>
+          <div class="sg-cell"><span class="sg-shift shift-day">7-15</span></div>
+          <div class="sg-cell"><span class="sg-shift shift-day">7-15</span></div>
+          <div class="sg-cell"><span class="sg-shift shift-day">7-15</span></div>
+          <div class="sg-cell"><span class="sg-shift shift-off">Off</span></div>
+
+          <!-- Nursultan -->
+          <div class="sg-cell sg-name">Nursultan D.</div>
+          <div class="sg-cell"><span class="sg-shift shift-evening">10-18</span></div>
+          <div class="sg-cell"><span class="sg-shift shift-off">Off</span></div>
+          <div class="sg-cell"><span class="sg-shift shift-evening">10-18</span></div>
+          <div class="sg-cell"><span class="sg-shift shift-evening">10-18</span></div>
+          <div class="sg-cell"><span class="sg-shift shift-evening">10-18</span></div>
+          <div class="sg-cell"><span class="sg-shift shift-evening">10-18</span></div>
+          <div class="sg-cell"><span class="sg-shift shift-off">Off</span></div>
+
+          <!-- Timur -->
+          <div class="sg-cell sg-name">Timur A.</div>
+          <div class="sg-cell"><span class="sg-shift shift-off">Off</span></div>
+          <div class="sg-cell"><span class="sg-shift shift-morning">5-13</span></div>
+          <div class="sg-cell"><span class="sg-shift shift-morning">5-13</span></div>
+          <div class="sg-cell"><span class="sg-shift shift-morning">5-13</span></div>
+          <div class="sg-cell"><span class="sg-shift shift-off">Off</span></div>
+          <div class="sg-cell"><span class="sg-shift shift-off">Off</span></div>
+          <div class="sg-cell"><span class="sg-shift shift-morning">5-13</span></div>
+        </div>
+      </div>
+
+      <!-- Performance -->
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">Performance Summary</span>
+          <span class="card-subtitle">Today</span>
+        </div>
+        <div class="grid-3" style="margin-bottom:0;">
+          <div style="text-align:center;padding:16px;">
+            <div class="mono" style="font-size:32px;font-weight:700;color:var(--primary);">156</div>
+            <div style="font-size:12px;color:var(--text-secondary);margin-top:4px;">Orders Processed</div>
+          </div>
+          <div style="text-align:center;padding:16px;">
+            <div class="mono" style="font-size:32px;font-weight:700;color:var(--accent);">2.8</div>
+            <div style="font-size:12px;color:var(--text-secondary);margin-top:4px;">Avg Time (min)</div>
+          </div>
+          <div style="text-align:center;padding:16px;">
+            <div class="mono" style="font-size:32px;font-weight:700;color:#1565C0;">98.1%</div>
+            <div style="font-size:12px;color:var(--text-secondary);margin-top:4px;">Order Accuracy</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /content -->
+</div><!-- /main -->
+
+<script>
+  // ── Tab Switching ──
+  const navItems = document.querySelectorAll('.nav-item[data-tab]');
+  const tabContents = document.querySelectorAll('.tab-content');
+  const pageTitle = document.getElementById('page-title');
+
+  const titles = {
+    overview: 'Overview',
+    inventory: 'Inventory',
+    finance: 'Finance',
+    sales: 'Sales Analytics',
+    production: 'Production Planning',
+    staff: 'Staff Overview'
+  };
+
+  navItems.forEach(item => {
+    item.addEventListener('click', () => {
+      const tab = item.dataset.tab;
+
+      // Update nav
+      navItems.forEach(n => n.classList.remove('active'));
+      item.classList.add('active');
+
+      // Update content
+      tabContents.forEach(tc => tc.classList.remove('active'));
+      const target = document.getElementById('tab-' + tab);
+      if (target) target.classList.add('active');
+
+      // Update title
+      pageTitle.textContent = titles[tab] || 'Dashboard';
+    });
+  });
+</script>
+</body>
+</html>

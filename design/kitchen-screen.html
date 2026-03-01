@@ -1,0 +1,844 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kitchen Display System — Bake App</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #1A1A2E; --surface: #16213E; --surface-hover: #1c2d50;
+    --text: #FFFFFF; --text-muted: #8892B0; --border: #2A3A5E;
+    --new: #4FC3F7; --new-dim: rgba(79,195,247,.15);
+    --progress: #FFB74D; --progress-dim: rgba(255,183,77,.15);
+    --ready: #81C784; --ready-dim: rgba(129,199,132,.15);
+    --delayed: #EF5350; --delayed-dim: rgba(239,83,80,.15);
+    --font-ui: 'Inter', system-ui, sans-serif;
+    --font-mono: 'JetBrains Mono', monospace;
+    --radius: 12px; --radius-sm: 8px; --touch-min: 80px;
+  }
+  html { font-size: 18px; }
+  body {
+    font-family: var(--font-ui); background: var(--bg); color: var(--text);
+    min-height: 100vh; overflow-x: hidden; -webkit-font-smoothing: antialiased;
+  }
+
+  /* Top Bar */
+  .top-bar {
+    display: flex; align-items: center; justify-content: space-between;
+    background: var(--surface); border-bottom: 1px solid var(--border);
+    padding: 0 24px; height: 72px; position: sticky; top: 0; z-index: 100;
+  }
+  .top-bar__title { font-size: 1.4rem; font-weight: 700; letter-spacing: -.02em; }
+  .top-bar__clock {
+    font-family: var(--font-mono); font-size: 1.6rem; font-weight: 700;
+    min-width: 140px; text-align: right;
+  }
+  .top-bar__stats { display: flex; gap: 24px; align-items: center; }
+  .stat-badge { display: flex; align-items: center; gap: 8px; font-size: 1rem; font-weight: 600; }
+  .stat-badge__dot { width: 12px; height: 12px; border-radius: 50%; display: inline-block; }
+
+  /* Tab Navigation */
+  .tab-nav { display: flex; gap: 4px; background: var(--bg); padding: 8px 24px; border-bottom: 1px solid var(--border); }
+  .tab-btn {
+    font-family: var(--font-ui); font-size: 1.05rem; font-weight: 600;
+    padding: 16px 32px; min-height: 60px; border: 2px solid var(--border);
+    border-radius: var(--radius-sm); background: var(--surface); color: var(--text-muted);
+    cursor: pointer; transition: all .2s; user-select: none;
+  }
+  .tab-btn:hover { background: var(--surface-hover); color: var(--text); }
+  .tab-btn.active { background: var(--new); color: #000; border-color: var(--new); }
+
+  /* Screen Container */
+  .screen { display: none; padding: 24px; }
+  .screen.active { display: block; }
+
+  /* ── SCREEN 1: ORDER QUEUE (KANBAN) ──────────────────────── */
+  .kanban { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; height: calc(100vh - 180px); }
+  .kanban-col {
+    display: flex; flex-direction: column; border-radius: var(--radius);
+    overflow: hidden; background: var(--surface); border: 1px solid var(--border);
+  }
+  .kanban-col__header {
+    padding: 18px 20px; font-size: 1.2rem; font-weight: 800;
+    text-transform: uppercase; letter-spacing: .06em;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .kanban-col__header .count { font-family: var(--font-mono); font-size: 1.6rem; font-weight: 700; }
+  .kanban-col--new .kanban-col__header  { background: var(--new); color: #000; }
+  .kanban-col--prog .kanban-col__header { background: var(--progress); color: #000; }
+  .kanban-col--ready .kanban-col__header{ background: var(--ready); color: #000; }
+  .kanban-col__body { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 16px; }
+
+  /* Order Card */
+  .order-card {
+    background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 20px; display: flex; flex-direction: column; gap: 14px; transition: border-color .2s;
+  }
+  .order-card:hover { border-color: var(--text-muted); }
+  .order-card__top { display: flex; justify-content: space-between; align-items: flex-start; }
+  .order-card__number { font-family: var(--font-mono); font-size: 2rem; font-weight: 700; line-height: 1; }
+  .order-card__timer {
+    font-family: var(--font-mono); font-size: 1.4rem; font-weight: 500;
+    padding: 4px 12px; border-radius: var(--radius-sm);
+  }
+  .kanban-col--new .order-card__timer  { background: var(--new-dim); color: var(--new); }
+  .kanban-col--prog .order-card__timer { background: var(--progress-dim); color: var(--progress); }
+  .kanban-col--ready .order-card__timer{ background: var(--ready-dim); color: var(--ready); }
+  .order-card__customer { font-size: 1.1rem; font-weight: 600; color: var(--text-muted); }
+  .order-card__items { list-style: none; display: flex; flex-direction: column; gap: 8px; }
+  .order-card__items li {
+    font-size: 1.15rem; font-weight: 500; padding: 6px 0;
+    border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 10px;
+  }
+  .order-card__items li:last-child { border-bottom: none; }
+  .item-qty { font-family: var(--font-mono); font-weight: 700; color: var(--new); min-width: 36px; }
+  .kanban-col--prog .item-qty  { color: var(--progress); }
+  .kanban-col--ready .item-qty { color: var(--ready); }
+  .item-check { width: 28px; height: 28px; accent-color: var(--progress); cursor: pointer; flex-shrink: 0; }
+  .item-check:checked + .item-label { text-decoration: line-through; color: var(--text-muted); }
+  .item-label { flex: 1; }
+  .item-clickable { cursor: pointer; transition: color .2s; }
+  .item-clickable:hover { color: var(--new); }
+
+  /* Action Buttons */
+  .order-btn {
+    font-family: var(--font-ui); font-size: 1.15rem; font-weight: 700;
+    text-transform: uppercase; letter-spacing: .04em; min-height: var(--touch-min);
+    border: none; border-radius: var(--radius-sm); cursor: pointer;
+    transition: filter .15s, transform .1s; user-select: none;
+  }
+  .order-btn:active { transform: scale(.97); }
+  .order-btn:hover  { filter: brightness(1.1); }
+  .order-btn--start  { background: var(--new); color: #000; }
+  .order-btn--done   { background: var(--progress); color: #000; }
+  .order-btn--pickup { background: var(--ready); color: #000; }
+
+  /* ── SCREEN 2: ORDER DETAIL OVERLAY ──────────────────────── */
+  .overlay {
+    display: none; position: fixed; inset: 0; background: rgba(0,0,0,.85);
+    z-index: 500; align-items: center; justify-content: center; padding: 24px;
+  }
+  .overlay.visible { display: flex; }
+  .detail-panel {
+    background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+    width: 100%; max-width: 800px; max-height: 90vh; overflow-y: auto; padding: 40px; position: relative;
+  }
+  .detail-panel__close {
+    position: absolute; top: 16px; right: 16px; width: 56px; height: 56px;
+    border-radius: 50%; border: 2px solid var(--border); background: var(--bg);
+    color: var(--text); font-size: 1.6rem; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .detail-panel__close:hover { border-color: var(--delayed); }
+  .detail-panel h2 { font-size: 2rem; font-weight: 800; margin-bottom: 28px; padding-right: 60px; }
+  .detail-section { margin-bottom: 32px; }
+  .detail-section h3 {
+    font-size: 1.3rem; font-weight: 700; color: var(--new); margin-bottom: 16px;
+    text-transform: uppercase; letter-spacing: .04em;
+  }
+  .ingredient-list { list-style: none; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .ingredient-list li {
+    font-size: 1.15rem; padding: 10px 14px; background: var(--bg);
+    border-radius: var(--radius-sm); border: 1px solid var(--border);
+    display: flex; justify-content: space-between;
+  }
+  .ingredient-list li span:last-child { font-family: var(--font-mono); font-weight: 600; color: var(--progress); }
+  .step-list { list-style: none; counter-reset: steps; display: flex; flex-direction: column; gap: 14px; }
+  .step-list li {
+    counter-increment: steps; font-size: 1.15rem; line-height: 1.5;
+    padding: 16px 20px 16px 64px; background: var(--bg);
+    border-radius: var(--radius-sm); border: 1px solid var(--border); position: relative;
+  }
+  .step-list li::before {
+    content: counter(steps); position: absolute; left: 16px; top: 14px;
+    font-family: var(--font-mono); font-weight: 700; font-size: 1.3rem;
+    color: var(--ready); width: 36px; text-align: center;
+  }
+
+  /* ── SCREEN 3: PRODUCTION PLAN ───────────────────────────── */
+  .prod-table-wrap {
+    overflow-x: auto; border-radius: var(--radius);
+    border: 1px solid var(--border); background: var(--surface);
+  }
+  .prod-table { width: 100%; border-collapse: collapse; font-size: 1.05rem; }
+  .prod-table th {
+    background: var(--bg); padding: 18px 16px; text-align: left; font-weight: 700;
+    font-size: 1rem; text-transform: uppercase; letter-spacing: .05em;
+    color: var(--text-muted); border-bottom: 2px solid var(--border); white-space: nowrap;
+  }
+  .prod-table td { padding: 16px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+  .prod-table tr:last-child td { border-bottom: none; }
+  .prod-table tr:hover td { background: var(--surface-hover); }
+  .time-cell { font-family: var(--font-mono); font-weight: 600; font-size: 1.1rem; white-space: nowrap; }
+  .recipe-cell { font-weight: 600; font-size: 1.1rem; }
+  .qty-cell { font-family: var(--font-mono); font-weight: 700; font-size: 1.15rem; text-align: center; }
+  .status-badge {
+    display: inline-block; padding: 6px 16px; border-radius: 20px;
+    font-size: .9rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; white-space: nowrap;
+  }
+  .status-badge--scheduled { background: var(--new-dim); color: var(--new); }
+  .status-badge--progress  { background: var(--progress-dim); color: var(--progress); }
+  .status-badge--completed { background: var(--ready-dim); color: var(--ready); }
+  .status-badge--delayed   { background: var(--delayed-dim); color: var(--delayed); }
+  .progress-bar { width: 100%; height: 12px; background: var(--bg); border-radius: 6px; overflow: hidden; min-width: 100px; }
+  .progress-bar__fill { height: 100%; border-radius: 6px; transition: width .4s; }
+  .progress-bar__fill--blue   { background: var(--new); }
+  .progress-bar__fill--orange { background: var(--progress); }
+  .progress-bar__fill--green  { background: var(--ready); }
+  .progress-bar__fill--red    { background: var(--delayed); }
+  .deviation-alert { background: var(--delayed-dim) !important; }
+  .deviation-alert td { background: transparent !important; }
+  .deviation-text { color: var(--delayed); font-weight: 700; }
+  .assignee { display: flex; align-items: center; gap: 8px; font-weight: 500; }
+  .assignee__avatar {
+    width: 36px; height: 36px; border-radius: 50%; background: var(--border);
+    display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: .85rem;
+  }
+
+  /* ── SCREEN 4: TIMER DISPLAY ─────────────────────────────── */
+  .timer-screen {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    min-height: calc(100vh - 180px); gap: 32px; text-align: center;
+  }
+  .timer-recipe { font-size: 1.3rem; font-weight: 600; color: var(--text-muted); }
+  .timer-step-label { font-size: 1.1rem; font-weight: 600; color: var(--new); text-transform: uppercase; letter-spacing: .06em; }
+  .timer-display {
+    font-family: var(--font-mono); font-size: 8rem; font-weight: 700;
+    line-height: 1; letter-spacing: -.02em; text-shadow: 0 0 60px rgba(79,195,247,.2);
+  }
+  .timer-instruction { font-size: 1.8rem; font-weight: 600; max-width: 700px; line-height: 1.4; }
+  .timer-progress-wrap { width: 100%; max-width: 600px; }
+  .timer-progress {
+    width: 100%; height: 16px; background: var(--surface);
+    border-radius: 8px; overflow: hidden; border: 1px solid var(--border);
+  }
+  .timer-progress__fill { height: 100%; background: var(--new); border-radius: 8px; transition: width .3s linear; }
+  .timer-controls { display: flex; gap: 16px; margin-top: 8px; }
+  .timer-step-nav { display: flex; gap: 12px; margin-top: 4px; }
+  .timer-btn {
+    font-family: var(--font-ui); font-size: 1.2rem; font-weight: 700;
+    text-transform: uppercase; letter-spacing: .04em; min-height: var(--touch-min);
+    min-width: 180px; border: 2px solid var(--border); border-radius: var(--radius-sm);
+    background: var(--surface); color: var(--text); cursor: pointer; transition: all .15s; user-select: none;
+  }
+  .timer-btn:active { transform: scale(.97); }
+  .timer-btn--start { background: var(--new); color: #000; border-color: var(--new); }
+  .timer-btn--start:hover { filter: brightness(1.15); }
+  .timer-btn--pause { background: var(--progress); color: #000; border-color: var(--progress); }
+  .timer-btn--pause:hover { filter: brightness(1.15); }
+  .timer-btn--reset:hover { border-color: var(--delayed); color: var(--delayed); }
+  .timer-btn--prev:hover, .timer-btn--next:hover { border-color: var(--new); color: var(--new); }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 8px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
+
+  @media (max-width: 1100px) {
+    .kanban { grid-template-columns: 1fr; height: auto; }
+    .kanban-col { max-height: 50vh; }
+    .ingredient-list { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<!-- TOP BAR -->
+<header class="top-bar">
+  <div class="top-bar__title">Kitchen Display</div>
+  <div class="top-bar__stats">
+    <span class="stat-badge"><span class="stat-badge__dot" style="background:var(--new)"></span> New: <span id="stat-new">3</span></span>
+    <span class="stat-badge"><span class="stat-badge__dot" style="background:var(--progress)"></span> In Progress: <span id="stat-prog">2</span></span>
+    <span class="stat-badge"><span class="stat-badge__dot" style="background:var(--ready)"></span> Ready: <span id="stat-ready">2</span></span>
+  </div>
+  <div class="top-bar__clock" id="clock">12:00:00</div>
+</header>
+
+<!-- TAB NAVIGATION -->
+<nav class="tab-nav">
+  <button class="tab-btn active" data-tab="queue">Order Queue</button>
+  <button class="tab-btn" data-tab="production">Production Plan</button>
+  <button class="tab-btn" data-tab="timer">Timer</button>
+</nav>
+
+<!-- SCREEN 1: ORDER QUEUE (KANBAN) -->
+<section class="screen active" id="screen-queue">
+  <div class="kanban">
+    <!-- NEW Column -->
+    <div class="kanban-col kanban-col--new">
+      <div class="kanban-col__header"><span>New</span><span class="count">3</span></div>
+      <div class="kanban-col__body">
+        <div class="order-card">
+          <div class="order-card__top">
+            <span class="order-card__number">#047</span>
+            <span class="order-card__timer" data-elapsed="155">2:35</span>
+          </div>
+          <div class="order-card__customer">Maria K.</div>
+          <ul class="order-card__items">
+            <li><span class="item-qty">2x</span> <span class="item-clickable" data-recipe="cappuccino">Cappuccino</span></li>
+            <li><span class="item-qty">1x</span> <span class="item-clickable" data-recipe="croissant">Butter Croissant</span></li>
+            <li><span class="item-qty">1x</span> <span class="item-clickable" data-recipe="avocado-toast">Avocado Toast</span></li>
+          </ul>
+          <button class="order-btn order-btn--start" onclick="moveToProgress(this)">Start</button>
+        </div>
+        <div class="order-card">
+          <div class="order-card__top">
+            <span class="order-card__number">#048</span>
+            <span class="order-card__timer" data-elapsed="90">1:30</span>
+          </div>
+          <div class="order-card__customer">Alex D.</div>
+          <ul class="order-card__items">
+            <li><span class="item-qty">1x</span> <span class="item-clickable" data-recipe="latte">Oat Milk Latte</span></li>
+            <li><span class="item-qty">2x</span> <span class="item-clickable" data-recipe="cinnamon-roll">Cinnamon Roll</span></li>
+          </ul>
+          <button class="order-btn order-btn--start" onclick="moveToProgress(this)">Start</button>
+        </div>
+        <div class="order-card">
+          <div class="order-card__top">
+            <span class="order-card__number">#049</span>
+            <span class="order-card__timer" data-elapsed="25">0:25</span>
+          </div>
+          <div class="order-card__customer">Tomasz W.</div>
+          <ul class="order-card__items">
+            <li><span class="item-qty">3x</span> <span class="item-clickable" data-recipe="espresso">Double Espresso</span></li>
+            <li><span class="item-qty">1x</span> <span class="item-clickable" data-recipe="cheesecake">New York Cheesecake</span></li>
+            <li><span class="item-qty">2x</span> <span class="item-clickable" data-recipe="croissant">Butter Croissant</span></li>
+          </ul>
+          <button class="order-btn order-btn--start" onclick="moveToProgress(this)">Start</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- IN PROGRESS Column -->
+    <div class="kanban-col kanban-col--prog">
+      <div class="kanban-col__header"><span>In Progress</span><span class="count">2</span></div>
+      <div class="kanban-col__body">
+        <div class="order-card">
+          <div class="order-card__top">
+            <span class="order-card__number">#045</span>
+            <span class="order-card__timer" data-elapsed="420">7:00</span>
+          </div>
+          <div class="order-card__customer">Elena R.</div>
+          <ul class="order-card__items">
+            <li><input type="checkbox" class="item-check" checked><span class="item-qty">1x</span><span class="item-label item-clickable" data-recipe="cappuccino">Cappuccino</span></li>
+            <li><input type="checkbox" class="item-check"><span class="item-qty">1x</span><span class="item-label item-clickable" data-recipe="croissant">Eggs Benedict</span></li>
+            <li><input type="checkbox" class="item-check"><span class="item-qty">1x</span><span class="item-label item-clickable" data-recipe="pancakes">Blueberry Pancakes</span></li>
+          </ul>
+          <button class="order-btn order-btn--done" onclick="moveToReady(this)">Done</button>
+        </div>
+        <div class="order-card">
+          <div class="order-card__top">
+            <span class="order-card__number">#046</span>
+            <span class="order-card__timer" data-elapsed="310">5:10</span>
+          </div>
+          <div class="order-card__customer">Jan P.</div>
+          <ul class="order-card__items">
+            <li><input type="checkbox" class="item-check" checked><span class="item-qty">2x</span><span class="item-label item-clickable" data-recipe="latte">Oat Milk Latte</span></li>
+            <li><input type="checkbox" class="item-check" checked><span class="item-qty">1x</span><span class="item-label item-clickable" data-recipe="croissant">Butter Croissant</span></li>
+            <li><input type="checkbox" class="item-check"><span class="item-qty">1x</span><span class="item-label item-clickable" data-recipe="avocado-toast">Avocado Toast</span></li>
+          </ul>
+          <button class="order-btn order-btn--done" onclick="moveToReady(this)">Done</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- READY Column -->
+    <div class="kanban-col kanban-col--ready">
+      <div class="kanban-col__header"><span>Ready</span><span class="count">2</span></div>
+      <div class="kanban-col__body">
+        <div class="order-card">
+          <div class="order-card__top">
+            <span class="order-card__number">#043</span>
+            <span class="order-card__timer" data-elapsed="180">3:00</span>
+          </div>
+          <div class="order-card__customer">Sofia L.</div>
+          <ul class="order-card__items">
+            <li><span class="item-qty">1x</span> <span class="item-clickable" data-recipe="latte">Matcha Latte</span></li>
+            <li><span class="item-qty">1x</span> <span class="item-clickable" data-recipe="croissant">Almond Croissant</span></li>
+          </ul>
+          <button class="order-btn order-btn--pickup" onclick="pickUp(this)">Picked Up</button>
+        </div>
+        <div class="order-card">
+          <div class="order-card__top">
+            <span class="order-card__number">#044</span>
+            <span class="order-card__timer" data-elapsed="65">1:05</span>
+          </div>
+          <div class="order-card__customer">Igor M.</div>
+          <ul class="order-card__items">
+            <li><span class="item-qty">1x</span> <span class="item-clickable" data-recipe="espresso">Double Espresso</span></li>
+            <li><span class="item-qty">2x</span> <span class="item-clickable" data-recipe="cinnamon-roll">Cinnamon Roll</span></li>
+            <li><span class="item-qty">1x</span> <span class="item-clickable" data-recipe="cheesecake">NY Cheesecake</span></li>
+          </ul>
+          <button class="order-btn order-btn--pickup" onclick="pickUp(this)">Picked Up</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- SCREEN 2: RECIPE DETAIL OVERLAY -->
+<div class="overlay" id="recipe-overlay">
+  <div class="detail-panel">
+    <button class="detail-panel__close" onclick="closeOverlay()">&times;</button>
+    <h2 id="detail-title">Recipe Name</h2>
+    <div class="detail-section">
+      <h3>Ingredients</h3>
+      <ul class="ingredient-list" id="detail-ingredients"></ul>
+    </div>
+    <div class="detail-section">
+      <h3>Instructions</h3>
+      <ol class="step-list" id="detail-steps"></ol>
+    </div>
+  </div>
+</div>
+
+<!-- SCREEN 3: PRODUCTION PLAN -->
+<section class="screen" id="screen-production">
+  <div class="prod-table-wrap">
+    <table class="prod-table">
+      <thead>
+        <tr>
+          <th>Time</th><th>Recipe</th><th>Planned</th><th>Actual</th>
+          <th>Status</th><th>Progress</th><th>Assigned To</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="time-cell">06:00</td><td class="recipe-cell">Sourdough Bread</td>
+          <td class="qty-cell">40</td><td class="qty-cell">42</td>
+          <td><span class="status-badge status-badge--completed">Completed</span></td>
+          <td><div class="progress-bar"><div class="progress-bar__fill progress-bar__fill--green" style="width:100%"></div></div></td>
+          <td><div class="assignee"><span class="assignee__avatar">DK</span>Dmitry K.</div></td>
+        </tr>
+        <tr>
+          <td class="time-cell">06:30</td><td class="recipe-cell">Butter Croissants</td>
+          <td class="qty-cell">60</td><td class="qty-cell">58</td>
+          <td><span class="status-badge status-badge--completed">Completed</span></td>
+          <td><div class="progress-bar"><div class="progress-bar__fill progress-bar__fill--green" style="width:100%"></div></div></td>
+          <td><div class="assignee"><span class="assignee__avatar">NP</span>Natalia P.</div></td>
+        </tr>
+        <tr>
+          <td class="time-cell">08:00</td><td class="recipe-cell">Blueberry Muffins</td>
+          <td class="qty-cell">48</td><td class="qty-cell">35</td>
+          <td><span class="status-badge status-badge--progress">In Progress</span></td>
+          <td><div class="progress-bar"><div class="progress-bar__fill progress-bar__fill--orange" style="width:73%"></div></div></td>
+          <td><div class="assignee"><span class="assignee__avatar">NP</span>Natalia P.</div></td>
+        </tr>
+        <tr class="deviation-alert">
+          <td class="time-cell">09:00</td><td class="recipe-cell">Focaccia Bread <span class="deviation-text">(Behind Schedule)</span></td>
+          <td class="qty-cell">20</td><td class="qty-cell deviation-text">8</td>
+          <td><span class="status-badge status-badge--delayed">Delayed</span></td>
+          <td><div class="progress-bar"><div class="progress-bar__fill progress-bar__fill--red" style="width:40%"></div></div></td>
+          <td><div class="assignee"><span class="assignee__avatar">DK</span>Dmitry K.</div></td>
+        </tr>
+        <tr>
+          <td class="time-cell">10:00</td><td class="recipe-cell">Club Sandwiches</td>
+          <td class="qty-cell">25</td><td class="qty-cell">3</td>
+          <td><span class="status-badge status-badge--progress">In Progress</span></td>
+          <td><div class="progress-bar"><div class="progress-bar__fill progress-bar__fill--orange" style="width:12%"></div></div></td>
+          <td><div class="assignee"><span class="assignee__avatar">OV</span>Olga V.</div></td>
+        </tr>
+        <tr>
+          <td class="time-cell">11:30</td><td class="recipe-cell">Quiche Lorraine</td>
+          <td class="qty-cell">12</td><td class="qty-cell">0</td>
+          <td><span class="status-badge status-badge--scheduled">Scheduled</span></td>
+          <td><div class="progress-bar"><div class="progress-bar__fill progress-bar__fill--blue" style="width:0%"></div></div></td>
+          <td><div class="assignee"><span class="assignee__avatar">NP</span>Natalia P.</div></td>
+        </tr>
+        <tr>
+          <td class="time-cell">13:00</td><td class="recipe-cell">Afternoon Cake Batch</td>
+          <td class="qty-cell">8</td><td class="qty-cell">0</td>
+          <td><span class="status-badge status-badge--scheduled">Scheduled</span></td>
+          <td><div class="progress-bar"><div class="progress-bar__fill progress-bar__fill--blue" style="width:0%"></div></div></td>
+          <td><div class="assignee"><span class="assignee__avatar">DK</span>Dmitry K.</div></td>
+        </tr>
+        <tr class="deviation-alert">
+          <td class="time-cell">14:00</td><td class="recipe-cell">Cheesecake <span class="deviation-text">(Oven Conflict)</span></td>
+          <td class="qty-cell">6</td><td class="qty-cell">0</td>
+          <td><span class="status-badge status-badge--delayed">Delayed</span></td>
+          <td><div class="progress-bar"><div class="progress-bar__fill progress-bar__fill--red" style="width:0%"></div></div></td>
+          <td><div class="assignee"><span class="assignee__avatar">OV</span>Olga V.</div></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- SCREEN 4: TIMER DISPLAY -->
+<section class="screen" id="screen-timer">
+  <div class="timer-screen">
+    <div class="timer-recipe" id="timer-recipe">Butter Croissants</div>
+    <div class="timer-step-label" id="timer-step-label">Step 2 of 5</div>
+    <div class="timer-display" id="timer-display">12:00</div>
+    <div class="timer-instruction" id="timer-instruction">Proof the shaped croissants at 27 C with high humidity until doubled in size.</div>
+    <div class="timer-progress-wrap">
+      <div class="timer-progress">
+        <div class="timer-progress__fill" id="timer-progress-fill" style="width:0%"></div>
+      </div>
+    </div>
+    <div class="timer-controls">
+      <button class="timer-btn timer-btn--start" id="timer-start-btn" onclick="toggleTimer()">Start</button>
+      <button class="timer-btn timer-btn--reset" onclick="resetTimer()">Reset</button>
+    </div>
+    <div class="timer-step-nav">
+      <button class="timer-btn timer-btn--prev" onclick="prevStep()">Prev Step</button>
+      <button class="timer-btn timer-btn--next" onclick="nextStep()">Next Step</button>
+    </div>
+  </div>
+</section>
+
+<script>
+(function () {
+  'use strict';
+
+  /* Recipe Database */
+  var recipes = {
+    cappuccino: {
+      name: 'Cappuccino',
+      ingredients: [['Espresso (double shot)', '18 g'], ['Whole Milk', '150 ml']],
+      steps: [
+        'Grind 18 g of fresh espresso beans to a fine consistency.',
+        'Tamp evenly and pull a double shot (25-30 sec, 36 ml output).',
+        'Steam 150 ml whole milk to 65 C with micro-foam texture.',
+        'Pour steamed milk over espresso in a circular motion.',
+        'Serve immediately in a preheated 180 ml ceramic cup.'
+      ]
+    },
+    croissant: {
+      name: 'Butter Croissant',
+      ingredients: [
+        ['Bread Flour', '500 g'], ['Butter (cold block)', '280 g'],
+        ['Sugar', '50 g'], ['Salt', '10 g'],
+        ['Instant Yeast', '7 g'], ['Whole Milk (cold)', '300 ml']
+      ],
+      steps: [
+        'Mix flour, sugar, salt, yeast, and cold milk into a shaggy dough. Rest 30 min.',
+        'Roll dough into a rectangle. Encase butter block and seal edges.',
+        'Perform 3 single folds, chilling 30 min between each fold.',
+        'Roll to 5 mm thickness and cut triangles (base 10 cm, height 20 cm).',
+        'Shape by rolling from base to tip. Proof at 27 C for 90 min.',
+        'Egg wash and bake at 200 C for 15-18 min until deeply golden.'
+      ]
+    },
+    'avocado-toast': {
+      name: 'Avocado Toast',
+      ingredients: [
+        ['Sourdough Bread', '2 slices'], ['Ripe Avocado', '1 whole'],
+        ['Lemon Juice', '10 ml'], ['Cherry Tomatoes', '6 pcs'],
+        ['Red Pepper Flakes', 'pinch'], ['Olive Oil', '5 ml']
+      ],
+      steps: [
+        'Toast sourdough slices until golden and crisp.',
+        'Mash avocado with lemon juice, salt, and pepper.',
+        'Spread avocado generously on each toast.',
+        'Halve cherry tomatoes and arrange on top.',
+        'Finish with red pepper flakes and a drizzle of olive oil.'
+      ]
+    },
+    latte: {
+      name: 'Oat Milk Latte',
+      ingredients: [['Espresso (double shot)', '18 g'], ['Barista Oat Milk', '200 ml']],
+      steps: [
+        'Grind 18 g espresso beans and pull a double shot.',
+        'Steam 200 ml barista oat milk to 60 C (oat milk scorches easily).',
+        'Pour steamed oat milk over espresso in a steady stream.',
+        'Serve in a 240 ml glass or cup.'
+      ]
+    },
+    'cinnamon-roll': {
+      name: 'Cinnamon Roll',
+      ingredients: [
+        ['Bread Flour', '400 g'], ['Butter', '60 g + 80 g'],
+        ['Sugar', '60 g + 150 g'], ['Cinnamon', '20 g'],
+        ['Milk (warm)', '240 ml'], ['Yeast', '7 g'], ['Cream Cheese Icing', '200 g']
+      ],
+      steps: [
+        'Combine warm milk, sugar, yeast. Let bloom 5 min.',
+        'Add flour, butter, salt. Knead until smooth (8 min).',
+        'Let dough rise until doubled, about 60 min.',
+        'Roll into 40x30 cm rectangle. Spread butter, sprinkle cinnamon sugar.',
+        'Roll tightly from long side. Cut into 12 pieces.',
+        'Proof 30 min, bake at 180 C for 22-25 min.',
+        'Spread cream cheese icing while warm. Serve.'
+      ]
+    },
+    espresso: {
+      name: 'Double Espresso',
+      ingredients: [['Espresso Beans', '18 g'], ['Filtered Water', '9 bar, 93 C']],
+      steps: [
+        'Grind 18 g beans to a fine, consistent grind.',
+        'Distribute evenly in portafilter and tamp firmly.',
+        'Lock portafilter and start extraction.',
+        'Target 36 ml output in 25-30 seconds.',
+        'Serve in a preheated 60 ml demitasse.'
+      ]
+    },
+    cheesecake: {
+      name: 'New York Cheesecake',
+      ingredients: [
+        ['Cream Cheese', '900 g'], ['Sugar', '200 g'],
+        ['Sour Cream', '200 ml'], ['Eggs', '5 large'],
+        ['Vanilla Extract', '10 ml'], ['Graham Crust', '1 prepared']
+      ],
+      steps: [
+        'Preheat oven to 160 C. Wrap springform pan in foil for water bath.',
+        'Beat cream cheese until smooth. Add sugar gradually.',
+        'Add eggs one at a time, mixing on low after each.',
+        'Fold in sour cream and vanilla gently.',
+        'Pour over prepared crust. Place in roasting pan with 2 cm hot water.',
+        'Bake 60-70 min. Turn off oven, crack door, cool 1 hour inside.',
+        'Refrigerate at least 4 hours before slicing.'
+      ]
+    },
+    pancakes: {
+      name: 'Blueberry Pancakes',
+      ingredients: [
+        ['All-Purpose Flour', '200 g'], ['Buttermilk', '300 ml'],
+        ['Eggs', '2 large'], ['Butter (melted)', '30 g'],
+        ['Baking Powder', '10 g'], ['Blueberries', '150 g']
+      ],
+      steps: [
+        'Whisk flour, sugar, baking powder, and salt.',
+        'Combine buttermilk, eggs, and melted butter separately.',
+        'Mix wet into dry until just combined (lumps OK).',
+        'Heat griddle to medium. Pour 80 ml per pancake, add blueberries.',
+        'Cook until bubbles form (2 min), flip, cook 1-2 min more.',
+        'Stack and serve with maple syrup.'
+      ]
+    }
+  };
+
+  /* Timer Recipe Steps */
+  var timerRecipe = {
+    name: 'Butter Croissants',
+    steps: [
+      { instruction: 'Mix flour, sugar, salt, yeast, and cold milk into a shaggy dough.', duration: 600 },
+      { instruction: 'Proof the shaped croissants at 27 C with high humidity until doubled in size.', duration: 720 },
+      { instruction: 'Perform first single fold, then chill the dough.', duration: 1800 },
+      { instruction: 'Perform second single fold, then chill the dough.', duration: 1800 },
+      { instruction: 'Bake at 200 C until deeply golden brown.', duration: 1080 }
+    ]
+  };
+
+  /* Tab Switching */
+  var tabBtns = document.querySelectorAll('.tab-btn');
+  var screens = document.querySelectorAll('.screen');
+  tabBtns.forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      var target = btn.getAttribute('data-tab');
+      tabBtns.forEach(function (b) { b.classList.remove('active'); });
+      screens.forEach(function (s) { s.classList.remove('active'); });
+      btn.classList.add('active');
+      document.getElementById('screen-' + target).classList.add('active');
+    });
+  });
+
+  /* Clock */
+  function updateClock() {
+    var now = new Date();
+    document.getElementById('clock').textContent =
+      String(now.getHours()).padStart(2, '0') + ':' +
+      String(now.getMinutes()).padStart(2, '0') + ':' +
+      String(now.getSeconds()).padStart(2, '0');
+  }
+  updateClock();
+  setInterval(updateClock, 1000);
+
+  /* Elapsed Timers */
+  function formatElapsed(s) { return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); }
+  setInterval(function () {
+    document.querySelectorAll('.order-card__timer').forEach(function (el) {
+      var e = parseInt(el.getAttribute('data-elapsed'), 10) + 1;
+      el.setAttribute('data-elapsed', e);
+      el.textContent = formatElapsed(e);
+    });
+  }, 1000);
+
+  /* Update Column Counts */
+  function updateCounts() {
+    [
+      ['.kanban-col--new', 'stat-new'],
+      ['.kanban-col--prog', 'stat-prog'],
+      ['.kanban-col--ready', 'stat-ready']
+    ].forEach(function (pair) {
+      var col = document.querySelector(pair[0]);
+      if (!col) return;
+      var n = col.querySelectorAll('.order-card').length;
+      col.querySelector('.count').textContent = n;
+      var s = document.getElementById(pair[1]);
+      if (s) s.textContent = n;
+    });
+  }
+
+  /* Kanban Card Movement */
+  window.moveToProgress = function (btn) {
+    var card = btn.closest('.order-card');
+    var dest = document.querySelector('.kanban-col--prog .kanban-col__body');
+    card.querySelectorAll('.order-card__items li').forEach(function (li) {
+      var qty = li.querySelector('.item-qty');
+      var cl = li.querySelector('.item-clickable');
+      if (!cl) return;
+      var text = cl.textContent, key = cl.getAttribute('data-recipe');
+      li.innerHTML = '';
+      var chk = document.createElement('input');
+      chk.type = 'checkbox'; chk.className = 'item-check'; li.appendChild(chk);
+      li.appendChild(qty.cloneNode(true));
+      var lbl = document.createElement('span');
+      lbl.className = 'item-label item-clickable';
+      lbl.setAttribute('data-recipe', key); lbl.textContent = text;
+      li.appendChild(lbl);
+      bindRecipeClick(lbl);
+    });
+    btn.className = 'order-btn order-btn--done'; btn.textContent = 'Done';
+    btn.setAttribute('onclick', 'moveToReady(this)');
+    card.querySelector('.order-card__timer').setAttribute('data-elapsed', '0');
+    card.style.opacity = '0';
+    setTimeout(function () {
+      dest.appendChild(card);
+      card.style.transition = 'opacity .3s'; card.style.opacity = '1';
+      updateCounts();
+    }, 50);
+  };
+
+  window.moveToReady = function (btn) {
+    var card = btn.closest('.order-card');
+    var dest = document.querySelector('.kanban-col--ready .kanban-col__body');
+    card.querySelectorAll('.order-card__items li').forEach(function (li) {
+      var qty = li.querySelector('.item-qty');
+      var lbl = li.querySelector('.item-label') || li.querySelector('.item-clickable');
+      if (!lbl) return;
+      var text = lbl.textContent, key = lbl.getAttribute('data-recipe');
+      li.innerHTML = '';
+      li.appendChild(qty.cloneNode(true));
+      var sp = document.createElement('span');
+      sp.className = 'item-clickable'; sp.setAttribute('data-recipe', key);
+      sp.textContent = text; li.appendChild(sp);
+      bindRecipeClick(sp);
+    });
+    btn.className = 'order-btn order-btn--pickup'; btn.textContent = 'Picked Up';
+    btn.setAttribute('onclick', 'pickUp(this)');
+    card.querySelector('.order-card__timer').setAttribute('data-elapsed', '0');
+    card.style.opacity = '0';
+    setTimeout(function () {
+      dest.appendChild(card);
+      card.style.transition = 'opacity .3s'; card.style.opacity = '1';
+      updateCounts();
+    }, 50);
+  };
+
+  window.pickUp = function (btn) {
+    var card = btn.closest('.order-card');
+    card.style.transition = 'opacity .4s, transform .4s';
+    card.style.opacity = '0'; card.style.transform = 'scale(.9)';
+    setTimeout(function () { card.remove(); updateCounts(); }, 400);
+  };
+
+  /* Recipe Detail Overlay */
+  function openOverlay(key) {
+    var r = recipes[key];
+    if (!r) return;
+    document.getElementById('detail-title').textContent = r.name;
+    var ing = document.getElementById('detail-ingredients');
+    ing.innerHTML = '';
+    r.ingredients.forEach(function (p) {
+      var li = document.createElement('li');
+      li.innerHTML = '<span>' + p[0] + '</span><span>' + p[1] + '</span>';
+      ing.appendChild(li);
+    });
+    var st = document.getElementById('detail-steps');
+    st.innerHTML = '';
+    r.steps.forEach(function (t) {
+      var li = document.createElement('li'); li.textContent = t; st.appendChild(li);
+    });
+    document.getElementById('recipe-overlay').classList.add('visible');
+  }
+
+  window.closeOverlay = function () {
+    document.getElementById('recipe-overlay').classList.remove('visible');
+  };
+  document.getElementById('recipe-overlay').addEventListener('click', function (e) {
+    if (e.target === this) closeOverlay();
+  });
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeOverlay(); });
+
+  function bindRecipeClick(el) {
+    el.addEventListener('click', function (e) {
+      e.stopPropagation();
+      var k = el.getAttribute('data-recipe');
+      if (k) openOverlay(k);
+    });
+  }
+  document.querySelectorAll('.item-clickable').forEach(bindRecipeClick);
+
+  /* Timer Functionality */
+  var currentStep = 1, timerRunning = false, timerInterval = null;
+  var timerSeconds = timerRecipe.steps[currentStep].duration;
+
+  function formatTimer(s) {
+    return String(Math.floor(s / 60)).padStart(2, '0') + ':' + String(s % 60).padStart(2, '0');
+  }
+  function updateTimerDisplay() { document.getElementById('timer-display').textContent = formatTimer(timerSeconds); }
+  function updateTimerProgress() {
+    var step = timerRecipe.steps[currentStep];
+    var pct = ((step.duration - timerSeconds) / step.duration) * 100;
+    document.getElementById('timer-progress-fill').style.width = Math.min(pct, 100) + '%';
+  }
+  function renderTimerStep() {
+    var step = timerRecipe.steps[currentStep];
+    document.getElementById('timer-recipe').textContent = timerRecipe.name;
+    document.getElementById('timer-step-label').textContent = 'Step ' + (currentStep + 1) + ' of ' + timerRecipe.steps.length;
+    document.getElementById('timer-instruction').textContent = step.instruction;
+    timerSeconds = step.duration;
+    timerRunning = false;
+    if (timerInterval) clearInterval(timerInterval);
+    timerInterval = null;
+    var btn = document.getElementById('timer-start-btn');
+    btn.textContent = 'Start'; btn.className = 'timer-btn timer-btn--start';
+    document.getElementById('timer-display').style.color = '';
+    updateTimerDisplay(); updateTimerProgress();
+  }
+
+  window.toggleTimer = function () {
+    var btn = document.getElementById('timer-start-btn');
+    if (timerRunning) {
+      timerRunning = false; clearInterval(timerInterval); timerInterval = null;
+      btn.textContent = 'Resume'; btn.className = 'timer-btn timer-btn--start';
+    } else {
+      timerRunning = true; btn.textContent = 'Pause'; btn.className = 'timer-btn timer-btn--pause';
+      timerInterval = setInterval(function () {
+        if (timerSeconds > 0) { timerSeconds--; updateTimerDisplay(); updateTimerProgress(); }
+        else {
+          clearInterval(timerInterval); timerInterval = null; timerRunning = false;
+          btn.textContent = 'Done!'; btn.className = 'timer-btn timer-btn--start';
+          var disp = document.getElementById('timer-display');
+          disp.style.color = 'var(--ready)';
+          setTimeout(function () { disp.style.color = ''; }, 3000);
+        }
+      }, 1000);
+    }
+  };
+
+  window.resetTimer = function () {
+    timerRunning = false;
+    if (timerInterval) clearInterval(timerInterval);
+    timerInterval = null;
+    timerSeconds = timerRecipe.steps[currentStep].duration;
+    updateTimerDisplay(); updateTimerProgress();
+    var btn = document.getElementById('timer-start-btn');
+    btn.textContent = 'Start'; btn.className = 'timer-btn timer-btn--start';
+    document.getElementById('timer-display').style.color = '';
+  };
+
+  window.prevStep = function () { if (currentStep > 0) { currentStep--; renderTimerStep(); } };
+  window.nextStep = function () { if (currentStep < timerRecipe.steps.length - 1) { currentStep++; renderTimerStep(); } };
+
+  renderTimerStep();
+})();
+</script>
+</body>
+</html>

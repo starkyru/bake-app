@@ -1,1 +1,191 @@
-// Re-export models
+export interface User {
+  id: string;
+  email: string;
+  firstName: string;
+  lastName: string;
+  phone?: string;
+  isActive: boolean;
+  role: Role;
+  locationId?: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface Role {
+  id: string;
+  name: string;
+  description?: string;
+  permissions: string[];
+}
+
+export interface Order {
+  id: string;
+  orderNumber: string;
+  type: string;
+  status: string;
+  subtotal: number;
+  tax: number;
+  total: number;
+  discount: number;
+  notes?: string;
+  userId?: string;
+  locationId?: string;
+  items: OrderItem[];
+  payments: Payment[];
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface OrderItem {
+  id: string;
+  productId: string;
+  product?: Product;
+  quantity: number;
+  unitPrice: number;
+  subtotal: number;
+  notes?: string;
+}
+
+export interface Product {
+  id: string;
+  name: string;
+  sku?: string;
+  price: number;
+  costPrice: number;
+  description?: string;
+  isActive: boolean;
+  categoryId?: string;
+  category?: Category;
+  recipeId?: string;
+}
+
+export interface Category {
+  id: string;
+  name: string;
+  parentId?: string;
+  sortOrder: number;
+  isActive: boolean;
+  children?: Category[];
+}
+
+export interface Ingredient {
+  id: string;
+  name: string;
+  unit: string;
+  costPerUnit: number;
+  minStockLevel: number;
+  category?: string;
+  isActive: boolean;
+}
+
+export interface InventoryItem {
+  id: string;
+  quantity: number;
+  status: string;
+  ingredient: Ingredient;
+  ingredientId: string;
+  locationId: string;
+}
+
+export interface InventoryMovement {
+  id: string;
+  type: string;
+  quantity: number;
+  unitCost?: number;
+  notes?: string;
+  ingredientId: string;
+  fromLocationId?: string;
+  toLocationId?: string;
+  userId?: string;
+  createdAt: Date;
+}
+
+export interface Recipe {
+  id: string;
+  name: string;
+  category?: string;
+  yieldQuantity: number;
+  yieldUnit: string;
+  costPerUnit: number;
+  currentVersion: number;
+  instructions?: string;
+  productId?: string;
+  isActive: boolean;
+  ingredients: RecipeIngredient[];
+}
+
+export interface RecipeIngredient {
+  id: string;
+  ingredientId: string;
+  ingredientName?: string;
+  quantity: number;
+  unit: string;
+  costPerUnit: number;
+}
+
+export interface Location {
+  id: string;
+  name: string;
+  address?: string;
+  type: string;
+  phone?: string;
+  isActive: boolean;
+}
+
+export interface ProductionPlan {
+  id: string;
+  date: Date;
+  status: string;
+  notes?: string;
+  locationId?: string;
+  tasks: ProductionTask[];
+}
+
+export interface ProductionTask {
+  id: string;
+  plannedQuantity: number;
+  actualYield?: number;
+  wasteQuantity: number;
+  status: string;
+  scheduledStart?: Date;
+  scheduledEnd?: Date;
+  actualStart?: Date;
+  actualEnd?: Date;
+  recipeId: string;
+  recipeName?: string;
+  assigneeId?: string;
+  assigneeName?: string;
+}
+
+export interface Payment {
+  id: string;
+  amount: number;
+  method: string;
+  status: string;
+  orderId: string;
+}
+
+export interface FinanceTransaction {
+  id: string;
+  type: string;
+  amount: number;
+  category?: string;
+  description?: string;
+  referenceType?: string;
+  referenceId?: string;
+  locationId?: string;
+  createdAt: Date;
+}
+
+export interface Notification {
+  id: string;
+  type: string;
+  title: string;
+  message: string;
+  priority: string;
+  isRead: boolean;
+  referenceType?: string;
+  referenceId?: string;
+  userId: string;
+  createdAt: Date;
+}

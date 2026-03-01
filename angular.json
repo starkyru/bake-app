@@ -251,6 +251,7 @@
   },
   "cli": {
     "defaultCollection": "@schematics/angular",
-    "packageManager": "npm"
+    "packageManager": "npm",
+    "analytics": false
   }
 }

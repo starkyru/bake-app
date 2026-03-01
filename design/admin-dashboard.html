@@ -1,0 +1,1959 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bake App — Admin Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons+Outlined" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --primary: #8B4513;
+    --primary-light: #A0522D;
+    --primary-dark: #6B3410;
+    --secondary: #D4A574;
+    --secondary-light: #E8C9A0;
+    --accent: #2E7D32;
+    --accent-light: #4CAF50;
+    --warn: #C62828;
+    --warn-light: #EF5350;
+    --bg: #FAF3E8;
+    --surface: #FFFFFF;
+    --text: #1A1A1A;
+    --text-secondary: #5F6368;
+    --text-muted: #9AA0A6;
+    --border: #E0D6CA;
+    --border-light: #F0E8DC;
+    --shadow-sm: 0 1px 3px rgba(0,0,0,0.08);
+    --shadow-md: 0 4px 12px rgba(0,0,0,0.1);
+    --shadow-lg: 0 8px 24px rgba(0,0,0,0.12);
+    --radius-sm: 6px;
+    --radius-md: 8px;
+    --radius-lg: 12px;
+    --sidebar-w: 240px;
+    --header-h: 64px;
+  }
+
+  body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.5;
+    min-height: 100vh;
+    display: flex;
+  }
+
+  /* Sidebar */
+  .sidebar {
+    width: var(--sidebar-w);
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    position: fixed;
+    top: 0; left: 0; bottom: 0;
+    display: flex;
+    flex-direction: column;
+    z-index: 100;
+    overflow-y: auto;
+  }
+
+  .sidebar-logo {
+    padding: 20px 20px 16px;
+    border-bottom: 1px solid var(--border-light);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .logo-icon {
+    width: 40px; height: 40px;
+    background: var(--primary);
+    border-radius: var(--radius-md);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-size: 20px;
+  }
+
+  .logo-text { font-weight: 700; font-size: 18px; color: var(--primary); }
+  .logo-sub { font-size: 11px; color: var(--text-muted); font-weight: 400; }
+
+  .sidebar-nav { padding: 12px 8px; flex: 1; }
+
+  .nav-label {
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--text-muted);
+    padding: 16px 12px 6px;
+  }
+
+  .nav-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 12px;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text-secondary);
+    transition: all 0.15s ease;
+    user-select: none;
+  }
+
+  .nav-item:hover { background: var(--border-light); color: var(--text); }
+
+  .nav-item.active {
+    background: #8B45131A;
+    color: var(--primary);
+    font-weight: 600;
+  }
+
+  .nav-item .material-icons-outlined { font-size: 20px; }
+
+  .sidebar-footer {
+    padding: 16px;
+    border-top: 1px solid var(--border-light);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .avatar {
+    width: 34px; height: 34px;
+    border-radius: 50%;
+    background: var(--secondary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--primary-dark);
+    font-weight: 600;
+    font-size: 13px;
+  }
+
+  .avatar-info { flex: 1; }
+  .avatar-name { font-size: 13px; font-weight: 600; }
+  .avatar-role { font-size: 11px; color: var(--text-muted); }
+
+  /* Main content */
+  .main { margin-left: var(--sidebar-w); flex: 1; min-height: 100vh; }
+
+  .page-header {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 20px 32px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    z-index: 50;
+  }
+
+  .page-title { font-size: 22px; font-weight: 700; }
+  .page-subtitle { font-size: 13px; color: var(--text-muted); margin-top: 2px; }
+
+  .page-content { padding: 24px 32px; }
+
+  /* Buttons */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 9px 18px;
+    border-radius: var(--radius-sm);
+    font-size: 13px;
+    font-weight: 600;
+    font-family: inherit;
+    border: none;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    white-space: nowrap;
+  }
+
+  .btn-primary { background: var(--primary); color: #fff; }
+  .btn-primary:hover { background: var(--primary-light); }
+  .btn-secondary { background: var(--border-light); color: var(--text); }
+  .btn-secondary:hover { background: var(--border); }
+  .btn-accent { background: var(--accent); color: #fff; }
+  .btn-accent:hover { background: #388E3C; }
+  .btn-danger { background: var(--warn); color: #fff; }
+  .btn-danger:hover { background: var(--warn-light); }
+  .btn-ghost { background: transparent; color: var(--text-secondary); }
+  .btn-ghost:hover { background: var(--border-light); }
+  .btn-sm { padding: 6px 12px; font-size: 12px; }
+  .btn .material-icons-outlined { font-size: 16px; }
+
+  /* Toolbar */
+  .toolbar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+  }
+
+  .search-box {
+    position: relative;
+    flex: 1;
+    max-width: 360px;
+  }
+
+  .search-box input {
+    width: 100%;
+    padding: 9px 12px 9px 38px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    font-size: 13px;
+    font-family: inherit;
+    background: var(--surface);
+    transition: border-color 0.15s;
+  }
+
+  .search-box input:focus { outline: none; border-color: var(--primary); }
+
+  .search-box .material-icons-outlined {
+    position: absolute;
+    left: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 18px;
+    color: var(--text-muted);
+  }
+
+  .filter-select {
+    padding: 9px 32px 9px 12px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    font-size: 13px;
+    font-family: inherit;
+    background: var(--surface) url("data:image/svg+xml,%3Csvg width='10' height='6' viewBox='0 0 10 6' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1L5 5L9 1' stroke='%235F6368' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") no-repeat right 10px center;
+    appearance: none;
+    cursor: pointer;
+  }
+
+  .filter-select:focus { outline: none; border-color: var(--primary); }
+
+  .toolbar-spacer { flex: 1; }
+
+  /* Tables */
+  .data-table {
+    width: 100%;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+  }
+
+  .data-table table { width: 100%; border-collapse: collapse; }
+
+  .data-table th {
+    text-align: left;
+    padding: 12px 16px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--text-muted);
+    background: #FAF8F5;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .data-table td {
+    padding: 12px 16px;
+    font-size: 13px;
+    border-bottom: 1px solid var(--border-light);
+    vertical-align: middle;
+  }
+
+  .data-table tr:last-child td { border-bottom: none; }
+  .data-table tr:hover td { background: #FAF8F5; }
+
+  .mono { font-family: 'JetBrains Mono', monospace; font-size: 13px; }
+
+  /* Badges */
+  .badge {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+  }
+
+  .badge-owner { background: #8B45131A; color: var(--primary); }
+  .badge-manager { background: #1565C01A; color: #1565C0; }
+  .badge-chef { background: #2E7D321A; color: var(--accent); }
+  .badge-baker { background: #E653001A; color: #E65300; }
+  .badge-cashier { background: #6A1B9A1A; color: #6A1B9A; }
+  .badge-barista { background: #00838F1A; color: #00838F; }
+  .badge-accountant { background: #4E342E1A; color: #4E342E; }
+  .badge-warehouse { background: #5465681A; color: #546568; }
+  .badge-active { background: #2E7D321A; color: var(--accent); }
+  .badge-inactive { background: #C628281A; color: var(--warn); }
+  .badge-coffee { background: #4E342E1A; color: #4E342E; }
+  .badge-pastries { background: #E653001A; color: #E65300; }
+  .badge-bread { background: #D4A5741A; color: #8B6914; }
+  .badge-sandwiches { background: #2E7D321A; color: var(--accent); }
+  .badge-drinks { background: #1565C01A; color: #1565C0; }
+
+  /* Toggle switch */
+  .toggle {
+    position: relative;
+    width: 40px; height: 22px;
+    display: inline-block;
+    cursor: pointer;
+  }
+
+  .toggle input { display: none; }
+
+  .toggle-slider {
+    position: absolute;
+    inset: 0;
+    background: #CCC;
+    border-radius: 22px;
+    transition: 0.2s;
+  }
+
+  .toggle-slider::before {
+    content: '';
+    position: absolute;
+    width: 16px; height: 16px;
+    left: 3px; bottom: 3px;
+    background: #fff;
+    border-radius: 50%;
+    transition: 0.2s;
+  }
+
+  .toggle input:checked + .toggle-slider { background: var(--accent); }
+  .toggle input:checked + .toggle-slider::before { transform: translateX(18px); }
+
+  /* Action buttons in table */
+  .action-btns { display: flex; gap: 4px; }
+
+  .icon-btn {
+    width: 32px; height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    border-radius: var(--radius-sm);
+    background: transparent;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .icon-btn:hover { background: var(--border-light); color: var(--text); }
+  .icon-btn:hover.danger { color: var(--warn); }
+  .icon-btn .material-icons-outlined { font-size: 18px; }
+
+  /* Overlay / Modal */
+  .overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.4);
+    z-index: 200;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .overlay.open { display: flex; }
+
+  .modal {
+    background: var(--surface);
+    border-radius: var(--radius-lg);
+    width: 560px;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: var(--shadow-lg);
+  }
+
+  .modal-header {
+    padding: 20px 24px;
+    border-bottom: 1px solid var(--border-light);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .modal-header h3 { font-size: 17px; font-weight: 700; }
+  .modal-body { padding: 24px; }
+  .modal-footer {
+    padding: 16px 24px;
+    border-top: 1px solid var(--border-light);
+    display: flex;
+    gap: 8px;
+    justify-content: flex-end;
+  }
+
+  /* Form fields */
+  .form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+
+  .form-group { display: flex; flex-direction: column; gap: 5px; }
+  .form-group.full { grid-column: 1 / -1; }
+
+  .form-label {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-secondary);
+  }
+
+  .form-input, .form-select, .form-textarea {
+    padding: 9px 12px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    font-size: 13px;
+    font-family: inherit;
+    background: var(--surface);
+    transition: border-color 0.15s;
+  }
+
+  .form-input:focus, .form-select:focus, .form-textarea:focus {
+    outline: none;
+    border-color: var(--primary);
+  }
+
+  .form-textarea { resize: vertical; min-height: 100px; }
+
+  /* Section panels */
+  .section { display: none; }
+  .section.active { display: block; }
+
+  /* Category tree */
+  .tree { padding: 0; list-style: none; }
+  .tree .tree { padding-left: 24px; }
+
+  .tree-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 12px;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: background 0.12s;
+    font-size: 14px;
+  }
+
+  .tree-item:hover { background: var(--border-light); }
+  .tree-item .material-icons-outlined { font-size: 18px; color: var(--text-muted); }
+  .tree-item .drag-handle { cursor: grab; color: var(--text-muted); }
+  .tree-item .tree-label { flex: 1; font-weight: 500; }
+  .tree-item .tree-count {
+    font-size: 11px;
+    color: var(--text-muted);
+    background: var(--border-light);
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  .tree-toggle { cursor: pointer; user-select: none; }
+  .tree-toggle .material-icons-outlined { transition: transform 0.2s; font-size: 18px; }
+  .tree-toggle.collapsed .material-icons-outlined { transform: rotate(-90deg); }
+
+  /* Accordion */
+  .accordion { display: flex; flex-direction: column; gap: 8px; }
+
+  .accordion-item {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+  }
+
+  .accordion-header {
+    padding: 16px 20px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    cursor: pointer;
+    user-select: none;
+    font-weight: 600;
+    font-size: 14px;
+    transition: background 0.12s;
+  }
+
+  .accordion-header:hover { background: #FAF8F5; }
+
+  .accordion-header .material-icons-outlined:last-child {
+    margin-left: auto;
+    transition: transform 0.2s;
+    font-size: 18px;
+    color: var(--text-muted);
+  }
+
+  .accordion-item.open .accordion-header .material-icons-outlined:last-child {
+    transform: rotate(180deg);
+  }
+
+  .accordion-body {
+    display: none;
+    padding: 0 20px 20px;
+  }
+
+  .accordion-item.open .accordion-body { display: block; }
+
+  /* Schedule grid */
+  .schedule-grid { display: flex; flex-direction: column; gap: 8px; }
+
+  .schedule-row {
+    display: grid;
+    grid-template-columns: 100px 1fr 1fr auto;
+    gap: 12px;
+    align-items: center;
+    padding: 8px 0;
+  }
+
+  .schedule-day { font-size: 13px; font-weight: 600; }
+
+  /* Recipe editor */
+  .recipe-layout {
+    display: grid;
+    grid-template-columns: 1fr 280px;
+    gap: 24px;
+  }
+
+  .recipe-main { display: flex; flex-direction: column; gap: 20px; }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+  }
+
+  .card-header {
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border-light);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .card-header h4 { font-size: 14px; font-weight: 700; }
+  .card-body { padding: 20px; }
+
+  .cost-summary {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 12px;
+    margin-top: 16px;
+  }
+
+  .cost-item {
+    background: #FAF8F5;
+    padding: 14px;
+    border-radius: var(--radius-md);
+    text-align: center;
+  }
+
+  .cost-item-label { font-size: 11px; color: var(--text-muted); font-weight: 500; }
+  .cost-item-value {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 18px;
+    font-weight: 600;
+    margin-top: 4px;
+    color: var(--primary);
+  }
+
+  .version-list { display: flex; flex-direction: column; gap: 8px; }
+
+  .version-item {
+    padding: 12px;
+    border: 1px solid var(--border-light);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: border-color 0.12s;
+  }
+
+  .version-item:hover { border-color: var(--primary); }
+  .version-item.current { border-color: var(--primary); background: #8B45130A; }
+  .version-badge { font-size: 12px; font-weight: 700; color: var(--primary); }
+  .version-date { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+  .version-author { font-size: 11px; color: var(--text-secondary); margin-top: 2px; }
+
+  /* Table footer */
+  .table-footer {
+    padding: 12px 16px;
+    border-top: 1px solid var(--border-light);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 12px;
+    color: var(--text-muted);
+  }
+
+  /* Stat cards row */
+  .stats-row {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+    margin-bottom: 20px;
+  }
+
+  .stat-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 18px 20px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+
+  .stat-icon {
+    width: 42px; height: 42px;
+    border-radius: var(--radius-md);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+  }
+
+  .stat-icon.users { background: #1565C01A; color: #1565C0; }
+  .stat-icon.products { background: #E653001A; color: #E65300; }
+  .stat-icon.recipes { background: #2E7D321A; color: #2E7D32; }
+  .stat-icon.locations { background: #6A1B9A1A; color: #6A1B9A; }
+
+  .stat-value {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 22px;
+    font-weight: 700;
+  }
+
+  .stat-label { font-size: 12px; color: var(--text-muted); }
+
+  /* Location type badges */
+  .badge-production { background: #E653001A; color: #E65300; }
+  .badge-retail { background: #1565C01A; color: #1565C0; }
+  .badge-warehouse { background: #5465681A; color: #546568; }
+
+  /* Category form panel */
+  .category-panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 20px;
+    margin-bottom: 20px;
+  }
+
+  .category-panel h4 { font-size: 14px; font-weight: 700; margin-bottom: 16px; }
+
+  /* Margin indicator */
+  .margin-good { color: var(--accent); font-weight: 600; }
+  .margin-ok { color: #E65300; font-weight: 600; }
+  .margin-low { color: var(--warn); font-weight: 600; }
+
+  /* Ingredient autocomplete */
+  .autocomplete-wrapper { position: relative; }
+  .autocomplete-list {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    box-shadow: var(--shadow-md);
+    z-index: 10;
+    max-height: 160px;
+    overflow-y: auto;
+    display: none;
+  }
+
+  .autocomplete-list.show { display: block; }
+
+  .autocomplete-option {
+    padding: 8px 12px;
+    font-size: 13px;
+    cursor: pointer;
+  }
+
+  .autocomplete-option:hover { background: var(--border-light); }
+
+  /* Wide modal */
+  .modal.wide { width: 700px; }
+</style>
+</head>
+<body>
+
+<!-- Sidebar -->
+<aside class="sidebar">
+  <div class="sidebar-logo">
+    <div class="logo-icon"><span class="material-icons-outlined">bakery_dining</span></div>
+    <div>
+      <div class="logo-text">BakeApp</div>
+      <div class="logo-sub">Admin Dashboard</div>
+    </div>
+  </div>
+
+  <nav class="sidebar-nav">
+    <div class="nav-label">Management</div>
+    <div class="nav-item active" data-section="users" onclick="switchSection('users')">
+      <span class="material-icons-outlined">people</span> Users
+    </div>
+    <div class="nav-item" data-section="products" onclick="switchSection('products')">
+      <span class="material-icons-outlined">inventory_2</span> Products
+    </div>
+    <div class="nav-item" data-section="recipes" onclick="switchSection('recipes')">
+      <span class="material-icons-outlined">menu_book</span> Recipes
+    </div>
+    <div class="nav-item" data-section="categories" onclick="switchSection('categories')">
+      <span class="material-icons-outlined">account_tree</span> Categories
+    </div>
+
+    <div class="nav-label">Organization</div>
+    <div class="nav-item" data-section="locations" onclick="switchSection('locations')">
+      <span class="material-icons-outlined">store</span> Locations
+    </div>
+    <div class="nav-item" data-section="settings" onclick="switchSection('settings')">
+      <span class="material-icons-outlined">settings</span> Settings
+    </div>
+  </nav>
+
+  <div class="sidebar-footer">
+    <div class="avatar">AK</div>
+    <div class="avatar-info">
+      <div class="avatar-name">Aidar Kozhanov</div>
+      <div class="avatar-role">Owner</div>
+    </div>
+    <button class="icon-btn"><span class="material-icons-outlined">logout</span></button>
+  </div>
+</aside>
+
+<!-- Main Content -->
+<div class="main">
+
+  <!-- ====== USERS SECTION ====== -->
+  <div class="section active" id="section-users">
+    <div class="page-header">
+      <div>
+        <div class="page-title">User Management</div>
+        <div class="page-subtitle">Manage staff accounts and permissions</div>
+      </div>
+      <button class="btn btn-primary" onclick="openModal('user-modal')">
+        <span class="material-icons-outlined">person_add</span> Add User
+      </button>
+    </div>
+    <div class="page-content">
+      <div class="stats-row">
+        <div class="stat-card">
+          <div class="stat-icon users"><span class="material-icons-outlined">people</span></div>
+          <div><div class="stat-value">8</div><div class="stat-label">Total Users</div></div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon" style="background:#2E7D321A;color:#2E7D32"><span class="material-icons-outlined">check_circle</span></div>
+          <div><div class="stat-value">7</div><div class="stat-label">Active</div></div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon" style="background:#C628281A;color:#C62828"><span class="material-icons-outlined">pause_circle</span></div>
+          <div><div class="stat-value">1</div><div class="stat-label">Inactive</div></div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon" style="background:#6A1B9A1A;color:#6A1B9A"><span class="material-icons-outlined">shield</span></div>
+          <div><div class="stat-value">5</div><div class="stat-label">Roles in Use</div></div>
+        </div>
+      </div>
+
+      <div class="toolbar">
+        <div class="search-box">
+          <span class="material-icons-outlined">search</span>
+          <input type="text" placeholder="Search users by name or email..." id="user-search" oninput="filterUsers()">
+        </div>
+        <select class="filter-select" id="user-role-filter" onchange="filterUsers()">
+          <option value="">All Roles</option>
+          <option value="Owner">Owner</option>
+          <option value="Manager">Manager</option>
+          <option value="Chef">Chef</option>
+          <option value="Baker">Baker</option>
+          <option value="Cashier">Cashier</option>
+          <option value="Barista">Barista</option>
+          <option value="Accountant">Accountant</option>
+          <option value="Warehouse">Warehouse</option>
+        </select>
+      </div>
+
+      <div class="data-table">
+        <table>
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Email</th>
+              <th>Role</th>
+              <th>Location</th>
+              <th>Status</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="users-tbody"></tbody>
+        </table>
+        <div class="table-footer">
+          <span>Showing <strong id="user-count">8</strong> of 8 users</span>
+          <span>Page 1 of 1</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ====== PRODUCTS SECTION ====== -->
+  <div class="section" id="section-products">
+    <div class="page-header">
+      <div>
+        <div class="page-title">Product Management</div>
+        <div class="page-subtitle">Manage menu items and pricing</div>
+      </div>
+      <button class="btn btn-primary" onclick="openModal('product-modal')">
+        <span class="material-icons-outlined">add_circle</span> Add Product
+      </button>
+    </div>
+    <div class="page-content">
+      <div class="stats-row">
+        <div class="stat-card">
+          <div class="stat-icon products"><span class="material-icons-outlined">inventory_2</span></div>
+          <div><div class="stat-value">10</div><div class="stat-label">Total Products</div></div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon" style="background:#2E7D321A;color:#2E7D32"><span class="material-icons-outlined">trending_up</span></div>
+          <div><div class="stat-value mono">62%</div><div class="stat-label">Avg Margin</div></div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon" style="background:#E653001A;color:#E65300"><span class="material-icons-outlined">category</span></div>
+          <div><div class="stat-value">5</div><div class="stat-label">Categories</div></div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon" style="background:#1565C01A;color:#1565C0"><span class="material-icons-outlined">check_circle</span></div>
+          <div><div class="stat-value">9</div><div class="stat-label">Active</div></div>
+        </div>
+      </div>
+
+      <div class="toolbar">
+        <div class="search-box">
+          <span class="material-icons-outlined">search</span>
+          <input type="text" placeholder="Search products..." id="product-search" oninput="filterProducts()">
+        </div>
+        <select class="filter-select" id="product-category-filter" onchange="filterProducts()">
+          <option value="">All Categories</option>
+          <option value="Coffee">Coffee</option>
+          <option value="Pastries">Pastries</option>
+          <option value="Bread">Bread</option>
+          <option value="Sandwiches">Sandwiches</option>
+          <option value="Drinks">Drinks</option>
+        </select>
+      </div>
+
+      <div class="data-table">
+        <table>
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>SKU</th>
+              <th>Category</th>
+              <th>Price</th>
+              <th>Cost Price</th>
+              <th>Margin</th>
+              <th>Status</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="products-tbody"></tbody>
+        </table>
+        <div class="table-footer">
+          <span>Showing <strong id="product-count">10</strong> of 10 products</span>
+          <span>Page 1 of 1</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ====== RECIPES SECTION ====== -->
+  <div class="section" id="section-recipes">
+    <div class="page-header">
+      <div>
+        <div class="page-title">Recipe Editor</div>
+        <div class="page-subtitle">Croissant Classic &mdash; Editing</div>
+      </div>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-secondary"><span class="material-icons-outlined">arrow_back</span> All Recipes</button>
+        <button class="btn btn-primary"><span class="material-icons-outlined">save</span> Save Recipe</button>
+      </div>
+    </div>
+    <div class="page-content">
+      <div class="recipe-layout">
+        <div class="recipe-main">
+          <!-- Recipe Header Card -->
+          <div class="card">
+            <div class="card-body">
+              <div class="form-grid">
+                <div class="form-group">
+                  <label class="form-label">Recipe Name</label>
+                  <input class="form-input" type="text" value="Croissant Classic">
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Category</label>
+                  <select class="form-select">
+                    <option>Pastries</option>
+                    <option>Bread</option>
+                    <option>Coffee</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Yield Quantity</label>
+                  <input class="form-input mono" type="number" value="12">
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Yield Unit</label>
+                  <select class="form-select">
+                    <option>pcs</option>
+                    <option>kg</option>
+                    <option>g</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Ingredients Card -->
+          <div class="card">
+            <div class="card-header">
+              <h4>Ingredients</h4>
+              <button class="btn btn-sm btn-secondary" onclick="addIngredientRow()">
+                <span class="material-icons-outlined">add</span> Add Row
+              </button>
+            </div>
+            <table style="width:100%;border-collapse:collapse;">
+              <thead>
+                <tr>
+                  <th style="text-align:left;padding:10px 16px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);background:#FAF8F5;border-bottom:1px solid var(--border);">Ingredient</th>
+                  <th style="text-align:left;padding:10px 16px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);background:#FAF8F5;border-bottom:1px solid var(--border);width:90px">Qty</th>
+                  <th style="text-align:left;padding:10px 16px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);background:#FAF8F5;border-bottom:1px solid var(--border);width:80px">Unit</th>
+                  <th style="text-align:left;padding:10px 16px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);background:#FAF8F5;border-bottom:1px solid var(--border);width:110px">Cost/Unit</th>
+                  <th style="text-align:left;padding:10px 16px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);background:#FAF8F5;border-bottom:1px solid var(--border);width:110px">Total</th>
+                  <th style="width:40px;background:#FAF8F5;border-bottom:1px solid var(--border);"></th>
+                </tr>
+              </thead>
+              <tbody id="ingredients-tbody"></tbody>
+            </table>
+            <div style="padding:16px 20px;">
+              <div class="cost-summary">
+                <div class="cost-item">
+                  <div class="cost-item-label">Total Ingredient Cost</div>
+                  <div class="cost-item-value" id="total-cost">3 480 &#8376;</div>
+                </div>
+                <div class="cost-item">
+                  <div class="cost-item-label">Cost per Unit (x12)</div>
+                  <div class="cost-item-value" id="cost-per-unit">290 &#8376;</div>
+                </div>
+                <div class="cost-item">
+                  <div class="cost-item-label">Suggested Price (3x)</div>
+                  <div class="cost-item-value" id="suggested-price">870 &#8376;</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Instructions Card -->
+          <div class="card">
+            <div class="card-header">
+              <h4>Instructions</h4>
+            </div>
+            <div class="card-body">
+              <textarea class="form-textarea" style="min-height:200px;font-size:13px;line-height:1.7">1. Combine flour, sugar, and salt in a large mixing bowl.
+2. Cut cold butter into small cubes and incorporate into dry ingredients.
+3. Dissolve yeast in warm milk (35-38C) and add to the mixture.
+4. Knead dough for 8-10 minutes until smooth and elastic.
+5. Wrap dough in plastic and refrigerate for 2 hours.
+6. Roll out dough and fold three times (lamination process).
+7. Refrigerate for 30 minutes between each fold.
+8. Roll final dough to 5mm thickness and cut into triangles.
+9. Roll each triangle from base to tip to form croissant shape.
+10. Proof at 27C for 90 minutes until doubled in size.
+11. Brush with egg wash.
+12. Bake at 200C for 14-16 minutes until golden brown.</textarea>
+            </div>
+          </div>
+        </div>
+
+        <!-- Version History Sidebar -->
+        <div>
+          <div class="card">
+            <div class="card-header">
+              <h4>Version History</h4>
+            </div>
+            <div class="card-body">
+              <div class="version-list">
+                <div class="version-item current">
+                  <div style="display:flex;align-items:center;gap:8px">
+                    <div class="version-badge">v3.2</div>
+                    <span class="badge badge-active" style="font-size:10px">Current</span>
+                  </div>
+                  <div class="version-date">Mar 1, 2026 &mdash; 10:30</div>
+                  <div class="version-author">Aidar Kozhanov</div>
+                </div>
+                <div class="version-item">
+                  <div class="version-badge">v3.1</div>
+                  <div class="version-date">Feb 25, 2026 &mdash; 14:15</div>
+                  <div class="version-author">Marat Suleimenov</div>
+                </div>
+                <div class="version-item">
+                  <div class="version-badge">v3.0</div>
+                  <div class="version-date">Feb 18, 2026 &mdash; 09:00</div>
+                  <div class="version-author">Aidar Kozhanov</div>
+                </div>
+                <div class="version-item">
+                  <div class="version-badge">v2.1</div>
+                  <div class="version-date">Jan 30, 2026 &mdash; 16:45</div>
+                  <div class="version-author">Dana Ospanova</div>
+                </div>
+                <div class="version-item">
+                  <div class="version-badge">v2.0</div>
+                  <div class="version-date">Jan 12, 2026 &mdash; 11:20</div>
+                  <div class="version-author">Aidar Kozhanov</div>
+                </div>
+                <div class="version-item">
+                  <div class="version-badge">v1.0</div>
+                  <div class="version-date">Dec 5, 2025 &mdash; 08:00</div>
+                  <div class="version-author">Marat Suleimenov</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ====== CATEGORIES SECTION ====== -->
+  <div class="section" id="section-categories">
+    <div class="page-header">
+      <div>
+        <div class="page-title">Category Management</div>
+        <div class="page-subtitle">Organize products with hierarchical categories</div>
+      </div>
+      <button class="btn btn-primary" onclick="openModal('category-modal')">
+        <span class="material-icons-outlined">create_new_folder</span> Add Category
+      </button>
+    </div>
+    <div class="page-content">
+      <div style="display:grid;grid-template-columns:1fr 340px;gap:24px;">
+        <div class="card">
+          <div class="card-header">
+            <h4>Category Tree</h4>
+          </div>
+          <div class="card-body" style="padding:12px 16px;">
+            <ul class="tree" id="category-tree"></ul>
+          </div>
+        </div>
+
+        <div>
+          <div class="category-panel">
+            <h4>Add Category</h4>
+            <div style="display:flex;flex-direction:column;gap:14px;">
+              <div class="form-group">
+                <label class="form-label">Name</label>
+                <input class="form-input" type="text" placeholder="Category name">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Parent Category</label>
+                <select class="form-select">
+                  <option value="">None (top-level)</option>
+                  <option>Beverages</option>
+                  <option>&nbsp;&nbsp;Coffee</option>
+                  <option>&nbsp;&nbsp;Hot Drinks</option>
+                  <option>Food</option>
+                  <option>&nbsp;&nbsp;Pastries</option>
+                  <option>&nbsp;&nbsp;Bread</option>
+                  <option>&nbsp;&nbsp;Sandwiches</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Sort Order</label>
+                <input class="form-input mono" type="number" value="0">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Icon</label>
+                <select class="form-select">
+                  <option>local_cafe</option>
+                  <option>bakery_dining</option>
+                  <option>restaurant</option>
+                  <option>lunch_dining</option>
+                  <option>local_bar</option>
+                  <option>emoji_food_beverage</option>
+                </select>
+              </div>
+              <button class="btn btn-primary" style="align-self:flex-start">
+                <span class="material-icons-outlined">add</span> Create Category
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ====== SETTINGS SECTION ====== -->
+  <div class="section" id="section-settings">
+    <div class="page-header">
+      <div>
+        <div class="page-title">Settings</div>
+        <div class="page-subtitle">Configure your bakery platform</div>
+      </div>
+      <button class="btn btn-primary"><span class="material-icons-outlined">save</span> Save Changes</button>
+    </div>
+    <div class="page-content">
+      <div class="accordion">
+        <!-- General -->
+        <div class="accordion-item open">
+          <div class="accordion-header" onclick="toggleAccordion(this)">
+            <span class="material-icons-outlined">storefront</span>
+            General Information
+            <span class="material-icons-outlined">expand_more</span>
+          </div>
+          <div class="accordion-body">
+            <div class="form-grid" style="margin-top:4px">
+              <div class="form-group">
+                <label class="form-label">Bakery Name</label>
+                <input class="form-input" type="text" value="Sweet Bake Almaty">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Phone</label>
+                <input class="form-input" type="text" value="+7 (727) 312-45-67">
+              </div>
+              <div class="form-group full">
+                <label class="form-label">Address</label>
+                <input class="form-input" type="text" value="ul. Abay 52, Almaty, Kazakhstan">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Email</label>
+                <input class="form-input" type="email" value="info@sweetbake.kz">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Timezone</label>
+                <select class="form-select">
+                  <option>Asia/Almaty (UTC+6)</option>
+                  <option>Asia/Aqtau (UTC+5)</option>
+                </select>
+              </div>
+              <div class="form-group full">
+                <label class="form-label">Logo</label>
+                <div style="border:2px dashed var(--border);border-radius:var(--radius-md);padding:24px;text-align:center;color:var(--text-muted);cursor:pointer;">
+                  <span class="material-icons-outlined" style="font-size:32px;display:block;margin-bottom:8px;">cloud_upload</span>
+                  <div style="font-size:13px;">Click to upload or drag &amp; drop</div>
+                  <div style="font-size:11px;margin-top:4px;">PNG, JPG up to 2MB</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tax -->
+        <div class="accordion-item">
+          <div class="accordion-header" onclick="toggleAccordion(this)">
+            <span class="material-icons-outlined">receipt_long</span>
+            Tax Configuration
+            <span class="material-icons-outlined">expand_more</span>
+          </div>
+          <div class="accordion-body">
+            <div class="form-grid" style="margin-top:4px">
+              <div class="form-group">
+                <label class="form-label">Tax Name</label>
+                <input class="form-input" type="text" value="VAT">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Tax Rate (%)</label>
+                <input class="form-input mono" type="number" value="12">
+              </div>
+              <div class="form-group full" style="flex-direction:row;align-items:center;gap:12px;">
+                <label class="toggle">
+                  <input type="checkbox" checked>
+                  <span class="toggle-slider"></span>
+                </label>
+                <span style="font-size:13px;font-weight:500;">Tax included in displayed prices</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- POS Settings -->
+        <div class="accordion-item">
+          <div class="accordion-header" onclick="toggleAccordion(this)">
+            <span class="material-icons-outlined">point_of_sale</span>
+            POS Settings
+            <span class="material-icons-outlined">expand_more</span>
+          </div>
+          <div class="accordion-body">
+            <div class="form-grid" style="margin-top:4px">
+              <div class="form-group full">
+                <label class="form-label">Receipt Header Text</label>
+                <textarea class="form-textarea" style="min-height:70px">Sweet Bake Almaty
+ul. Abay 52 | +7 (727) 312-45-67
+Thank you for your purchase!</textarea>
+              </div>
+              <div class="form-group" style="flex-direction:row;align-items:center;gap:12px;">
+                <label class="toggle">
+                  <input type="checkbox" checked>
+                  <span class="toggle-slider"></span>
+                </label>
+                <span style="font-size:13px;font-weight:500;">Auto-print receipts</span>
+              </div>
+              <div class="form-group" style="flex-direction:row;align-items:center;gap:12px;">
+                <label class="toggle">
+                  <input type="checkbox" checked>
+                  <span class="toggle-slider"></span>
+                </label>
+                <span style="font-size:13px;font-weight:500;">Allow discounts</span>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Max Discount (%)</label>
+                <input class="form-input mono" type="number" value="20">
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Working Hours -->
+        <div class="accordion-item">
+          <div class="accordion-header" onclick="toggleAccordion(this)">
+            <span class="material-icons-outlined">schedule</span>
+            Working Hours
+            <span class="material-icons-outlined">expand_more</span>
+          </div>
+          <div class="accordion-body">
+            <div class="schedule-grid" style="margin-top:4px" id="schedule-grid"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ====== LOCATIONS SECTION ====== -->
+  <div class="section" id="section-locations">
+    <div class="page-header">
+      <div>
+        <div class="page-title">Locations</div>
+        <div class="page-subtitle">Manage bakery branches and facilities</div>
+      </div>
+      <button class="btn btn-primary" onclick="openModal('location-modal')">
+        <span class="material-icons-outlined">add_business</span> Add Location
+      </button>
+    </div>
+    <div class="page-content">
+      <div class="stats-row">
+        <div class="stat-card">
+          <div class="stat-icon locations"><span class="material-icons-outlined">store</span></div>
+          <div><div class="stat-value">5</div><div class="stat-label">Total Locations</div></div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon" style="background:#1565C01A;color:#1565C0"><span class="material-icons-outlined">storefront</span></div>
+          <div><div class="stat-value">3</div><div class="stat-label">Retail Outlets</div></div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon" style="background:#E653001A;color:#E65300"><span class="material-icons-outlined">precision_manufacturing</span></div>
+          <div><div class="stat-value">1</div><div class="stat-label">Production</div></div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon" style="background:#5465681A;color:#546568"><span class="material-icons-outlined">warehouse</span></div>
+          <div><div class="stat-value">1</div><div class="stat-label">Warehouse</div></div>
+        </div>
+      </div>
+
+      <div class="toolbar">
+        <div class="search-box">
+          <span class="material-icons-outlined">search</span>
+          <input type="text" placeholder="Search locations...">
+        </div>
+      </div>
+
+      <div class="data-table">
+        <table>
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Address</th>
+              <th>Type</th>
+              <th>Phone</th>
+              <th>Manager</th>
+              <th>Status</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="locations-tbody"></tbody>
+        </table>
+        <div class="table-footer">
+          <span>Showing <strong>5</strong> of 5 locations</span>
+          <span>Page 1 of 1</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ====== MODALS ====== -->
+
+<!-- Add User Modal -->
+<div class="overlay" id="user-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>Add New User</h3>
+      <button class="icon-btn" onclick="closeModal('user-modal')"><span class="material-icons-outlined">close</span></button>
+    </div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="form-group">
+          <label class="form-label">First Name</label>
+          <input class="form-input" type="text" placeholder="Enter first name">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Last Name</label>
+          <input class="form-input" type="text" placeholder="Enter last name">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Email</label>
+          <input class="form-input" type="email" placeholder="user@sweetbake.kz">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Phone</label>
+          <input class="form-input" type="tel" placeholder="+7 (7XX) XXX-XX-XX">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Role</label>
+          <select class="form-select">
+            <option value="">Select role...</option>
+            <option>Owner</option>
+            <option>Manager</option>
+            <option>Chef</option>
+            <option>Baker</option>
+            <option>Cashier</option>
+            <option>Barista</option>
+            <option>Accountant</option>
+            <option>Warehouse</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Location</label>
+          <select class="form-select">
+            <option value="">Select location...</option>
+            <option>Main Bakery - Abay</option>
+            <option>Branch - Dostyk Plaza</option>
+            <option>Branch - Mega Center</option>
+            <option>Production Facility</option>
+            <option>Central Warehouse</option>
+          </select>
+        </div>
+        <div class="form-group full">
+          <label class="form-label">Password</label>
+          <input class="form-input" type="password" placeholder="Minimum 8 characters">
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('user-modal')">Cancel</button>
+      <button class="btn btn-primary" onclick="closeModal('user-modal')">
+        <span class="material-icons-outlined">person_add</span> Create User
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Add Product Modal -->
+<div class="overlay" id="product-modal">
+  <div class="modal wide">
+    <div class="modal-header">
+      <h3>Add New Product</h3>
+      <button class="icon-btn" onclick="closeModal('product-modal')"><span class="material-icons-outlined">close</span></button>
+    </div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="form-group">
+          <label class="form-label">Product Name</label>
+          <input class="form-input" type="text" placeholder="e.g. Cappuccino">
+        </div>
+        <div class="form-group">
+          <label class="form-label">SKU</label>
+          <input class="form-input mono" type="text" placeholder="e.g. COF-001">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Category</label>
+          <select class="form-select">
+            <option value="">Select category...</option>
+            <option>Coffee</option>
+            <option>Pastries</option>
+            <option>Bread</option>
+            <option>Sandwiches</option>
+            <option>Drinks</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Recipe Link</label>
+          <select class="form-select">
+            <option value="">No recipe</option>
+            <option>Croissant Classic</option>
+            <option>Cappuccino Standard</option>
+            <option>Sourdough Loaf</option>
+            <option>Cinnamon Roll</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Selling Price (&#8376;)</label>
+          <input class="form-input mono" type="number" placeholder="0" id="modal-sell-price" oninput="calcModalMargin()">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Cost Price (&#8376;)</label>
+          <input class="form-input mono" type="number" placeholder="0" id="modal-cost-price" oninput="calcModalMargin()">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Calculated Margin</label>
+          <div class="form-input mono" style="background:#FAF8F5;display:flex;align-items:center;" id="modal-margin">--%</div>
+        </div>
+        <div class="form-group" style="flex-direction:row;align-items:end;gap:12px;padding-bottom:4px;">
+          <label class="toggle">
+            <input type="checkbox" checked>
+            <span class="toggle-slider"></span>
+          </label>
+          <span style="font-size:13px;font-weight:500;">Active</span>
+        </div>
+        <div class="form-group full">
+          <label class="form-label">Description</label>
+          <textarea class="form-textarea" placeholder="Product description..." style="min-height:70px"></textarea>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('product-modal')">Cancel</button>
+      <button class="btn btn-primary" onclick="closeModal('product-modal')">
+        <span class="material-icons-outlined">add_circle</span> Create Product
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Add Category Modal -->
+<div class="overlay" id="category-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>Add New Category</h3>
+      <button class="icon-btn" onclick="closeModal('category-modal')"><span class="material-icons-outlined">close</span></button>
+    </div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="form-group full">
+          <label class="form-label">Category Name</label>
+          <input class="form-input" type="text" placeholder="e.g. Specialty Coffee">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Parent Category</label>
+          <select class="form-select">
+            <option value="">None (top-level)</option>
+            <option>Beverages</option>
+            <option>Food</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Sort Order</label>
+          <input class="form-input mono" type="number" value="0">
+        </div>
+        <div class="form-group full">
+          <label class="form-label">Icon</label>
+          <select class="form-select">
+            <option>local_cafe</option>
+            <option>bakery_dining</option>
+            <option>restaurant</option>
+            <option>lunch_dining</option>
+          </select>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('category-modal')">Cancel</button>
+      <button class="btn btn-primary" onclick="closeModal('category-modal')">
+        <span class="material-icons-outlined">create_new_folder</span> Create Category
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Add Location Modal -->
+<div class="overlay" id="location-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>Add New Location</h3>
+      <button class="icon-btn" onclick="closeModal('location-modal')"><span class="material-icons-outlined">close</span></button>
+    </div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="form-group full">
+          <label class="form-label">Location Name</label>
+          <input class="form-input" type="text" placeholder="e.g. Branch - Downtown">
+        </div>
+        <div class="form-group full">
+          <label class="form-label">Address</label>
+          <input class="form-input" type="text" placeholder="Full address">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Type</label>
+          <select class="form-select">
+            <option>Retail</option>
+            <option>Production</option>
+            <option>Warehouse</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Phone</label>
+          <input class="form-input" type="tel" placeholder="+7 (7XX) XXX-XX-XX">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Manager</label>
+          <select class="form-select">
+            <option value="">Select manager...</option>
+            <option>Marat Suleimenov</option>
+            <option>Dana Ospanova</option>
+            <option>Arman Bekov</option>
+          </select>
+        </div>
+        <div class="form-group" style="flex-direction:row;align-items:end;gap:12px;padding-bottom:4px;">
+          <label class="toggle">
+            <input type="checkbox" checked>
+            <span class="toggle-slider"></span>
+          </label>
+          <span style="font-size:13px;font-weight:500;">Active</span>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('location-modal')">Cancel</button>
+      <button class="btn btn-primary" onclick="closeModal('location-modal')">
+        <span class="material-icons-outlined">add_business</span> Create Location
+      </button>
+    </div>
+  </div>
+</div>
+
+<script>
+  // ==================== DATA ====================
+
+  const users = [
+    { name: 'Aidar Kozhanov', email: 'aidar@sweetbake.kz', role: 'Owner', location: 'Main Bakery - Abay', active: true },
+    { name: 'Marat Suleimenov', email: 'marat@sweetbake.kz', role: 'Manager', location: 'Main Bakery - Abay', active: true },
+    { name: 'Dana Ospanova', email: 'dana@sweetbake.kz', role: 'Chef', location: 'Production Facility', active: true },
+    { name: 'Nurlan Temirov', email: 'nurlan@sweetbake.kz', role: 'Baker', location: 'Production Facility', active: true },
+    { name: 'Asel Muratova', email: 'asel@sweetbake.kz', role: 'Cashier', location: 'Branch - Dostyk Plaza', active: true },
+    { name: 'Timur Kairatov', email: 'timur@sweetbake.kz', role: 'Barista', location: 'Branch - Mega Center', active: true },
+    { name: 'Zhanna Serikova', email: 'zhanna@sweetbake.kz', role: 'Accountant', location: 'Main Bakery - Abay', active: true },
+    { name: 'Bekzat Aliev', email: 'bekzat@sweetbake.kz', role: 'Warehouse', location: 'Central Warehouse', active: false },
+  ];
+
+  const products = [
+    { name: 'Espresso', sku: 'COF-001', category: 'Coffee', price: 800, cost: 180, active: true },
+    { name: 'Cappuccino', sku: 'COF-002', category: 'Coffee', price: 1200, cost: 320, active: true },
+    { name: 'Latte', sku: 'COF-003', category: 'Coffee', price: 1400, cost: 380, active: true },
+    { name: 'Croissant Classic', sku: 'PAS-001', category: 'Pastries', price: 850, cost: 290, active: true },
+    { name: 'Cinnamon Roll', sku: 'PAS-002', category: 'Pastries', price: 950, cost: 310, active: true },
+    { name: 'Napoleon Cake Slice', sku: 'PAS-003', category: 'Pastries', price: 1500, cost: 520, active: true },
+    { name: 'Sourdough Loaf', sku: 'BRD-001', category: 'Bread', price: 1200, cost: 380, active: true },
+    { name: 'Baguette', sku: 'BRD-002', category: 'Bread', price: 700, cost: 210, active: true },
+    { name: 'Club Sandwich', sku: 'SND-001', category: 'Sandwiches', price: 2200, cost: 850, active: true },
+    { name: 'Matcha Latte', sku: 'DRK-001', category: 'Drinks', price: 1600, cost: 550, active: false },
+  ];
+
+  const ingredients = [
+    { name: 'Bread Flour', qty: 500, unit: 'g', costPerUnit: 1.2 },
+    { name: 'Unsalted Butter', qty: 300, unit: 'g', costPerUnit: 4.5 },
+    { name: 'Whole Milk', qty: 200, unit: 'ml', costPerUnit: 0.8 },
+    { name: 'Granulated Sugar', qty: 60, unit: 'g', costPerUnit: 0.6 },
+    { name: 'Active Dry Yeast', qty: 10, unit: 'g', costPerUnit: 15 },
+    { name: 'Fine Sea Salt', qty: 10, unit: 'g', costPerUnit: 2 },
+    { name: 'Egg (for wash)', qty: 2, unit: 'pcs', costPerUnit: 120 },
+  ];
+
+  const locations = [
+    { name: 'Main Bakery - Abay', address: 'ul. Abay 52, Almaty', type: 'Retail', phone: '+7 (727) 312-45-67', manager: 'Marat Suleimenov', active: true },
+    { name: 'Branch - Dostyk Plaza', address: 'Dostyk Ave 240, Almaty', type: 'Retail', phone: '+7 (727) 315-78-90', manager: 'Asel Muratova', active: true },
+    { name: 'Branch - Mega Center', address: 'Rozybakiev St 247A, Almaty', type: 'Retail', phone: '+7 (727) 318-12-34', manager: 'Timur Kairatov', active: true },
+    { name: 'Production Facility', address: 'ul. Zhandosov 98, Almaty', type: 'Production', phone: '+7 (727) 320-55-00', manager: 'Dana Ospanova', active: true },
+    { name: 'Central Warehouse', address: 'ul. Seifullin 412, Almaty', type: 'Warehouse', phone: '+7 (727) 322-00-11', manager: 'Bekzat Aliev', active: false },
+  ];
+
+  const categoryTree = [
+    {
+      name: 'Beverages', icon: 'local_cafe', count: 12, children: [
+        {
+          name: 'Coffee', icon: 'coffee', count: 8, children: [
+            { name: 'Espresso Drinks', icon: 'local_cafe', count: 5, children: [] },
+            { name: 'Filter Coffee', icon: 'coffee_maker', count: 3, children: [] },
+          ]
+        },
+        {
+          name: 'Hot Drinks', icon: 'emoji_food_beverage', count: 4, children: [
+            { name: 'Tea', icon: 'emoji_food_beverage', count: 3, children: [] },
+            { name: 'Cocoa', icon: 'local_cafe', count: 1, children: [] },
+          ]
+        },
+      ]
+    },
+    {
+      name: 'Food', icon: 'restaurant', count: 24, children: [
+        {
+          name: 'Pastries', icon: 'bakery_dining', count: 10, children: [
+            { name: 'Croissants', icon: 'bakery_dining', count: 4, children: [] },
+            { name: 'Cakes & Slices', icon: 'cake', count: 6, children: [] },
+          ]
+        },
+        {
+          name: 'Bread', icon: 'bakery_dining', count: 8, children: [
+            { name: 'Sourdough', icon: 'bakery_dining', count: 3, children: [] },
+            { name: 'Artisan', icon: 'bakery_dining', count: 5, children: [] },
+          ]
+        },
+        {
+          name: 'Sandwiches', icon: 'lunch_dining', count: 6, children: []
+        },
+      ]
+    },
+  ];
+
+  const allIngredientNames = [
+    'Bread Flour', 'All-Purpose Flour', 'Unsalted Butter', 'Salted Butter',
+    'Whole Milk', 'Heavy Cream', 'Granulated Sugar', 'Brown Sugar',
+    'Active Dry Yeast', 'Instant Yeast', 'Fine Sea Salt', 'Kosher Salt',
+    'Egg', 'Vanilla Extract', 'Cocoa Powder', 'Dark Chocolate',
+    'Baking Powder', 'Baking Soda', 'Cinnamon', 'Honey', 'Olive Oil',
+    'Almond Flour', 'Matcha Powder', 'Espresso Beans', 'Cream Cheese',
+  ];
+
+  // ==================== SECTION SWITCHING ====================
+
+  function switchSection(name) {
+    document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+    document.getElementById('section-' + name).classList.add('active');
+    document.querySelector(`.nav-item[data-section="${name}"]`).classList.add('active');
+  }
+
+  // ==================== MODALS ====================
+
+  function openModal(id) {
+    document.getElementById(id).classList.add('open');
+  }
+
+  function closeModal(id) {
+    document.getElementById(id).classList.remove('open');
+  }
+
+  // close on overlay click
+  document.querySelectorAll('.overlay').forEach(ov => {
+    ov.addEventListener('click', e => {
+      if (e.target === ov) ov.classList.remove('open');
+    });
+  });
+
+  // ==================== RENDER USERS ====================
+
+  function renderUsers(data) {
+    const tbody = document.getElementById('users-tbody');
+    tbody.innerHTML = data.map(u => `
+      <tr>
+        <td><strong>${u.name}</strong></td>
+        <td style="color:var(--text-secondary)">${u.email}</td>
+        <td><span class="badge badge-${u.role.toLowerCase()}">${u.role}</span></td>
+        <td>${u.location}</td>
+        <td>
+          <label class="toggle">
+            <input type="checkbox" ${u.active ? 'checked' : ''}>
+            <span class="toggle-slider"></span>
+          </label>
+        </td>
+        <td>
+          <div class="action-btns">
+            <button class="icon-btn" title="Edit"><span class="material-icons-outlined">edit</span></button>
+            <button class="icon-btn danger" title="Delete"><span class="material-icons-outlined">delete</span></button>
+          </div>
+        </td>
+      </tr>
+    `).join('');
+    document.getElementById('user-count').textContent = data.length;
+  }
+
+  function filterUsers() {
+    const q = document.getElementById('user-search').value.toLowerCase();
+    const role = document.getElementById('user-role-filter').value;
+    const filtered = users.filter(u => {
+      const matchQ = !q || u.name.toLowerCase().includes(q) || u.email.toLowerCase().includes(q);
+      const matchRole = !role || u.role === role;
+      return matchQ && matchRole;
+    });
+    renderUsers(filtered);
+  }
+
+  // ==================== RENDER PRODUCTS ====================
+
+  function fmtPrice(n) {
+    return n.toLocaleString('ru-RU') + ' \u20B8';
+  }
+
+  function calcMargin(price, cost) {
+    if (!price) return 0;
+    return Math.round(((price - cost) / price) * 100);
+  }
+
+  function marginClass(m) {
+    if (m >= 60) return 'margin-good';
+    if (m >= 40) return 'margin-ok';
+    return 'margin-low';
+  }
+
+  function renderProducts(data) {
+    const tbody = document.getElementById('products-tbody');
+    tbody.innerHTML = data.map(p => {
+      const m = calcMargin(p.price, p.cost);
+      const catClass = p.category.toLowerCase().replace(/\s/g, '');
+      return `
+        <tr>
+          <td><strong>${p.name}</strong></td>
+          <td class="mono">${p.sku}</td>
+          <td><span class="badge badge-${catClass}">${p.category}</span></td>
+          <td class="mono">${fmtPrice(p.price)}</td>
+          <td class="mono">${fmtPrice(p.cost)}</td>
+          <td class="mono ${marginClass(m)}">${m}%</td>
+          <td><span class="badge ${p.active ? 'badge-active' : 'badge-inactive'}">${p.active ? 'Active' : 'Inactive'}</span></td>
+          <td>
+            <div class="action-btns">
+              <button class="icon-btn" title="Edit"><span class="material-icons-outlined">edit</span></button>
+              <button class="icon-btn danger" title="Delete"><span class="material-icons-outlined">delete</span></button>
+            </div>
+          </td>
+        </tr>
+      `;
+    }).join('');
+    document.getElementById('product-count').textContent = data.length;
+  }
+
+  function filterProducts() {
+    const q = document.getElementById('product-search').value.toLowerCase();
+    const cat = document.getElementById('product-category-filter').value;
+    const filtered = products.filter(p => {
+      const matchQ = !q || p.name.toLowerCase().includes(q) || p.sku.toLowerCase().includes(q);
+      const matchCat = !cat || p.category === cat;
+      return matchQ && matchCat;
+    });
+    renderProducts(filtered);
+  }
+
+  // ==================== PRODUCT MODAL MARGIN CALC ====================
+
+  function calcModalMargin() {
+    const sell = parseFloat(document.getElementById('modal-sell-price').value) || 0;
+    const cost = parseFloat(document.getElementById('modal-cost-price').value) || 0;
+    const el = document.getElementById('modal-margin');
+    if (sell > 0 && cost > 0) {
+      const m = calcMargin(sell, cost);
+      el.textContent = m + '%';
+      el.className = 'form-input mono ' + marginClass(m);
+      el.style.background = '#FAF8F5';
+    } else {
+      el.textContent = '--%';
+      el.className = 'form-input mono';
+      el.style.background = '#FAF8F5';
+    }
+  }
+
+  // ==================== RENDER INGREDIENTS ====================
+
+  function renderIngredients() {
+    const tbody = document.getElementById('ingredients-tbody');
+    tbody.innerHTML = ingredients.map((ing, i) => {
+      const total = Math.round(ing.qty * ing.costPerUnit);
+      return `
+        <tr>
+          <td style="padding:8px 16px;">
+            <div class="autocomplete-wrapper">
+              <input class="form-input" type="text" value="${ing.name}" style="width:100%"
+                     onfocus="showAutocomplete(this)" oninput="filterAutocomplete(this)" onblur="hideAutocomplete(this)">
+              <div class="autocomplete-list"></div>
+            </div>
+          </td>
+          <td style="padding:8px 8px;"><input class="form-input mono" type="number" value="${ing.qty}" style="width:100%" onchange="updateIngredient(${i},'qty',this.value)"></td>
+          <td style="padding:8px 8px;">
+            <select class="form-select" style="width:100%" onchange="updateIngredient(${i},'unit',this.value)">
+              <option ${ing.unit==='g'?'selected':''}>g</option>
+              <option ${ing.unit==='ml'?'selected':''}>ml</option>
+              <option ${ing.unit==='kg'?'selected':''}>kg</option>
+              <option ${ing.unit==='pcs'?'selected':''}>pcs</option>
+            </select>
+          </td>
+          <td style="padding:8px 8px;" class="mono"><input class="form-input mono" type="number" value="${ing.costPerUnit}" step="0.1" style="width:100%" onchange="updateIngredient(${i},'costPerUnit',this.value)"></td>
+          <td style="padding:8px 16px;" class="mono" style="font-weight:600">${fmtPrice(total)}</td>
+          <td style="padding:8px 8px;">
+            <button class="icon-btn danger" onclick="removeIngredient(${i})" title="Remove"><span class="material-icons-outlined">close</span></button>
+          </td>
+        </tr>
+      `;
+    }).join('');
+    recalcTotals();
+  }
+
+  function updateIngredient(idx, field, val) {
+    if (field === 'qty' || field === 'costPerUnit') val = parseFloat(val) || 0;
+    ingredients[idx][field] = val;
+    renderIngredients();
+  }
+
+  function removeIngredient(idx) {
+    ingredients.splice(idx, 1);
+    renderIngredients();
+  }
+
+  function addIngredientRow() {
+    ingredients.push({ name: '', qty: 0, unit: 'g', costPerUnit: 0 });
+    renderIngredients();
+  }
+
+  function recalcTotals() {
+    let total = 0;
+    ingredients.forEach(ing => { total += Math.round(ing.qty * ing.costPerUnit); });
+    const yieldQty = 12;
+    const perUnit = Math.round(total / yieldQty);
+    const suggested = perUnit * 3;
+    document.getElementById('total-cost').textContent = fmtPrice(total);
+    document.getElementById('cost-per-unit').textContent = fmtPrice(perUnit);
+    document.getElementById('suggested-price').textContent = fmtPrice(suggested);
+  }
+
+  // ==================== AUTOCOMPLETE ====================
+
+  function showAutocomplete(input) {
+    const list = input.nextElementSibling;
+    const val = input.value.toLowerCase();
+    const matches = allIngredientNames.filter(n => n.toLowerCase().includes(val));
+    list.innerHTML = matches.map(n => `<div class="autocomplete-option" onmousedown="selectAutocomplete(this,'${n}')">${n}</div>`).join('');
+    if (matches.length) list.classList.add('show');
+  }
+
+  function filterAutocomplete(input) {
+    showAutocomplete(input);
+  }
+
+  function hideAutocomplete(input) {
+    setTimeout(() => { input.nextElementSibling.classList.remove('show'); }, 150);
+  }
+
+  function selectAutocomplete(el, name) {
+    const input = el.parentElement.previousElementSibling || el.closest('.autocomplete-wrapper').querySelector('input');
+    input.value = name;
+    el.parentElement.classList.remove('show');
+  }
+
+  // ==================== RENDER CATEGORY TREE ====================
+
+  function renderTree(items, depth) {
+    return items.map(cat => {
+      const hasChildren = cat.children && cat.children.length > 0;
+      const toggleClass = hasChildren ? 'tree-toggle' : '';
+      return `
+        <li>
+          <div class="tree-item" style="padding-left:${12 + depth * 20}px">
+            <span class="material-icons-outlined drag-handle" style="font-size:16px;cursor:grab;">drag_indicator</span>
+            ${hasChildren ? `<span class="${toggleClass}" onclick="toggleTree(this)"><span class="material-icons-outlined">expand_more</span></span>` : '<span style="width:18px;display:inline-block"></span>'}
+            <span class="material-icons-outlined" style="font-size:18px;color:var(--secondary)">${cat.icon}</span>
+            <span class="tree-label">${cat.name}</span>
+            <span class="tree-count">${cat.count}</span>
+            <button class="icon-btn" style="width:28px;height:28px;" title="Edit"><span class="material-icons-outlined" style="font-size:16px">edit</span></button>
+            <button class="icon-btn danger" style="width:28px;height:28px;" title="Delete"><span class="material-icons-outlined" style="font-size:16px">delete</span></button>
+          </div>
+          ${hasChildren ? `<ul class="tree">${renderTree(cat.children, depth + 1)}</ul>` : ''}
+        </li>
+      `;
+    }).join('');
+  }
+
+  function toggleTree(el) {
+    const li = el.closest('li');
+    const sub = li.querySelector(':scope > ul');
+    if (!sub) return;
+    el.classList.toggle('collapsed');
+    sub.style.display = sub.style.display === 'none' ? '' : 'none';
+  }
+
+  // ==================== RENDER LOCATIONS ====================
+
+  function renderLocations() {
+    const tbody = document.getElementById('locations-tbody');
+    tbody.innerHTML = locations.map(loc => {
+      const typeClass = loc.type.toLowerCase();
+      return `
+        <tr>
+          <td><strong>${loc.name}</strong></td>
+          <td style="color:var(--text-secondary)">${loc.address}</td>
+          <td><span class="badge badge-${typeClass}">${loc.type}</span></td>
+          <td>${loc.phone}</td>
+          <td>${loc.manager}</td>
+          <td>
+            <label class="toggle">
+              <input type="checkbox" ${loc.active ? 'checked' : ''}>
+              <span class="toggle-slider"></span>
+            </label>
+          </td>
+          <td>
+            <div class="action-btns">
+              <button class="icon-btn" title="Edit"><span class="material-icons-outlined">edit</span></button>
+              <button class="icon-btn danger" title="Delete"><span class="material-icons-outlined">delete</span></button>
+            </div>
+          </td>
+        </tr>
+      `;
+    }).join('');
+  }
+
+  // ==================== ACCORDION ====================
+
+  function toggleAccordion(header) {
+    const item = header.parentElement;
+    item.classList.toggle('open');
+  }
+
+  // ==================== RENDER SCHEDULE ====================
+
+  function renderSchedule() {
+    const days = [
+      { day: 'Monday', open: '07:00', close: '21:00', active: true },
+      { day: 'Tuesday', open: '07:00', close: '21:00', active: true },
+      { day: 'Wednesday', open: '07:00', close: '21:00', active: true },
+      { day: 'Thursday', open: '07:00', close: '21:00', active: true },
+      { day: 'Friday', open: '07:00', close: '22:00', active: true },
+      { day: 'Saturday', open: '08:00', close: '22:00', active: true },
+      { day: 'Sunday', open: '08:00', close: '20:00', active: true },
+    ];
+
+    const grid = document.getElementById('schedule-grid');
+    grid.innerHTML = days.map(d => `
+      <div class="schedule-row">
+        <div class="schedule-day">${d.day}</div>
+        <input class="form-input mono" type="time" value="${d.open}" style="max-width:140px">
+        <input class="form-input mono" type="time" value="${d.close}" style="max-width:140px">
+        <label class="toggle">
+          <input type="checkbox" ${d.active ? 'checked' : ''}>
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+    `).join('');
+  }
+
+  // ==================== INIT ====================
+
+  renderUsers(users);
+  renderProducts(products);
+  renderIngredients();
+  document.getElementById('category-tree').innerHTML = renderTree(categoryTree, 0);
+  renderLocations();
+  renderSchedule();
+</script>
+</body>
+</html>

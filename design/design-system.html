@@ -1,0 +1,1472 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bake App Design System</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    /* ── Reset & Base ─────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --primary: #8B4513;
+      --secondary: #D4A574;
+      --accent: #2E7D32;
+      --warn: #C62828;
+      --background: #FAF3E8;
+      --surface: #FFFFFF;
+      --text-primary: #2C1810;
+      --text-secondary: #5D4037;
+      --text-disabled: #9E9E9E;
+      --amber-warning: #F57F17;
+      --kitchen-bg: #1A1A2E;
+      --kitchen-surface: #16213E;
+      --kitchen-text: #FFFFFF;
+      --kitchen-new: #4FC3F7;
+      --kitchen-progress: #FFB74D;
+      --kitchen-ready: #81C784;
+      --spacing-xs: 4px;
+      --spacing-sm: 8px;
+      --spacing-md: 16px;
+      --spacing-lg: 24px;
+      --spacing-xl: 32px;
+      --spacing-xxl: 48px;
+      --radius: 8px;
+      --shadow-sm: 0 1px 3px rgba(0,0,0,0.08);
+      --shadow-md: 0 4px 12px rgba(0,0,0,0.1);
+      --shadow-lg: 0 8px 24px rgba(0,0,0,0.12);
+      --sidebar-width: 240px;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      color: var(--text-primary);
+      background: var(--background);
+      line-height: 1.6;
+    }
+
+    /* ── Sidebar ──────────────────────────────────────── */
+    .sidebar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: var(--sidebar-width);
+      height: 100vh;
+      background: var(--surface);
+      border-right: 1px solid #E0D5C7;
+      padding: var(--spacing-lg) 0;
+      overflow-y: auto;
+      z-index: 100;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .sidebar-logo {
+      padding: 0 var(--spacing-lg) var(--spacing-lg);
+      border-bottom: 1px solid #E0D5C7;
+      margin-bottom: var(--spacing-md);
+    }
+
+    .sidebar-logo h1 {
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--primary);
+    }
+
+    .sidebar-logo span {
+      font-size: 12px;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+    }
+
+    .sidebar nav a {
+      display: block;
+      padding: 10px var(--spacing-lg);
+      color: var(--text-secondary);
+      text-decoration: none;
+      font-size: 14px;
+      font-weight: 500;
+      transition: all 0.2s;
+      border-left: 3px solid transparent;
+    }
+
+    .sidebar nav a:hover {
+      color: var(--primary);
+      background: #FAF3E8;
+      border-left-color: var(--secondary);
+    }
+
+    .sidebar nav a.active {
+      color: var(--primary);
+      background: #FAF3E8;
+      border-left-color: var(--primary);
+    }
+
+    /* ── Main Content ─────────────────────────────────── */
+    .main {
+      margin-left: var(--sidebar-width);
+      padding: var(--spacing-xxl);
+      max-width: 960px;
+    }
+
+    .section {
+      margin-bottom: var(--spacing-xxl);
+      padding-bottom: var(--spacing-xxl);
+      border-bottom: 1px solid #E0D5C7;
+    }
+
+    .section:last-child { border-bottom: none; }
+
+    .section-title {
+      font-size: 32px;
+      font-weight: 700;
+      color: var(--text-primary);
+      margin-bottom: var(--spacing-sm);
+    }
+
+    .section-desc {
+      font-size: 14px;
+      color: var(--text-secondary);
+      margin-bottom: var(--spacing-xl);
+    }
+
+    .subsection-title {
+      font-size: 20px;
+      font-weight: 600;
+      color: var(--text-primary);
+      margin: var(--spacing-xl) 0 var(--spacing-md);
+    }
+
+    /* ── Color Swatches ───────────────────────────────── */
+    .color-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+      gap: var(--spacing-md);
+    }
+
+    .color-swatch {
+      border-radius: var(--radius);
+      overflow: hidden;
+      background: var(--surface);
+      box-shadow: var(--shadow-sm);
+      cursor: pointer;
+      transition: transform 0.15s, box-shadow 0.15s;
+    }
+
+    .color-swatch:hover {
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-md);
+    }
+
+    .color-swatch .preview {
+      height: 80px;
+      position: relative;
+    }
+
+    .color-swatch .preview.bordered {
+      border: 1px solid #E0D5C7;
+    }
+
+    .color-swatch .info {
+      padding: 12px;
+    }
+
+    .color-swatch .name {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    .color-swatch .hex {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      color: var(--text-secondary);
+    }
+
+    .color-swatch .role {
+      font-size: 11px;
+      color: var(--text-disabled);
+      margin-top: 2px;
+    }
+
+    .copy-toast {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      background: var(--text-primary);
+      color: #fff;
+      padding: 10px 20px;
+      border-radius: var(--radius);
+      font-size: 13px;
+      font-weight: 500;
+      opacity: 0;
+      transform: translateY(8px);
+      transition: all 0.25s;
+      pointer-events: none;
+      z-index: 200;
+    }
+
+    .copy-toast.show {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    /* ── Kitchen Dark Section ─────────────────────────── */
+    .dark-panel {
+      background: var(--kitchen-bg);
+      border-radius: var(--radius);
+      padding: var(--spacing-xl);
+    }
+
+    .dark-panel .color-swatch {
+      background: var(--kitchen-surface);
+    }
+
+    .dark-panel .color-swatch .name { color: #E0E0E0; }
+    .dark-panel .color-swatch .hex  { color: #BDBDBD; }
+    .dark-panel .color-swatch .role { color: #757575; }
+
+    /* ── Typography ────────────────────────────────────── */
+    .type-row {
+      display: flex;
+      align-items: baseline;
+      gap: var(--spacing-lg);
+      padding: var(--spacing-md) 0;
+      border-bottom: 1px solid #F0E8DC;
+    }
+
+    .type-row:last-child { border-bottom: none; }
+
+    .type-meta {
+      flex-shrink: 0;
+      width: 140px;
+      text-align: right;
+    }
+
+    .type-meta .size {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      color: var(--primary);
+      font-weight: 500;
+    }
+
+    .type-meta .label {
+      font-size: 11px;
+      color: var(--text-disabled);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .type-sample {
+      flex: 1;
+      color: var(--text-primary);
+    }
+
+    .mono-sample {
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    /* ── Spacing ───────────────────────────────────────── */
+    .spacing-row {
+      display: flex;
+      align-items: center;
+      gap: var(--spacing-lg);
+      padding: 12px 0;
+    }
+
+    .spacing-label {
+      width: 80px;
+      text-align: right;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 13px;
+      color: var(--text-secondary);
+    }
+
+    .spacing-label span {
+      display: block;
+      font-family: 'Inter', sans-serif;
+      font-size: 11px;
+      color: var(--text-disabled);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .spacing-box {
+      height: 32px;
+      background: var(--secondary);
+      border-radius: 4px;
+      opacity: 0.7;
+      transition: opacity 0.15s;
+    }
+
+    .spacing-box:hover { opacity: 1; }
+
+    /* ── Badges ─────────────────────────────────────────── */
+    .badge-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--spacing-sm);
+      margin-bottom: var(--spacing-md);
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 12px;
+      border-radius: 100px;
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .badge-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+    }
+
+    .badge-green       { background: #E8F5E9; color: #2E7D32; }
+    .badge-green .badge-dot { background: #2E7D32; }
+    .badge-amber       { background: #FFF8E1; color: #F57F17; }
+    .badge-amber .badge-dot { background: #F57F17; }
+    .badge-red         { background: #FFEBEE; color: #C62828; }
+    .badge-red .badge-dot   { background: #C62828; }
+
+    /* ── Buttons ────────────────────────────────────────── */
+    .button-row {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: var(--spacing-md);
+      margin-bottom: var(--spacing-lg);
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      border: 2px solid transparent;
+      border-radius: var(--radius);
+      font-family: 'Inter', sans-serif;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      text-decoration: none;
+      white-space: nowrap;
+    }
+
+    .btn-sm { padding: 6px 16px;  font-size: 12px; }
+    .btn-md { padding: 10px 24px; font-size: 14px; }
+    .btn-lg { padding: 14px 32px; font-size: 16px; }
+
+    .btn-primary {
+      background: var(--primary);
+      color: #fff;
+    }
+    .btn-primary:hover { background: #7A3B10; }
+
+    .btn-secondary {
+      background: transparent;
+      color: var(--primary);
+      border-color: var(--primary);
+    }
+    .btn-secondary:hover {
+      background: #FAF3E8;
+    }
+
+    .btn-accent {
+      background: var(--accent);
+      color: #fff;
+    }
+    .btn-accent:hover { background: #256D29; }
+
+    .btn-warn {
+      background: var(--warn);
+      color: #fff;
+    }
+    .btn-warn:hover { background: #B71C1C; }
+
+    .btn-disabled {
+      background: #E0E0E0;
+      color: #9E9E9E;
+      cursor: not-allowed;
+      pointer-events: none;
+    }
+
+    .btn-icon {
+      width: 44px;
+      height: 44px;
+      padding: 0;
+      border-radius: 50%;
+      font-size: 18px;
+    }
+
+    /* ── Cards ──────────────────────────────────────────── */
+    .card-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: var(--spacing-lg);
+    }
+
+    .card {
+      background: var(--surface);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow-sm);
+      overflow: hidden;
+      transition: box-shadow 0.2s, transform 0.15s;
+    }
+
+    .card:hover {
+      box-shadow: var(--shadow-md);
+      transform: translateY(-2px);
+    }
+
+    .card-img {
+      height: 140px;
+      background: linear-gradient(135deg, var(--secondary) 0%, var(--primary) 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 48px;
+    }
+
+    .card-body { padding: var(--spacing-md); }
+
+    .card-title {
+      font-size: 16px;
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+
+    .card-subtitle {
+      font-size: 13px;
+      color: var(--text-secondary);
+    }
+
+    .card-price {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 18px;
+      font-weight: 600;
+      color: var(--primary);
+      margin-top: var(--spacing-sm);
+    }
+
+    .card-footer {
+      padding: 12px var(--spacing-md);
+      border-top: 1px solid #F0E8DC;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .stat-card {
+      padding: var(--spacing-lg);
+    }
+
+    .stat-value {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 32px;
+      font-weight: 700;
+      color: var(--primary);
+    }
+
+    .stat-label {
+      font-size: 13px;
+      color: var(--text-secondary);
+      margin-top: 4px;
+    }
+
+    .stat-change {
+      font-size: 12px;
+      font-weight: 600;
+      margin-top: var(--spacing-sm);
+    }
+
+    .stat-change.up   { color: var(--accent); }
+    .stat-change.down { color: var(--warn); }
+
+    /* Dark order card */
+    .order-card-dark {
+      background: var(--kitchen-surface);
+      border-radius: var(--radius);
+      padding: var(--spacing-md);
+      color: var(--kitchen-text);
+    }
+
+    .order-card-dark .order-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: var(--spacing-sm);
+    }
+
+    .order-card-dark .order-number {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 18px;
+      font-weight: 700;
+    }
+
+    .order-card-dark .order-time {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 13px;
+      color: #BDBDBD;
+    }
+
+    .order-card-dark .order-items {
+      list-style: none;
+      margin: var(--spacing-sm) 0;
+    }
+
+    .order-card-dark .order-items li {
+      padding: 6px 0;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+      font-size: 14px;
+    }
+
+    .order-card-dark .order-items li:last-child { border-bottom: none; }
+
+    .order-status-badge {
+      display: inline-block;
+      padding: 4px 12px;
+      border-radius: 100px;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .status-new      { background: rgba(79,195,247,0.15); color: var(--kitchen-new); }
+    .status-progress { background: rgba(255,183,77,0.15);  color: var(--kitchen-progress); }
+    .status-ready    { background: rgba(129,199,132,0.15); color: var(--kitchen-ready); }
+
+    /* ── Forms ──────────────────────────────────────────── */
+    .form-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: var(--spacing-lg);
+    }
+
+    .form-field { margin-bottom: var(--spacing-md); }
+
+    .form-field label {
+      display: block;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      margin-bottom: 6px;
+    }
+
+    .form-field input,
+    .form-field select {
+      width: 100%;
+      padding: 10px 14px;
+      border: 2px solid #D7CFC3;
+      border-radius: var(--radius);
+      font-family: 'Inter', sans-serif;
+      font-size: 14px;
+      color: var(--text-primary);
+      background: var(--surface);
+      transition: border-color 0.2s, box-shadow 0.2s;
+      outline: none;
+    }
+
+    .form-field input:focus,
+    .form-field select:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(139,69,19,0.12);
+    }
+
+    .form-field input::placeholder {
+      color: var(--text-disabled);
+    }
+
+    .form-field.error input,
+    .form-field.error select {
+      border-color: var(--warn);
+    }
+
+    .form-field.error input:focus,
+    .form-field.error select:focus {
+      box-shadow: 0 0 0 3px rgba(198,40,40,0.12);
+    }
+
+    .form-error {
+      font-size: 12px;
+      color: var(--warn);
+      margin-top: 4px;
+      font-weight: 500;
+    }
+
+    .form-hint {
+      font-size: 12px;
+      color: var(--text-disabled);
+      margin-top: 4px;
+    }
+
+    /* ── Touch Targets ─────────────────────────────────── */
+    .touch-comparison {
+      display: flex;
+      gap: var(--spacing-xl);
+      align-items: flex-end;
+    }
+
+    .touch-demo {
+      text-align: center;
+    }
+
+    .touch-box {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--primary);
+      color: #fff;
+      border-radius: var(--radius);
+      font-weight: 600;
+      font-size: 14px;
+      margin-bottom: var(--spacing-sm);
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .touch-box:hover { background: #7A3B10; }
+
+    .touch-label {
+      font-size: 12px;
+      color: var(--text-secondary);
+    }
+
+    .touch-label strong {
+      display: block;
+      font-size: 14px;
+      color: var(--text-primary);
+    }
+
+    /* ── Dark Mode Toggle ──────────────────────────────── */
+    .toggle-wrap {
+      display: flex;
+      align-items: center;
+      gap: var(--spacing-sm);
+      margin-bottom: var(--spacing-lg);
+    }
+
+    .toggle {
+      position: relative;
+      width: 48px;
+      height: 26px;
+      background: #D7CFC3;
+      border-radius: 13px;
+      cursor: pointer;
+      transition: background 0.3s;
+      border: none;
+      outline: none;
+    }
+
+    .toggle.active { background: var(--kitchen-new); }
+
+    .toggle-knob {
+      position: absolute;
+      top: 3px;
+      left: 3px;
+      width: 20px;
+      height: 20px;
+      background: #fff;
+      border-radius: 50%;
+      transition: transform 0.3s;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+    }
+
+    .toggle.active .toggle-knob { transform: translateX(22px); }
+
+    .toggle-text {
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text-secondary);
+    }
+
+    /* ── Utility ────────────────────────────────────────── */
+    .divider {
+      height: 1px;
+      background: #E0D5C7;
+      margin: var(--spacing-lg) 0;
+    }
+
+    @media (max-width: 768px) {
+      .sidebar { display: none; }
+      .main { margin-left: 0; padding: var(--spacing-lg); }
+      .form-grid { grid-template-columns: 1fr; }
+      .card-grid { grid-template-columns: 1fr; }
+      .color-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Copy Toast -->
+  <div class="copy-toast" id="copyToast">Copied!</div>
+
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <h1>Bake App</h1>
+      <span>Design System v1.0</span>
+    </div>
+    <nav id="sidebarNav">
+      <a href="#colors">Color Palette</a>
+      <a href="#kitchen-theme">Kitchen Dark Theme</a>
+      <a href="#typography">Typography</a>
+      <a href="#spacing">Spacing</a>
+      <a href="#badges">Status Badges</a>
+      <a href="#buttons">Buttons</a>
+      <a href="#cards">Cards</a>
+      <a href="#forms">Form Fields</a>
+      <a href="#touch">Touch Targets</a>
+    </nav>
+  </aside>
+
+  <!-- Main Content -->
+  <main class="main">
+
+    <!-- ═══════════════ COLORS ═══════════════ -->
+    <section class="section" id="colors">
+      <h2 class="section-title">Color Palette</h2>
+      <p class="section-desc">Core brand colors used across all Bake App interfaces. Click any swatch to copy its hex value.</p>
+
+      <div class="color-grid">
+        <div class="color-swatch" onclick="copyColor('#8B4513')">
+          <div class="preview" style="background: #8B4513;"></div>
+          <div class="info">
+            <div class="name">Primary</div>
+            <div class="hex">#8B4513</div>
+            <div class="role">Main brand color</div>
+          </div>
+        </div>
+        <div class="color-swatch" onclick="copyColor('#D4A574')">
+          <div class="preview" style="background: #D4A574;"></div>
+          <div class="info">
+            <div class="name">Secondary</div>
+            <div class="hex">#D4A574</div>
+            <div class="role">Accents, hover states</div>
+          </div>
+        </div>
+        <div class="color-swatch" onclick="copyColor('#2E7D32')">
+          <div class="preview" style="background: #2E7D32;"></div>
+          <div class="info">
+            <div class="name">Accent</div>
+            <div class="hex">#2E7D32</div>
+            <div class="role">Success, in-stock</div>
+          </div>
+        </div>
+        <div class="color-swatch" onclick="copyColor('#C62828')">
+          <div class="preview" style="background: #C62828;"></div>
+          <div class="info">
+            <div class="name">Warn</div>
+            <div class="hex">#C62828</div>
+            <div class="role">Alerts, errors, out-of-stock</div>
+          </div>
+        </div>
+        <div class="color-swatch" onclick="copyColor('#FAF3E8')">
+          <div class="preview bordered" style="background: #FAF3E8;"></div>
+          <div class="info">
+            <div class="name">Background</div>
+            <div class="hex">#FAF3E8</div>
+            <div class="role">Page backgrounds</div>
+          </div>
+        </div>
+        <div class="color-swatch" onclick="copyColor('#FFFFFF')">
+          <div class="preview bordered" style="background: #FFFFFF;"></div>
+          <div class="info">
+            <div class="name">Surface</div>
+            <div class="hex">#FFFFFF</div>
+            <div class="role">Cards, panels</div>
+          </div>
+        </div>
+        <div class="color-swatch" onclick="copyColor('#2C1810')">
+          <div class="preview" style="background: #2C1810;"></div>
+          <div class="info">
+            <div class="name">Text Primary</div>
+            <div class="hex">#2C1810</div>
+            <div class="role">Headings</div>
+          </div>
+        </div>
+        <div class="color-swatch" onclick="copyColor('#5D4037')">
+          <div class="preview" style="background: #5D4037;"></div>
+          <div class="info">
+            <div class="name">Text Secondary</div>
+            <div class="hex">#5D4037</div>
+            <div class="role">Body text</div>
+          </div>
+        </div>
+        <div class="color-swatch" onclick="copyColor('#9E9E9E')">
+          <div class="preview" style="background: #9E9E9E;"></div>
+          <div class="info">
+            <div class="name">Text Disabled</div>
+            <div class="hex">#9E9E9E</div>
+            <div class="role">Disabled elements</div>
+          </div>
+        </div>
+        <div class="color-swatch" onclick="copyColor('#F57F17')">
+          <div class="preview" style="background: #F57F17;"></div>
+          <div class="info">
+            <div class="name">Amber Warning</div>
+            <div class="hex">#F57F17</div>
+            <div class="role">Low-stock, pending</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══════════════ KITCHEN DARK THEME ═══════════════ -->
+    <section class="section" id="kitchen-theme">
+      <h2 class="section-title">Kitchen Dark Theme</h2>
+      <p class="section-desc">Optimized for kitchen display screens with high contrast and status-driven colors.</p>
+
+      <div class="toggle-wrap">
+        <button class="toggle" id="darkToggle" onclick="toggleDarkPreview()">
+          <div class="toggle-knob"></div>
+        </button>
+        <span class="toggle-text" id="darkToggleLabel">Preview dark theme</span>
+      </div>
+
+      <div class="dark-panel" id="darkPanel">
+        <div class="color-grid">
+          <div class="color-swatch" onclick="copyColor('#1A1A2E')">
+            <div class="preview" style="background: #1A1A2E; border: 1px solid #2A2A4E;"></div>
+            <div class="info">
+              <div class="name">Background</div>
+              <div class="hex">#1A1A2E</div>
+              <div class="role">Page background</div>
+            </div>
+          </div>
+          <div class="color-swatch" onclick="copyColor('#16213E')">
+            <div class="preview" style="background: #16213E; border: 1px solid #263150;"></div>
+            <div class="info">
+              <div class="name">Surface</div>
+              <div class="hex">#16213E</div>
+              <div class="role">Cards, panels</div>
+            </div>
+          </div>
+          <div class="color-swatch" onclick="copyColor('#FFFFFF')">
+            <div class="preview" style="background: #FFFFFF;"></div>
+            <div class="info">
+              <div class="name">Text</div>
+              <div class="hex">#FFFFFF</div>
+              <div class="role">Primary text</div>
+            </div>
+          </div>
+          <div class="color-swatch" onclick="copyColor('#4FC3F7')">
+            <div class="preview" style="background: #4FC3F7;"></div>
+            <div class="info">
+              <div class="name">New Order</div>
+              <div class="hex">#4FC3F7</div>
+              <div class="role">New incoming orders</div>
+            </div>
+          </div>
+          <div class="color-swatch" onclick="copyColor('#FFB74D')">
+            <div class="preview" style="background: #FFB74D;"></div>
+            <div class="info">
+              <div class="name">In Progress</div>
+              <div class="hex">#FFB74D</div>
+              <div class="role">Currently being prepared</div>
+            </div>
+          </div>
+          <div class="color-swatch" onclick="copyColor('#81C784')">
+            <div class="preview" style="background: #81C784;"></div>
+            <div class="info">
+              <div class="name">Ready</div>
+              <div class="hex">#81C784</div>
+              <div class="role">Ready for pickup</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══════════════ TYPOGRAPHY ═══════════════ -->
+    <section class="section" id="typography">
+      <h2 class="section-title">Typography</h2>
+      <p class="section-desc">Inter for all UI text. JetBrains Mono for numerical data, prices, and codes.</p>
+
+      <h3 class="subsection-title">Inter -- UI Type Scale</h3>
+
+      <div class="type-row">
+        <div class="type-meta">
+          <div class="size">48px</div>
+          <div class="label">H1</div>
+        </div>
+        <div class="type-sample" style="font-size: 48px; font-weight: 700; line-height: 1.2;">
+          Bake App
+        </div>
+      </div>
+
+      <div class="type-row">
+        <div class="type-meta">
+          <div class="size">32px</div>
+          <div class="label">H2</div>
+        </div>
+        <div class="type-sample" style="font-size: 32px; font-weight: 700; line-height: 1.3;">
+          Daily Production
+        </div>
+      </div>
+
+      <div class="type-row">
+        <div class="type-meta">
+          <div class="size">24px</div>
+          <div class="label">H3</div>
+        </div>
+        <div class="type-sample" style="font-size: 24px; font-weight: 600; line-height: 1.3;">
+          Inventory Overview
+        </div>
+      </div>
+
+      <div class="type-row">
+        <div class="type-meta">
+          <div class="size">20px</div>
+          <div class="label">Title</div>
+        </div>
+        <div class="type-sample" style="font-size: 20px; font-weight: 600; line-height: 1.4;">
+          Order #1042 Details
+        </div>
+      </div>
+
+      <div class="type-row">
+        <div class="type-meta">
+          <div class="size">16px</div>
+          <div class="label">Subtitle</div>
+        </div>
+        <div class="type-sample" style="font-size: 16px; font-weight: 500; line-height: 1.5;">
+          Select products to add to this order
+        </div>
+      </div>
+
+      <div class="type-row">
+        <div class="type-meta">
+          <div class="size">14px</div>
+          <div class="label">Body</div>
+        </div>
+        <div class="type-sample" style="font-size: 14px; font-weight: 400; line-height: 1.6; color: var(--text-secondary);">
+          This recipe requires 500g of flour, 200ml of milk, and 3 eggs. Preheat the oven to 180 degrees before starting.
+        </div>
+      </div>
+
+      <div class="type-row">
+        <div class="type-meta">
+          <div class="size">12px</div>
+          <div class="label">Caption</div>
+        </div>
+        <div class="type-sample" style="font-size: 12px; font-weight: 400; line-height: 1.5; color: var(--text-disabled);">
+          Last updated 5 minutes ago &middot; Modified by Admin
+        </div>
+      </div>
+
+      <h3 class="subsection-title">JetBrains Mono -- Numbers &amp; Prices</h3>
+
+      <div class="type-row">
+        <div class="type-meta">
+          <div class="size">32px</div>
+          <div class="label">Stat</div>
+        </div>
+        <div class="type-sample mono-sample" style="font-size: 32px; font-weight: 700; color: var(--primary);">
+          12,450.00
+        </div>
+      </div>
+
+      <div class="type-row">
+        <div class="type-meta">
+          <div class="size">18px</div>
+          <div class="label">Price</div>
+        </div>
+        <div class="type-sample mono-sample" style="font-size: 18px; font-weight: 600; color: var(--primary);">
+          350.00 / 1,200.50 / 89.99
+        </div>
+      </div>
+
+      <div class="type-row">
+        <div class="type-meta">
+          <div class="size">14px</div>
+          <div class="label">Code</div>
+        </div>
+        <div class="type-sample mono-sample" style="font-size: 14px; font-weight: 400; color: var(--text-secondary);">
+          ORD-2026-0342 &middot; SKU-FL-001 &middot; 14:35:22
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══════════════ SPACING ═══════════════ -->
+    <section class="section" id="spacing">
+      <h2 class="section-title">Spacing</h2>
+      <p class="section-desc">Based on an 8px grid. All spacing values are multiples of the base unit.</p>
+
+      <div class="spacing-row">
+        <div class="spacing-label">4px <span>XS</span></div>
+        <div class="spacing-box" style="width: 4px;"></div>
+      </div>
+      <div class="spacing-row">
+        <div class="spacing-label">8px <span>SM</span></div>
+        <div class="spacing-box" style="width: 8px;"></div>
+      </div>
+      <div class="spacing-row">
+        <div class="spacing-label">16px <span>MD</span></div>
+        <div class="spacing-box" style="width: 16px;"></div>
+      </div>
+      <div class="spacing-row">
+        <div class="spacing-label">24px <span>LG</span></div>
+        <div class="spacing-box" style="width: 24px;"></div>
+      </div>
+      <div class="spacing-row">
+        <div class="spacing-label">32px <span>XL</span></div>
+        <div class="spacing-box" style="width: 32px;"></div>
+      </div>
+      <div class="spacing-row">
+        <div class="spacing-label">48px <span>XXL</span></div>
+        <div class="spacing-box" style="width: 48px;"></div>
+      </div>
+
+      <div style="margin-top: var(--spacing-xl); padding: var(--spacing-md); background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow-sm);">
+        <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: var(--spacing-sm);">
+          <strong>Usage guide:</strong>
+        </p>
+        <p style="font-size: 13px; color: var(--text-secondary); line-height: 1.8;">
+          <strong>XS (4px)</strong> -- tight inline spacing, icon gaps<br>
+          <strong>SM (8px)</strong> -- element padding, compact lists<br>
+          <strong>MD (16px)</strong> -- card padding, form field gaps<br>
+          <strong>LG (24px)</strong> -- section padding, card grid gaps<br>
+          <strong>XL (32px)</strong> -- section margins<br>
+          <strong>XXL (48px)</strong> -- page padding, major section breaks
+        </p>
+      </div>
+    </section>
+
+    <!-- ═══════════════ BADGES ═══════════════ -->
+    <section class="section" id="badges">
+      <h2 class="section-title">Status Badges</h2>
+      <p class="section-desc">Consistent status indicators used across inventory, orders, and system states.</p>
+
+      <h3 class="subsection-title">Success / Green</h3>
+      <div class="badge-grid">
+        <span class="badge badge-green"><span class="badge-dot"></span> In Stock</span>
+        <span class="badge badge-green"><span class="badge-dot"></span> Completed</span>
+        <span class="badge badge-green"><span class="badge-dot"></span> Active</span>
+      </div>
+
+      <h3 class="subsection-title">Warning / Amber</h3>
+      <div class="badge-grid">
+        <span class="badge badge-amber"><span class="badge-dot"></span> Low Stock</span>
+        <span class="badge badge-amber"><span class="badge-dot"></span> Pending</span>
+        <span class="badge badge-amber"><span class="badge-dot"></span> Warning</span>
+      </div>
+
+      <h3 class="subsection-title">Error / Red</h3>
+      <div class="badge-grid">
+        <span class="badge badge-red"><span class="badge-dot"></span> Out of Stock</span>
+        <span class="badge badge-red"><span class="badge-dot"></span> Cancelled</span>
+        <span class="badge badge-red"><span class="badge-dot"></span> Error</span>
+      </div>
+    </section>
+
+    <!-- ═══════════════ BUTTONS ═══════════════ -->
+    <section class="section" id="buttons">
+      <h2 class="section-title">Buttons</h2>
+      <p class="section-desc">Button variants, sizes, and states for all interactive elements.</p>
+
+      <h3 class="subsection-title">Variants</h3>
+      <div class="button-row">
+        <button class="btn btn-md btn-primary">Primary</button>
+        <button class="btn btn-md btn-secondary">Secondary</button>
+        <button class="btn btn-md btn-accent">Accent</button>
+        <button class="btn btn-md btn-warn">Warn</button>
+        <button class="btn btn-md btn-disabled">Disabled</button>
+      </div>
+
+      <h3 class="subsection-title">Sizes</h3>
+      <div class="button-row">
+        <button class="btn btn-sm btn-primary">Small</button>
+        <button class="btn btn-md btn-primary">Medium</button>
+        <button class="btn btn-lg btn-primary">Large</button>
+      </div>
+
+      <h3 class="subsection-title">With Icons</h3>
+      <div class="button-row">
+        <button class="btn btn-md btn-primary">+ Add Product</button>
+        <button class="btn btn-md btn-secondary">&#x2913; Export</button>
+        <button class="btn btn-md btn-accent">&#10003; Confirm Order</button>
+        <button class="btn btn-md btn-warn">&#10005; Delete</button>
+      </div>
+
+      <h3 class="subsection-title">Icon Buttons</h3>
+      <div class="button-row">
+        <button class="btn btn-icon btn-primary" title="Add">+</button>
+        <button class="btn btn-icon btn-secondary" title="Edit">&#9998;</button>
+        <button class="btn btn-icon btn-accent" title="Confirm">&#10003;</button>
+        <button class="btn btn-icon btn-warn" title="Delete">&#10005;</button>
+        <button class="btn btn-icon btn-disabled" title="Disabled">&#8943;</button>
+      </div>
+    </section>
+
+    <!-- ═══════════════ CARDS ═══════════════ -->
+    <section class="section" id="cards">
+      <h2 class="section-title">Cards</h2>
+      <p class="section-desc">Card patterns for products, statistics, and kitchen orders.</p>
+
+      <h3 class="subsection-title">Product Cards</h3>
+      <div class="card-grid">
+        <div class="card">
+          <div class="card-img" style="background: linear-gradient(135deg, #D4A574 0%, #8B4513 100%);">
+            <span style="font-size: 48px;">&#127838;</span>
+          </div>
+          <div class="card-body">
+            <div class="card-title">Sourdough Loaf</div>
+            <div class="card-subtitle">Artisan Breads</div>
+            <div class="card-price">$8.50</div>
+          </div>
+          <div class="card-footer">
+            <span class="badge badge-green"><span class="badge-dot"></span> In Stock</span>
+            <span style="font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--text-disabled);">SKU-BR-012</span>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-img" style="background: linear-gradient(135deg, #FFCC80 0%, #F57F17 100%);">
+            <span style="font-size: 48px;">&#127856;</span>
+          </div>
+          <div class="card-body">
+            <div class="card-title">Cinnamon Roll</div>
+            <div class="card-subtitle">Pastries</div>
+            <div class="card-price">$4.75</div>
+          </div>
+          <div class="card-footer">
+            <span class="badge badge-amber"><span class="badge-dot"></span> Low Stock</span>
+            <span style="font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--text-disabled);">SKU-PS-008</span>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-img" style="background: linear-gradient(135deg, #EF9A9A 0%, #C62828 100%);">
+            <span style="font-size: 48px;">&#127874;</span>
+          </div>
+          <div class="card-body">
+            <div class="card-title">Red Velvet Cake</div>
+            <div class="card-subtitle">Cakes &amp; Tarts</div>
+            <div class="card-price">$32.00</div>
+          </div>
+          <div class="card-footer">
+            <span class="badge badge-red"><span class="badge-dot"></span> Out of Stock</span>
+            <span style="font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--text-disabled);">SKU-CK-003</span>
+          </div>
+        </div>
+      </div>
+
+      <h3 class="subsection-title">Stats Cards</h3>
+      <div class="card-grid">
+        <div class="card stat-card">
+          <div class="stat-value">$12,450</div>
+          <div class="stat-label">Today's Revenue</div>
+          <div class="stat-change up">+12.5% vs yesterday</div>
+        </div>
+        <div class="card stat-card">
+          <div class="stat-value">342</div>
+          <div class="stat-label">Orders Completed</div>
+          <div class="stat-change up">+8.2% vs yesterday</div>
+        </div>
+        <div class="card stat-card">
+          <div class="stat-value">$36.40</div>
+          <div class="stat-label">Average Order Value</div>
+          <div class="stat-change down">-2.1% vs yesterday</div>
+        </div>
+      </div>
+
+      <h3 class="subsection-title">Kitchen Order Cards (Dark Theme)</h3>
+      <div class="dark-panel" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: var(--spacing-md);">
+        <div class="order-card-dark">
+          <div class="order-header">
+            <span class="order-number" style="color: var(--kitchen-new);">#1042</span>
+            <span class="order-status-badge status-new">New</span>
+          </div>
+          <div class="order-time">14:35 &middot; 0 min ago</div>
+          <ul class="order-items">
+            <li>2x Cappuccino</li>
+            <li>1x Sourdough Loaf</li>
+            <li>1x Cinnamon Roll</li>
+          </ul>
+        </div>
+
+        <div class="order-card-dark">
+          <div class="order-header">
+            <span class="order-number" style="color: var(--kitchen-progress);">#1041</span>
+            <span class="order-status-badge status-progress">In Progress</span>
+          </div>
+          <div class="order-time">14:28 &middot; 7 min ago</div>
+          <ul class="order-items">
+            <li>1x Latte</li>
+            <li>2x Croissant</li>
+          </ul>
+        </div>
+
+        <div class="order-card-dark">
+          <div class="order-header">
+            <span class="order-number" style="color: var(--kitchen-ready);">#1040</span>
+            <span class="order-status-badge status-ready">Ready</span>
+          </div>
+          <div class="order-time">14:22 &middot; 13 min ago</div>
+          <ul class="order-items">
+            <li>1x Espresso</li>
+            <li>1x Red Velvet Slice</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══════════════ FORMS ═══════════════ -->
+    <section class="section" id="forms">
+      <h2 class="section-title">Form Fields</h2>
+      <p class="section-desc">Input styles for product management, order entry, and configuration screens.</p>
+
+      <div class="form-grid">
+        <div>
+          <div class="form-field">
+            <label>Product Name</label>
+            <input type="text" placeholder="e.g. Sourdough Loaf" value="Sourdough Loaf">
+          </div>
+
+          <div class="form-field">
+            <label>Category</label>
+            <select>
+              <option>Artisan Breads</option>
+              <option>Pastries</option>
+              <option>Cakes &amp; Tarts</option>
+              <option>Beverages</option>
+            </select>
+          </div>
+
+          <div class="form-field">
+            <label>Production Date</label>
+            <input type="date" value="2026-03-01">
+          </div>
+        </div>
+
+        <div>
+          <div class="form-field">
+            <label>Price</label>
+            <input type="text" placeholder="0.00" value="8.50" style="font-family: 'JetBrains Mono', monospace;">
+            <div class="form-hint">Enter price without currency symbol</div>
+          </div>
+
+          <div class="form-field error">
+            <label>SKU Code</label>
+            <input type="text" value="INVALID">
+            <div class="form-error">SKU must follow the format: XXX-YY-000</div>
+          </div>
+
+          <div class="form-field">
+            <label>Stock Quantity</label>
+            <input type="number" placeholder="0" value="24" style="font-family: 'JetBrains Mono', monospace;" disabled>
+            <div class="form-hint">Auto-calculated from inventory</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══════════════ TOUCH TARGETS ═══════════════ -->
+    <section class="section" id="touch">
+      <h2 class="section-title">Touch Targets</h2>
+      <p class="section-desc">Minimum touch target sizes ensure usability on touchscreens in fast-paced environments.</p>
+
+      <div class="touch-comparison">
+        <div class="touch-demo">
+          <div class="touch-box" style="width: 48px; height: 48px;">48</div>
+          <div class="touch-label">
+            <strong>Default</strong>
+            Standard UI
+          </div>
+        </div>
+
+        <div class="touch-demo">
+          <div class="touch-box" style="width: 64px; height: 64px; font-size: 16px;">64</div>
+          <div class="touch-label">
+            <strong>POS App</strong>
+            Minimum 64px
+          </div>
+        </div>
+
+        <div class="touch-demo">
+          <div class="touch-box" style="width: 80px; height: 80px; font-size: 18px; background: var(--kitchen-surface);">80</div>
+          <div class="touch-label">
+            <strong>Kitchen</strong>
+            Minimum 80px
+          </div>
+        </div>
+      </div>
+
+      <div style="margin-top: var(--spacing-xl); padding: var(--spacing-md); background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow-sm);">
+        <p style="font-size: 13px; color: var(--text-secondary); line-height: 1.8;">
+          <strong>POS buttons (64px):</strong> Cashiers interact quickly during checkout. Large enough for fast tapping without errors.<br>
+          <strong>Kitchen buttons (80px):</strong> Cooks may have wet or floured hands. Extra-large targets reduce mistakes under pressure.
+        </p>
+      </div>
+
+      <h3 class="subsection-title">POS Button Grid Example</h3>
+      <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--spacing-sm); max-width: 360px;">
+        <button class="btn btn-primary" style="height: 64px; border-radius: var(--radius); font-size: 13px; font-weight: 600; padding: 0;">Bread</button>
+        <button class="btn btn-primary" style="height: 64px; border-radius: var(--radius); font-size: 13px; font-weight: 600; padding: 0;">Pastry</button>
+        <button class="btn btn-primary" style="height: 64px; border-radius: var(--radius); font-size: 13px; font-weight: 600; padding: 0;">Cake</button>
+        <button class="btn btn-primary" style="height: 64px; border-radius: var(--radius); font-size: 13px; font-weight: 600; padding: 0;">Drink</button>
+      </div>
+
+      <h3 class="subsection-title">Kitchen Action Buttons Example</h3>
+      <div style="display: flex; gap: var(--spacing-md);">
+        <button class="btn" style="width: 160px; height: 80px; border-radius: var(--radius); font-size: 16px; font-weight: 700; background: var(--kitchen-surface); color: var(--kitchen-new); border: 2px solid var(--kitchen-new);">Accept</button>
+        <button class="btn" style="width: 160px; height: 80px; border-radius: var(--radius); font-size: 16px; font-weight: 700; background: var(--kitchen-progress); color: #1A1A2E; border: none;">Start</button>
+        <button class="btn" style="width: 160px; height: 80px; border-radius: var(--radius); font-size: 16px; font-weight: 700; background: var(--kitchen-ready); color: #1A1A2E; border: none;">Done</button>
+      </div>
+    </section>
+
+  </main>
+
+  <script>
+    /* ── Copy color hex to clipboard ──────────────────── */
+    function copyColor(hex) {
+      navigator.clipboard.writeText(hex).then(function() {
+        var toast = document.getElementById('copyToast');
+        toast.textContent = 'Copied ' + hex;
+        toast.classList.add('show');
+        setTimeout(function() { toast.classList.remove('show'); }, 1500);
+      });
+    }
+
+    /* ── Dark mode toggle for kitchen section ─────────── */
+    var darkActive = false;
+
+    function toggleDarkPreview() {
+      darkActive = !darkActive;
+      var toggle = document.getElementById('darkToggle');
+      var label = document.getElementById('darkToggleLabel');
+      var body = document.body;
+
+      toggle.classList.toggle('active', darkActive);
+
+      if (darkActive) {
+        label.textContent = 'Dark theme active';
+        body.style.background = '#1A1A2E';
+        body.style.color = '#FFFFFF';
+        document.querySelector('.sidebar').style.background = '#16213E';
+        document.querySelector('.sidebar').style.borderRightColor = '#2A2A4E';
+        document.querySelector('.sidebar-logo h1').style.color = '#D4A574';
+        document.querySelector('.sidebar-logo span').style.color = '#9E9E9E';
+
+        document.querySelectorAll('.sidebar nav a').forEach(function(a) {
+          a.style.color = '#BDBDBD';
+        });
+
+        document.querySelectorAll('.section-title').forEach(function(el) {
+          el.style.color = '#FFFFFF';
+        });
+
+        document.querySelectorAll('.section-desc, .subsection-title').forEach(function(el) {
+          el.style.color = '#BDBDBD';
+        });
+
+        document.querySelectorAll('.section').forEach(function(el) {
+          el.style.borderBottomColor = '#2A2A4E';
+        });
+
+        document.querySelectorAll('.card, .stat-card').forEach(function(el) {
+          el.style.background = '#16213E';
+          el.style.color = '#FFFFFF';
+        });
+
+        document.querySelectorAll('.card-footer').forEach(function(el) {
+          el.style.borderTopColor = '#2A2A4E';
+        });
+
+        document.querySelectorAll('.card-title').forEach(function(el) {
+          el.style.color = '#FFFFFF';
+        });
+
+        document.querySelectorAll('.form-field input, .form-field select').forEach(function(el) {
+          el.style.background = '#16213E';
+          el.style.color = '#FFFFFF';
+          el.style.borderColor = '#2A2A4E';
+        });
+
+      } else {
+        label.textContent = 'Preview dark theme';
+        body.style.background = '';
+        body.style.color = '';
+        document.querySelector('.sidebar').style.background = '';
+        document.querySelector('.sidebar').style.borderRightColor = '';
+        document.querySelector('.sidebar-logo h1').style.color = '';
+        document.querySelector('.sidebar-logo span').style.color = '';
+
+        document.querySelectorAll('.sidebar nav a').forEach(function(a) {
+          a.style.color = '';
+        });
+
+        document.querySelectorAll('.section-title').forEach(function(el) {
+          el.style.color = '';
+        });
+
+        document.querySelectorAll('.section-desc, .subsection-title').forEach(function(el) {
+          el.style.color = '';
+        });
+
+        document.querySelectorAll('.section').forEach(function(el) {
+          el.style.borderBottomColor = '';
+        });
+
+        document.querySelectorAll('.card, .stat-card').forEach(function(el) {
+          el.style.background = '';
+          el.style.color = '';
+        });
+
+        document.querySelectorAll('.card-footer').forEach(function(el) {
+          el.style.borderTopColor = '';
+        });
+
+        document.querySelectorAll('.card-title').forEach(function(el) {
+          el.style.color = '';
+        });
+
+        document.querySelectorAll('.form-field input, .form-field select').forEach(function(el) {
+          el.style.background = '';
+          el.style.color = '';
+          el.style.borderColor = '';
+        });
+      }
+    }
+
+    /* ── Sidebar active link on scroll ────────────────── */
+    var sections = document.querySelectorAll('.section[id]');
+    var navLinks = document.querySelectorAll('#sidebarNav a');
+
+    function updateActiveLink() {
+      var scrollPos = window.scrollY + 100;
+
+      sections.forEach(function(section) {
+        var top = section.offsetTop;
+        var height = section.offsetHeight;
+        var id = section.getAttribute('id');
+
+        if (scrollPos >= top && scrollPos < top + height) {
+          navLinks.forEach(function(link) {
+            link.classList.remove('active');
+            if (link.getAttribute('href') === '#' + id) {
+              link.classList.add('active');
+            }
+          });
+        }
+      });
+    }
+
+    window.addEventListener('scroll', updateActiveLink);
+    updateActiveLink();
+  </script>
+
+</body>
+</html>

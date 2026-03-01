@@ -1,7 +1,6 @@
 import { Module } from '@nestjs/common';
-import { ConfigModule } from '@nestjs/config';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { BullModule } from '@nestjs/bull';
 import { AuthModule } from './modules/auth/auth.module';
 import { UsersModule } from './modules/users/users.module';
 import { RolesModule } from './modules/roles/roles.module';
@@ -12,6 +11,7 @@ import { ProductionModule } from './modules/production/production.module';
 import { FinanceModule } from './modules/finance/finance.module';
 import { ReportingModule } from './modules/reporting/reporting.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
+import { HealthController } from './health.controller';
 
 @Module({
   imports: [
@@ -19,23 +19,21 @@ import { NotificationsModule } from './modules/notifications/notifications.modul
       isGlobal: true,
       envFilePath: '.env',
     }),
-    TypeOrmModule.forRoot({
-      type: 'postgres',
-      host: process.env.DB_HOST || 'localhost',
-      port: parseInt(process.env.DB_PORT) || 5432,
-      username: process.env.DB_USERNAME || 'postgres',
-      password: process.env.DB_PASSWORD || 'postgres',
-      database: process.env.DB_NAME || 'bake_app',
-      entities: ['src/**/*.entity.ts'],
-      migrations: ['src/database/migrations/*.ts'],
-      synchronize: process.env.NODE_ENV !== 'production',
-      logging: process.env.NODE_ENV === 'development',
-    }),
-    BullModule.forRoot({
-      redis: {
-        host: process.env.REDIS_HOST || 'localhost',
-        port: parseInt(process.env.REDIS_PORT) || 6379,
-      },
+    TypeOrmModule.forRootAsync({
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: (config: ConfigService) => ({
+        type: 'postgres',
+        host: config.get('DB_HOST', 'localhost'),
+        port: config.get<number>('DB_PORT', 5432),
+        username: config.get('DB_USERNAME', 'postgres'),
+        password: config.get('DB_PASSWORD', 'postgres'),
+        database: config.get('DB_NAME', 'bake_app'),
+        autoLoadEntities: true,
+        synchronize: config.get('NODE_ENV') !== 'production',
+        logging: config.get('NODE_ENV') === 'development',
+        retryAttempts: 0,
+      }),
     }),
     AuthModule,
     UsersModule,
@@ -48,5 +46,6 @@ import { NotificationsModule } from './modules/notifications/notifications.modul
     ReportingModule,
     NotificationsModule,
   ],
+  controllers: [HealthController],
 })
 export class AppModule {}
