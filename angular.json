@@ -1,0 +1,256 @@
+{
+  "$schema": "./node_modules/@angular/cli/lib/config/schema.json",
+  "version": 1,
+  "newProjectRoot": "projects",
+  "projects": {
+    "pos-app": {
+      "projectType": "application",
+      "root": "apps/pos-app",
+      "sourceRoot": "apps/pos-app/src",
+      "prefix": "bake-app",
+      "architect": {
+        "build": {
+          "builder": "@angular-devkit/build-angular:browser",
+          "options": {
+            "outputPath": "dist/apps/pos-app",
+            "index": "apps/pos-app/src/index.html",
+            "main": "apps/pos-app/src/main.ts",
+            "polyfills": ["zone.js"],
+            "tsConfig": "apps/pos-app/tsconfig.app.json",
+            "inlineStyleLanguage": "css",
+            "assets": ["apps/pos-app/src/favicon.ico", "apps/pos-app/src/assets"],
+            "styles": ["apps/pos-app/src/styles.css"],
+            "scripts": []
+          },
+          "configurations": {
+            "production": {
+              "budgets": [
+                {
+                  "type": "initial",
+                  "maximumWarning": "500kb",
+                  "maximumError": "1mb"
+                },
+                {
+                  "type": "anyComponentStyle",
+                  "maximumWarning": "2kb",
+                  "maximumError": "4kb"
+                }
+              ],
+              "outputHashing": "all",
+              "optimization": true,
+              "aot": true,
+              "sourceMap": false,
+              "namedChunks": false,
+              "extractLicenses": true,
+              "vendorChunk": false
+            },
+            "development": {
+              "buildOptimizer": false,
+              "optimization": false,
+              "vendorChunk": true,
+              "extractLicenses": false,
+              "sourceMap": true,
+              "namedChunks": true
+            }
+          },
+          "defaultConfiguration": "production"
+        },
+        "serve": {
+          "builder": "@angular-devkit/build-angular:dev-server",
+          "configurations": {
+            "production": {
+              "buildTarget": "pos-app:build:production"
+            },
+            "development": {
+              "buildTarget": "pos-app:build:development"
+            }
+          },
+          "defaultConfiguration": "development",
+          "options": {
+            "proxyConfig": "apps/pos-app/proxy.conf.json"
+          }
+        },
+        "lint": {
+          "builder": "@angular-eslint/builder:lint",
+          "options": {
+            "lintFilePatterns": ["apps/pos-app/**/*.ts", "apps/pos-app/**/*.html"]
+          }
+        }
+      }
+    },
+    "admin-dashboard": {
+      "projectType": "application",
+      "root": "apps/admin-dashboard",
+      "sourceRoot": "apps/admin-dashboard/src",
+      "prefix": "bake-app",
+      "architect": {
+        "build": {
+          "builder": "@angular-devkit/build-angular:browser",
+          "options": {
+            "outputPath": "dist/apps/admin-dashboard",
+            "index": "apps/admin-dashboard/src/index.html",
+            "main": "apps/admin-dashboard/src/main.ts",
+            "polyfills": ["zone.js"],
+            "tsConfig": "apps/admin-dashboard/tsconfig.app.json",
+            "inlineStyleLanguage": "css",
+            "assets": ["apps/admin-dashboard/src/favicon.ico", "apps/admin-dashboard/src/assets"],
+            "styles": ["apps/admin-dashboard/src/styles.css"],
+            "scripts": []
+          },
+          "configurations": {
+            "production": {
+              "budgets": [
+                {
+                  "type": "initial",
+                  "maximumWarning": "500kb",
+                  "maximumError": "1mb"
+                }
+              ],
+              "outputHashing": "all",
+              "optimization": true,
+              "sourceMap": false
+            },
+            "development": {
+              "buildOptimizer": false,
+              "optimization": false,
+              "sourceMap": true
+            }
+          },
+          "defaultConfiguration": "production"
+        },
+        "serve": {
+          "builder": "@angular-devkit/build-angular:dev-server",
+          "configurations": {
+            "production": {
+              "buildTarget": "admin-dashboard:build:production"
+            },
+            "development": {
+              "buildTarget": "admin-dashboard:build:development"
+            }
+          },
+          "defaultConfiguration": "development",
+          "options": {
+            "port": 4201,
+            "proxyConfig": "apps/admin-dashboard/proxy.conf.json"
+          }
+        }
+      }
+    },
+    "kitchen-screen": {
+      "projectType": "application",
+      "root": "apps/kitchen-screen",
+      "sourceRoot": "apps/kitchen-screen/src",
+      "prefix": "bake-app",
+      "architect": {
+        "build": {
+          "builder": "@angular-devkit/build-angular:browser",
+          "options": {
+            "outputPath": "dist/apps/kitchen-screen",
+            "index": "apps/kitchen-screen/src/index.html",
+            "main": "apps/kitchen-screen/src/main.ts",
+            "polyfills": ["zone.js"],
+            "tsConfig": "apps/kitchen-screen/tsconfig.app.json",
+            "inlineStyleLanguage": "css",
+            "assets": ["apps/kitchen-screen/src/favicon.ico", "apps/kitchen-screen/src/assets"],
+            "styles": ["apps/kitchen-screen/src/styles.css"],
+            "scripts": []
+          },
+          "configurations": {
+            "production": {
+              "budgets": [
+                {
+                  "type": "initial",
+                  "maximumWarning": "500kb",
+                  "maximumError": "1mb"
+                }
+              ],
+              "outputHashing": "all"
+            },
+            "development": {
+              "buildOptimizer": false,
+              "optimization": false,
+              "sourceMap": true
+            }
+          },
+          "defaultConfiguration": "production"
+        },
+        "serve": {
+          "builder": "@angular-devkit/build-angular:dev-server",
+          "configurations": {
+            "production": {
+              "buildTarget": "kitchen-screen:build:production"
+            },
+            "development": {
+              "buildTarget": "kitchen-screen:build:development"
+            }
+          },
+          "defaultConfiguration": "development",
+          "options": {
+            "port": 4202,
+            "proxyConfig": "apps/kitchen-screen/proxy.conf.json"
+          }
+        }
+      }
+    },
+    "manager-dashboard": {
+      "projectType": "application",
+      "root": "apps/manager-dashboard",
+      "sourceRoot": "apps/manager-dashboard/src",
+      "prefix": "bake-app",
+      "architect": {
+        "build": {
+          "builder": "@angular-devkit/build-angular:browser",
+          "options": {
+            "outputPath": "dist/apps/manager-dashboard",
+            "index": "apps/manager-dashboard/src/index.html",
+            "main": "apps/manager-dashboard/src/main.ts",
+            "polyfills": ["zone.js"],
+            "tsConfig": "apps/manager-dashboard/tsconfig.app.json",
+            "inlineStyleLanguage": "css",
+            "assets": ["apps/manager-dashboard/src/favicon.ico", "apps/manager-dashboard/src/assets"],
+            "styles": ["apps/manager-dashboard/src/styles.css"],
+            "scripts": []
+          },
+          "configurations": {
+            "production": {
+              "budgets": [
+                {
+                  "type": "initial",
+                  "maximumWarning": "500kb",
+                  "maximumError": "1mb"
+                }
+              ],
+              "outputHashing": "all"
+            },
+            "development": {
+              "buildOptimizer": false,
+              "optimization": false,
+              "sourceMap": true
+            }
+          },
+          "defaultConfiguration": "production"
+        },
+        "serve": {
+          "builder": "@angular-devkit/build-angular:dev-server",
+          "configurations": {
+            "production": {
+              "buildTarget": "manager-dashboard:build:production"
+            },
+            "development": {
+              "buildTarget": "manager-dashboard:build:development"
+            }
+          },
+          "defaultConfiguration": "development",
+          "options": {
+            "port": 4203,
+            "proxyConfig": "apps/manager-dashboard/proxy.conf.json"
+          }
+        }
+      }
+    }
+  },
+  "cli": {
+    "defaultCollection": "@schematics/angular",
+    "packageManager": "npm"
+  }
+}

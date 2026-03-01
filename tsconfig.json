@@ -1,0 +1,31 @@
+{
+  "compileOnSave": false,
+  "compilerOptions": {
+    "rootDir": ".",
+    "sourceMap": true,
+    "declaration": false,
+    "downlevelIteration": true,
+    "experimentalDecorators": true,
+    "moduleResolution": "node",
+    "importHelpers": true,
+    "target": "es2020",
+    "module": "esnext",
+    "lib": ["es2020", "dom"],
+    "skipLibCheck": true,
+    "skipDefaultLibCheck": true,
+    "baseUrl": ".",
+    "paths": {
+      "@bake-app/api/*": ["apps/api/src/*"],
+      "@bake-app/pos-app/*": ["apps/pos-app/src/*"],
+      "@bake-app/admin-dashboard/*": ["apps/admin-dashboard/src/*"],
+      "@bake-app/kitchen-screen/*": ["apps/kitchen-screen/src/*"],
+      "@bake-app/manager-dashboard/*": ["apps/manager-dashboard/src/*"],
+      "@bake-app/ui-components": ["libs/ui-components/src/index.ts"],
+      "@bake-app/shared-types": ["libs/shared-types/src/index.ts"],
+      "@bake-app/auth": ["libs/auth/src/index.ts"],
+      "@bake-app/api-client": ["libs/api-client/src/index.ts"],
+      "@bake-app/state": ["libs/state/src/index.ts"]
+    }
+  },
+  "exclude": ["node_modules", "tmp"]
+}
