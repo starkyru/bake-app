@@ -32,13 +32,13 @@ The system will support:
 
 ## **2.1 Architectural Style**
 
-* Modular Monolith (Phase 1\)
+* Modular Monolith
 
-* Service-Oriented Evolution (Phase 2+)
-
-* Event-driven components for forecasting and analytics
+* Event-driven components for real-time updates
 
 * Real-time updates via WebSockets
+
+* Foundation for future microservices evolution
 
 ---
 
@@ -72,15 +72,9 @@ The system will support:
 
 * REST API \+ OpenAPI documentation
 
-### **Forecasting Service (Phase 2\)**
+### **Forecasting Service (Phase 2)**
 
-* Python
-
-* FastAPI
-
-* ML libraries (Prophet / scikit-learn)
-
-* Async communication via Redis queue or HTTP
+Reserved for future expansion. See SecondPhaseTechnology.md
 
 ### **Infrastructure**
 
@@ -194,11 +188,11 @@ modules/
   inventory/  
   recipes/  
   production/  
-  forecasting/  
   finance/  
-  crm/  
   reporting/  
   notifications/  
+
+Note: forecasting/ and crm/ modules reserved for Phase 2 expansion  
 ---
 
 ## **4.2 API Design**
@@ -309,27 +303,19 @@ Redis:
 
 ---
 
-# **6\. Forecasting Architecture (Phase 2\)**
+# **6\. Future Expansion (Phase 2+)**
 
-Separate microservice:
+Phase 2 introduces:
 
-* FastAPI
+* Forecasting microservice (Python/FastAPI)
 
-* Python ML stack
+* CRM & marketing automation
 
-* Weather API integration
+* Advanced analytics & business intelligence
 
-* Seasonal modeling
+* Automated production planning
 
-* Holiday calendar integration
-
-Communication:
-
-* Redis queue
-
-* REST endpoint
-
-* Scheduled jobs
+See **SecondPhaseTechnology.md** for Phase 2 architecture details.
 
 ---
 
@@ -423,29 +409,21 @@ Option C:
 
 ---
 
-# **11\. Scalability Strategy**
+# **11\. Scalability Strategy (Phase 1)**
 
-Phase 1:
+* Modular monolith architecture
 
-* Modular monolith
+* Single PostgreSQL database
 
-* Single database
+* Redis for caching & queuing
 
-Phase 2:
+* Containerized deployment via Docker
 
-* Extract forecasting service
+* Horizontal scaling via load balancing
 
-* Extract reporting service
+* Foundation for future microservices extraction
 
-* Add read replicas
-
-Phase 3:
-
-* Multi-tenant architecture
-
-* Multi-location support
-
-* Horizontal scaling
+Phase 2+ enhancements documented in SecondPhaseTechnology.md
 
 ---
 
@@ -483,33 +461,31 @@ Load Testing:
 
 ---
 
-# **14\. MVP Scope Recommendation**
+# **14\. Prototype Scope (Phase 1)**
 
-Phase 1 (3–4 months):
+Target Timeline: 3–4 months
 
-* POS
+### **Core Features**
 
-* Inventory
+* **POS Module**: Order management, payment processing, receipts
 
-* Recipes
+* **Inventory Management**: Stock tracking, ingredient management, reorder alerts
 
-* Finance basics
+* **Recipes**: Create, manage, scale recipes with ingredient mappings
 
-* Reporting
+* **Production Planning**: Basic production schedules linked to inventory
 
-* Role management
+* **Finance Basics**: Transaction tracking, basic P&L reporting
 
-* Real-time updates
+* **Reporting**: Sales reports, inventory reports, financial summaries
 
-Phase 2:
+* **Role Management**: RBAC with Owner, Manager, Chef, Baker, Barista, Cashier, Warehouse roles
 
-* Forecasting
+* **Real-Time Updates**: WebSocket support for live inventory & order status
 
-* Automated planning
+* **Offline Support**: POS offline capability with sync on reconnect
 
-* CRM automation
-
-* Advanced analytics
+For Phase 2 expansion (Forecasting, CRM, Advanced Analytics), see SecondPhaseTechnology.md
 
 ---
 
