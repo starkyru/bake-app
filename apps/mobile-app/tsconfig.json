@@ -1,0 +1,10 @@
+{
+  "extends": "expo/tsconfig.base",
+  "compilerOptions": {
+    "strict": true,
+    "baseUrl": ".",
+    "paths": {
+      "@bake-app/shared-types": ["../../libs/shared-types/src/index.ts"]
+    }
+  }
+}
