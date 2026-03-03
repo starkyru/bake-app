@@ -33,7 +33,7 @@ import { HealthController } from './health.controller';
         autoLoadEntities: true,
         synchronize: config.get('NODE_ENV') !== 'production',
         logging: config.get('NODE_ENV') === 'development',
-        retryAttempts: 0,
+        retryAttempts: 3,
       }),
     }),
     AuthModule,
