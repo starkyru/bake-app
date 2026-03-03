@@ -199,7 +199,7 @@ export class LoginComponent {
 
     this.authService.login(this.email, this.password).subscribe({
       next: (response: any) => {
-        localStorage.setItem('token', response.access_token || response.token);
+        localStorage.setItem('token', response.accessToken ?? '');
         this.loading = false;
         this.router.navigate(['/dashboard']);
       },

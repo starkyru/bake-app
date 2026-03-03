@@ -69,7 +69,12 @@ export class AuthService {
   }
 
   private async generateTokens(user: User): Promise<AuthResponseDto> {
-    const payload = { sub: user.id, email: user.email };
+    const payload = {
+      sub: user.id,
+      email: user.email,
+      role: user.role?.name || '',
+      name: `${user.firstName} ${user.lastName}`.trim(),
+    };
     const accessToken = this.jwtService.sign(payload);
     const refreshTokenStr = randomBytes(40).toString('hex');
     const tokenHash = createHash('sha256').update(refreshTokenStr).digest('hex');

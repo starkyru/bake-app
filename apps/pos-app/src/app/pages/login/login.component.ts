@@ -221,7 +221,7 @@ export class LoginComponent {
 
     this.authService.login(email, password).subscribe({
       next: (response) => {
-        localStorage.setItem('token', response.token ?? '');
+        localStorage.setItem('token', response.accessToken ?? '');
         this.isLoading = false;
         this.router.navigate(['/pos']);
       },
