@@ -177,9 +177,7 @@ const ROLE_APP_MAP: Record<string, AppLink[]> = {
         <a
           *ngFor="let app of apps"
           class="app-card"
-          [href]="app.url"
-          target="_blank"
-          rel="noopener"
+          [href]="app.url + '?token=' + token"
         >
           <div class="app-icon-wrapper" [style.background-color]="app.color + '20'">
             <mat-icon [style.color]="app.color" class="app-icon">{{ app.icon }}</mat-icon>
@@ -322,10 +320,12 @@ const ROLE_APP_MAP: Record<string, AppLink[]> = {
 export class DashboardComponent implements OnInit {
   userName = '';
   userRole = '';
+  token = '';
   apps: AppLink[] = [];
 
   ngOnInit(): void {
     const token = localStorage.getItem('token');
+    this.token = token || '';
     if (token) {
       try {
         const payload = JSON.parse(atob(token.split('.')[1]));

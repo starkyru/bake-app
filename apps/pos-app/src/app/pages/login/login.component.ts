@@ -207,6 +207,9 @@ export class LoginComponent {
       email: ['', [Validators.required, Validators.email]],
       password: ['', [Validators.required]],
     });
+    if (this.authService.isAuthenticated()) {
+      this.router.navigate(['/pos']);
+    }
   }
 
   onSubmit(): void {

@@ -5,6 +5,7 @@ import { provideHttpClient } from '@angular/common/http';
 import { provideStoreDevtools } from '@ngrx/store-devtools';
 import { provideStore } from '@ngrx/store';
 import { provideEffects } from '@ngrx/effects';
+import { provideAuthTokenPassthrough } from '@bake-app/auth';
 import { AppComponent } from './app/app.component';
 import { routes } from './app/app.routes';
 import { environment } from './environments/environment';
@@ -14,6 +15,7 @@ bootstrapApplication(AppComponent, {
     provideAnimations(),
     provideRouter(routes),
     provideHttpClient(),
+    provideAuthTokenPassthrough(),
     provideStore({}, {
       initialState: {},
       runtimeChecks: {
