@@ -55,7 +55,7 @@ jobs:
           config: |
             Host vps
               HostName ${{ secrets.VPS_HOST }}
-              User deploy
+              User ilia
               StrictHostKeyChecking no
 
       - name: Deploy frontend assets
@@ -69,13 +69,16 @@ jobs:
       - name: Deploy API
         run: |
           ssh vps << 'EOF'
+            export NVM_DIR="$HOME/.nvm"
+            [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
             cd /opt/bake-app
             git pull origin main
-            docker compose -f docker-compose.prod.yml build api
-            docker compose -f docker-compose.prod.yml up -d api
+            npm ci --omit=dev
+            npx nest build apps/api
+            pm2 restart bake-api
           EOF
 
       - name: Health check
         run: |
-          sleep 10
-          ssh vps 'curl -f http://127.0.0.1:3000/api/health || exit 1'
+          sleep 5
+          ssh vps 'curl -f http://127.0.0.1:3100/api/health || exit 1'
