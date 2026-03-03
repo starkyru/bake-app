@@ -7,7 +7,7 @@ import { CommonModule } from '@angular/common';
   imports: [CommonModule],
   template: `
     <span class="currency-display" [class]="'currency-display--' + size">
-      <span class="currency-symbol" *ngIf="showSymbol">&#8376;</span>
+      <span class="currency-symbol" *ngIf="showSymbol">$</span>
       <span class="currency-amount">{{ amount | number : '1.0-0' }}</span>
     </span>
   `,

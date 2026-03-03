@@ -35,7 +35,7 @@ interface SalesItem {
       <div class="kpi-grid">
         <bake-stats-card
           title="Total Sales"
-          value="&#8376;1,245,000"
+          value="$1,245,000"
           icon="point_of_sale"
           [trend]="12.5"
           trendLabel="vs yesterday"
@@ -53,7 +53,7 @@ interface SalesItem {
 
         <bake-stats-card
           title="Avg Check"
-          value="&#8376;7,980"
+          value="$7,980"
           icon="receipt"
           [trend]="5.1"
           trendLabel="vs last week"

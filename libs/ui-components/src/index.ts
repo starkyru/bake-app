@@ -35,6 +35,7 @@ export { BakeInventoryItemComponent } from './lib/inventory-item/inventory-item.
 export {
   SidebarMenuItem,
   TableColumn,
+  TableAction,
   SelectOption,
   BreadcrumbItem,
   TabItem,

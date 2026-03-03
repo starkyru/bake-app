@@ -71,7 +71,7 @@ export default function POSScreen() {
             <Text style={styles.productName}>{item.name}</Text>
             <Text style={styles.productCategory}>{item.category}</Text>
             <Text style={styles.productPrice}>
-              {item.price?.toFixed(2)} ₸
+              {item.price?.toFixed(2)} $
             </Text>
           </TouchableOpacity>
         )}
@@ -88,7 +88,7 @@ export default function POSScreen() {
             <Text style={styles.cartCount}>
               {cart.reduce((sum, item) => sum + item.quantity, 0)} items
             </Text>
-            <Text style={styles.cartTotal}>{cartTotal.toFixed(2)} ₸</Text>
+            <Text style={styles.cartTotal}>{cartTotal.toFixed(2)} $</Text>
           </View>
           <TouchableOpacity style={styles.checkoutBtn} onPress={handleCheckout}>
             <Text style={styles.checkoutText}>Checkout</Text>

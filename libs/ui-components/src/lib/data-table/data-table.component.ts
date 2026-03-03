@@ -65,7 +65,7 @@ import { TableColumn } from '../models';
             <td mat-cell *matCellDef="let row">
               <ng-container [ngSwitch]="col.type">
                 <span *ngSwitchCase="'currency'" class="currency">
-                  &#8376;{{ row[col.key] | number : '1.0-0' }}
+                  ${{ row[col.key] | number : '1.0-0' }}
                 </span>
                 <span *ngSwitchCase="'date'">
                   {{ row[col.key] | date : 'short' }}
@@ -83,25 +83,41 @@ import { TableColumn } from '../models';
                   {{ row[col.key] }}
                 </mat-chip>
                 <span *ngSwitchCase="'actions'" class="actions">
-                  <button
-                    mat-icon-button
-                    (click)="
-                      rowAction.emit({ action: 'edit', row: row });
-                      $event.stopPropagation()
-                    "
-                  >
-                    <mat-icon>edit</mat-icon>
-                  </button>
-                  <button
-                    mat-icon-button
-                    color="warn"
-                    (click)="
-                      rowAction.emit({ action: 'delete', row: row });
-                      $event.stopPropagation()
-                    "
-                  >
-                    <mat-icon>delete</mat-icon>
-                  </button>
+                  <ng-container *ngIf="col.actions; else defaultActions">
+                    <button
+                      *ngFor="let act of col.actions"
+                      mat-icon-button
+                      [color]="act.color || ''"
+                      [title]="act.tooltip || act.action"
+                      (click)="
+                        rowAction.emit({ action: act.action, row: row });
+                        $event.stopPropagation()
+                      "
+                    >
+                      <mat-icon>{{ act.icon }}</mat-icon>
+                    </button>
+                  </ng-container>
+                  <ng-template #defaultActions>
+                    <button
+                      mat-icon-button
+                      (click)="
+                        rowAction.emit({ action: 'edit', row: row });
+                        $event.stopPropagation()
+                      "
+                    >
+                      <mat-icon>edit</mat-icon>
+                    </button>
+                    <button
+                      mat-icon-button
+                      color="warn"
+                      (click)="
+                        rowAction.emit({ action: 'delete', row: row });
+                        $event.stopPropagation()
+                      "
+                    >
+                      <mat-icon>delete</mat-icon>
+                    </button>
+                  </ng-template>
                 </span>
                 <span *ngSwitchDefault>{{ row[col.key] }}</span>
               </ng-container>

@@ -49,7 +49,7 @@ export interface PaymentDialogResult {
 
       <div class="total-display">
         <span class="total-label">Total Due</span>
-        <span class="total-amount">\u20B8{{ data.total | number: '1.0-0' }}</span>
+        <span class="total-amount">${{ data.total | number: '1.0-0' }}</span>
       </div>
 
       <mat-tab-group
@@ -75,7 +75,7 @@ export interface PaymentDialogResult {
                 placeholder="0"
                 class="amount-input"
               />
-              <span matPrefix class="currency-prefix">\u20B8</span>
+              <span matPrefix class="currency-prefix">$</span>
             </mat-form-field>
 
             <div class="quick-amounts">
@@ -91,41 +91,41 @@ export interface PaymentDialogResult {
                 class="quick-btn"
                 (click)="addCashAmount(500)"
               >
-                +\u20B8500
+                +$500
               </button>
               <button
                 mat-stroked-button
                 class="quick-btn"
                 (click)="addCashAmount(1000)"
               >
-                +\u20B81,000
+                +$1,000
               </button>
               <button
                 mat-stroked-button
                 class="quick-btn"
                 (click)="addCashAmount(2000)"
               >
-                +\u20B82,000
+                +$2,000
               </button>
               <button
                 mat-stroked-button
                 class="quick-btn"
                 (click)="addCashAmount(5000)"
               >
-                +\u20B85,000
+                +$5,000
               </button>
               <button
                 mat-stroked-button
                 class="quick-btn"
                 (click)="setCashAmount(roundUp(data.total, 1000))"
               >
-                \u20B8{{ roundUp(data.total, 1000) | number: '1.0-0' }}
+                ${{ roundUp(data.total, 1000) | number: '1.0-0' }}
               </button>
             </div>
 
             <div class="change-display" *ngIf="cashAmount >= data.total">
               <span class="change-label">Change</span>
-              <span class="change-amount">\u20B8{{ change | number: '1.0-0' }}</span>
+              <span class="change-amount">${{ change | number: '1.0-0' }}</span>
             </div>
 
             <div class="insufficient" *ngIf="cashAmount > 0 && cashAmount < data.total">

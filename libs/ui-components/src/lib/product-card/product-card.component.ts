@@ -25,7 +25,7 @@ import { MatIconModule } from '@angular/material/icon';
       <mat-card-content class="product-info">
         <span class="product-category" *ngIf="category">{{ category }}</span>
         <span class="product-name">{{ name }}</span>
-        <span class="product-price">{{ price | currency: 'UAH':'symbol-narrow':'1.2-2' }}</span>
+        <span class="product-price">{{ price | currency: 'USD':'symbol':'1.2-2' }}</span>
       </mat-card-content>
     </mat-card>
   `,

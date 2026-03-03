@@ -86,7 +86,7 @@ export default function OrdersScreen() {
               <Text style={styles.orderDate}>
                 {new Date(item.createdAt).toLocaleDateString()}
               </Text>
-              <Text style={styles.orderTotal}>{item.total?.toFixed(2)} ₸</Text>
+              <Text style={styles.orderTotal}>{item.total?.toFixed(2)} $</Text>
             </View>
           </TouchableOpacity>
         )}

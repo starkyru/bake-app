@@ -76,11 +76,11 @@ interface ProductDialogData {
 
       <div class="form-row">
         <mat-form-field appearance="outline" class="half-width">
-          <mat-label>Price (&#8376;)</mat-label>
+          <mat-label>Price ($)</mat-label>
           <input matInput type="number" [(ngModel)]="price" placeholder="0" />
         </mat-form-field>
         <mat-form-field appearance="outline" class="half-width">
-          <mat-label>Cost Price (&#8376;)</mat-label>
+          <mat-label>Cost Price ($)</mat-label>
           <input matInput type="number" [(ngModel)]="cost" placeholder="0" />
         </mat-form-field>
       </div>

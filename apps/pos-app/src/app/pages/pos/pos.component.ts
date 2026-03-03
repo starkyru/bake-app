@@ -145,7 +145,7 @@ const CATEGORIES = [
             <div class="item-info">
               <span class="item-name">{{ item.product.name }}</span>
               <span class="item-price">
-                \u20B8{{ item.product.price * item.quantity | number: '1.0-0' }}
+                ${{ item.product.price * item.quantity | number: '1.0-0' }}
               </span>
             </div>
             <div class="item-controls">
@@ -172,11 +172,11 @@ const CATEGORIES = [
         <div class="cart-totals" *ngIf="cart.length > 0">
           <div class="total-row">
             <span>Subtotal</span>
-            <span class="total-value">\u20B8{{ subtotal | number: '1.0-0' }}</span>
+            <span class="total-value">${{ subtotal | number: '1.0-0' }}</span>
           </div>
           <div class="total-row tax-row">
             <span>Tax (12%)</span>
-            <span class="total-value">\u20B8{{ tax | number: '1.0-0' }}</span>
+            <span class="total-value">${{ tax | number: '1.0-0' }}</span>
           </div>
           <div class="total-row grand-total">
             <span>Total</span>
@@ -195,7 +195,7 @@ const CATEGORIES = [
           </button>
           <button mat-flat-button class="pay-btn" (click)="openPaymentDialog()">
             <mat-icon>payment</mat-icon>
-            PAY \u20B8{{ total | number: '1.0-0' }}
+            PAY ${{ total | number: '1.0-0' }}
           </button>
         </div>
       </div>
@@ -546,7 +546,7 @@ export class PosComponent {
       if (result) {
         this.cart = [];
         this.snackBar.open(
-          `Payment successful! ${result.method === 'cash' ? 'Change: \u20B8' + result.change : 'Card approved.'}`,
+          `Payment successful! ${result.method === 'cash' ? 'Change: $' + result.change : 'Card approved.'}`,
           'OK',
           {
             duration: 4000,

@@ -37,6 +37,90 @@ interface UserDialogData {
 }
 
 @Component({
+  selector: 'bake-app-password-dialog',
+  standalone: true,
+  imports: [
+    CommonModule,
+    FormsModule,
+    MatDialogModule,
+    MatButtonModule,
+    MatFormFieldModule,
+    MatInputModule,
+    MatIconModule,
+  ],
+  template: `
+    <h2 mat-dialog-title>Change Password</h2>
+    <mat-dialog-content class="dialog-content">
+      <p class="user-info">Setting new password for <strong>{{ data.name }}</strong></p>
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>New Password</mat-label>
+        <input
+          matInput
+          [type]="hidePassword ? 'password' : 'text'"
+          [(ngModel)]="password"
+          placeholder="Enter new password"
+        />
+        <mat-icon matPrefix>lock</mat-icon>
+        <button mat-icon-button matSuffix type="button" (click)="hidePassword = !hidePassword">
+          <mat-icon>{{ hidePassword ? 'visibility_off' : 'visibility' }}</mat-icon>
+        </button>
+      </mat-form-field>
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>Confirm Password</mat-label>
+        <input
+          matInput
+          [type]="hideConfirm ? 'password' : 'text'"
+          [(ngModel)]="confirmPassword"
+          placeholder="Confirm new password"
+        />
+        <mat-icon matPrefix>lock</mat-icon>
+        <button mat-icon-button matSuffix type="button" (click)="hideConfirm = !hideConfirm">
+          <mat-icon>{{ hideConfirm ? 'visibility_off' : 'visibility' }}</mat-icon>
+        </button>
+      </mat-form-field>
+      <p class="error" *ngIf="error">{{ error }}</p>
+    </mat-dialog-content>
+    <mat-dialog-actions align="end">
+      <button mat-button [mat-dialog-close]="null">Cancel</button>
+      <button mat-flat-button class="save-btn" (click)="onSave()">Change Password</button>
+    </mat-dialog-actions>
+  `,
+  styles: [
+    `
+      .dialog-content { display: flex; flex-direction: column; gap: 4px; min-width: 400px; padding-top: 8px; }
+      .full-width { width: 100%; }
+      .user-info { color: #6d4c41; margin: 0 0 8px; }
+      .error { color: #c62828; font-size: 13px; margin: 0; }
+      .save-btn { background-color: #8b4513 !important; color: #ffffff !important; }
+    `,
+  ],
+})
+export class PasswordDialogComponent {
+  password = '';
+  confirmPassword = '';
+  hidePassword = true;
+  hideConfirm = true;
+  error = '';
+
+  constructor(
+    public dialogRef: MatDialogRef<PasswordDialogComponent>,
+    @Inject(MAT_DIALOG_DATA) public data: { id: string; name: string }
+  ) {}
+
+  onSave(): void {
+    if (!this.password || this.password.length < 6) {
+      this.error = 'Password must be at least 6 characters';
+      return;
+    }
+    if (this.password !== this.confirmPassword) {
+      this.error = 'Passwords do not match';
+      return;
+    }
+    this.dialogRef.close(this.password);
+  }
+}
+
+@Component({
   selector: 'bake-app-user-dialog',
   standalone: true,
   imports: [
@@ -190,7 +274,14 @@ export class UsersComponent {
     { key: 'email', label: 'Email', sortable: true },
     { key: 'role', label: 'Role', type: 'badge', sortable: true },
     { key: 'status', label: 'Status', type: 'badge', sortable: true },
-    { key: 'actions', label: 'Actions', type: 'actions', width: '120px' },
+    {
+      key: 'actions', label: 'Actions', type: 'actions', width: '160px',
+      actions: [
+        { action: 'password', icon: 'key', tooltip: 'Change password' },
+        { action: 'edit', icon: 'edit', tooltip: 'Edit user' },
+        { action: 'delete', icon: 'delete', color: 'warn', tooltip: 'Delete user' },
+      ],
+    },
   ];
 
   users: UserData[] = [
@@ -299,8 +390,23 @@ export class UsersComponent {
     });
   }
 
+  openPasswordDialog(user: UserData): void {
+    const dialogRef = this.dialog.open(PasswordDialogComponent, {
+      width: '460px',
+      data: { id: user.id, name: user.name },
+    });
+
+    dialogRef.afterClosed().subscribe((newPassword) => {
+      if (newPassword) {
+        this.toastService.success(`Password changed for ${user.name}`);
+      }
+    });
+  }
+
   onRowAction(event: { action: string; row: UserData }): void {
-    if (event.action === 'edit') {
+    if (event.action === 'password') {
+      this.openPasswordDialog(event.row);
+    } else if (event.action === 'edit') {
       this.openEditDialog(event.row);
     } else if (event.action === 'delete') {
       this.confirmService

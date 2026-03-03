@@ -44,7 +44,7 @@ interface PlanCategory {
       <div class="kpi-grid">
         <bake-stats-card
           title="Revenue"
-          value="&#8376;1,245,000"
+          value="$1,245,000"
           icon="payments"
           [trend]="12.5"
           trendLabel="vs last week"
@@ -53,7 +53,7 @@ interface PlanCategory {
 
         <bake-stats-card
           title="Net Profit"
-          value="&#8376;312,000"
+          value="$312,000"
           icon="account_balance"
           [trend]="8.3"
           trendLabel="vs last week"
@@ -71,7 +71,7 @@ interface PlanCategory {
 
         <bake-stats-card
           title="Avg Check"
-          value="&#8376;7,980"
+          value="$7,980"
           icon="shopping_cart"
           [trend]="5.1"
           trendLabel="vs last week"
@@ -406,11 +406,11 @@ export class DashboardComponent {
   ];
 
   topProducts: TopProduct[] = [
-    { rank: 1, name: 'Sourdough Bread', sold: 42, revenue: '\u20B8126,000' },
-    { rank: 2, name: 'Croissant', sold: 38, revenue: '\u20B876,000' },
-    { rank: 3, name: 'Napoleon Cake', sold: 15, revenue: '\u20B8112,500' },
-    { rank: 4, name: 'Cappuccino', sold: 65, revenue: '\u20B858,500' },
-    { rank: 5, name: 'Eclair', sold: 28, revenue: '\u20B847,600' },
+    { rank: 1, name: 'Sourdough Bread', sold: 42, revenue: '$126,000' },
+    { rank: 2, name: 'Croissant', sold: 38, revenue: '$76,000' },
+    { rank: 3, name: 'Napoleon Cake', sold: 15, revenue: '$112,500' },
+    { rank: 4, name: 'Cappuccino', sold: 65, revenue: '$58,500' },
+    { rank: 5, name: 'Eclair', sold: 28, revenue: '$47,600' },
   ];
 
   planCategories: PlanCategory[] = [

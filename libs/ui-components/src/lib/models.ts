@@ -7,6 +7,13 @@ export interface SidebarMenuItem {
   badgeColor?: string;
 }
 
+export interface TableAction {
+  action: string;
+  icon: string;
+  color?: string;
+  tooltip?: string;
+}
+
 export interface TableColumn {
   key: string;
   label: string;
@@ -14,6 +21,7 @@ export interface TableColumn {
   type?: 'text' | 'number' | 'currency' | 'date' | 'badge' | 'actions';
   width?: string;
   format?: string;
+  actions?: TableAction[];
 }
 
 export interface SelectOption {

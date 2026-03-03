@@ -42,7 +42,7 @@ interface FoodCostItem {
       <div class="kpi-grid">
         <bake-stats-card
           title="Daily Revenue"
-          value="&#8376;1,245,000"
+          value="$1,245,000"
           icon="payments"
           [trend]="12.5"
           trendLabel="vs yesterday"
@@ -51,7 +51,7 @@ interface FoodCostItem {
 
         <bake-stats-card
           title="Total Costs"
-          value="&#8376;933,000"
+          value="$933,000"
           icon="receipt"
           [trend]="-2.1"
           trendLabel="vs yesterday"
@@ -60,7 +60,7 @@ interface FoodCostItem {
 
         <bake-stats-card
           title="Net Profit"
-          value="&#8376;312,000"
+          value="$312,000"
           icon="account_balance"
           [trend]="8.3"
           trendLabel="vs yesterday"
@@ -100,7 +100,7 @@ interface FoodCostItem {
                     [style.background-color]="getBarColor(item.category)"
                   ></div>
                 </div>
-                <span class="cost-amount">&#8376;{{ item.amount | number }}</span>
+                <span class="cost-amount">${{ item.amount | number }}</span>
               </div>
             </div>
 
@@ -108,7 +108,7 @@ interface FoodCostItem {
 
             <div class="cost-total">
               <span class="total-label">Total Costs</span>
-              <span class="total-amount">&#8376;933,000</span>
+              <span class="total-amount">$933,000</span>
             </div>
           </mat-card-content>
         </mat-card>
@@ -129,7 +129,7 @@ interface FoodCostItem {
                   <span class="period-label">{{ period.label }}</span>
                 </div>
                 <div class="revenue-values">
-                  <span class="revenue-amount">&#8376;{{ period.revenue | number }}</span>
+                  <span class="revenue-amount">${{ period.revenue | number }}</span>
                   <span
                     class="revenue-change"
                     [class.positive]="period.change >= 0"

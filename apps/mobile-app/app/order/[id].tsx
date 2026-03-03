@@ -107,7 +107,7 @@ export default function OrderDetailScreen() {
               <Text style={styles.itemQty}>x{item.quantity}</Text>
             </View>
             <Text style={styles.itemPrice}>
-              {(item.price * item.quantity).toFixed(2)} ₸
+              {(item.price * item.quantity).toFixed(2)} $
             </Text>
           </View>
         )}
@@ -115,7 +115,7 @@ export default function OrderDetailScreen() {
 
       <View style={styles.totalRow}>
         <Text style={styles.totalLabel}>Total</Text>
-        <Text style={styles.totalValue}>{order.total?.toFixed(2)} ₸</Text>
+        <Text style={styles.totalValue}>{order.total?.toFixed(2)} $</Text>
       </View>
     </View>
   );

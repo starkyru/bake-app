@@ -142,7 +142,7 @@ interface Ingredient {
                   </ng-container>
 
                   <ng-container matColumnDef="cost">
-                    <th mat-header-cell *matHeaderCellDef>Cost/Unit (&#8376;)</th>
+                    <th mat-header-cell *matHeaderCellDef>Cost/Unit ($)</th>
                     <td mat-cell *matCellDef="let row">
                       <mat-form-field appearance="outline" class="table-field narrow">
                         <input
@@ -157,9 +157,9 @@ interface Ingredient {
                   </ng-container>
 
                   <ng-container matColumnDef="total">
-                    <th mat-header-cell *matHeaderCellDef>Total (&#8376;)</th>
+                    <th mat-header-cell *matHeaderCellDef>Total ($)</th>
                     <td mat-cell *matCellDef="let row">
-                      <span class="total-value">&#8376;{{ row.total | number : '1.0-0' }}</span>
+                      <span class="total-value">${{ row.total | number : '1.0-0' }}</span>
                     </td>
                   </ng-container>
 
@@ -184,12 +184,12 @@ interface Ingredient {
 
               <div class="total-cost">
                 <span class="total-label">Total Recipe Cost:</span>
-                <span class="total-amount">&#8376;{{ totalCost | number : '1.0-0' }}</span>
+                <span class="total-amount">${{ totalCost | number : '1.0-0' }}</span>
               </div>
               <div class="cost-per-unit" *ngIf="yieldQuantity > 0">
                 <span class="total-label">Cost per Unit:</span>
                 <span class="total-amount">
-                  &#8376;{{ costPerUnit | number : '1.0-0' }}
+                  ${{ costPerUnit | number : '1.0-0' }}
                 </span>
               </div>
             </div>

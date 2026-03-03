@@ -47,7 +47,7 @@ export default function DashboardScreen() {
 
         <View style={[styles.statCard, { backgroundColor: '#e3f2fd' }]}>
           <Text style={[styles.statValue, { color: '#1565c0' }]}>
-            {stats.todayRevenue.toFixed(0)} ₸
+            {stats.todayRevenue.toFixed(0)} $
           </Text>
           <Text style={styles.statLabel}>Today's Revenue</Text>
         </View>
