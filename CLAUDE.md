@@ -19,6 +19,8 @@ npm run serve:pos          # POS app (port 4200)
 npm run serve:admin        # Admin dashboard (port 4201)
 npm run serve:kitchen      # Kitchen display (port 4202)
 npm run serve:manager      # Manager dashboard (port 4203)
+npm run serve:hub          # Hub portal (port 4204)
+npm run serve:mobile       # Expo mobile app
 
 # Quality
 npm run test               # Run Jest tests
@@ -36,6 +38,8 @@ All frontend dev servers proxy `/api` requests to `http://localhost:3000`.
 - **`apps/admin-dashboard/`** — Admin panel (port 4201)
 - **`apps/kitchen-screen/`** — Kitchen Display System (port 4202)
 - **`apps/manager-dashboard/`** — Manager dashboard (port 4203)
+- **`apps/hub-app/`** — Hub portal at `bake.ilia.to` — login + role-based links to sub-apps (port 4204)
+- **`apps/mobile-app/`** — React Native (Expo) mobile app with Zustand, expo-router, expo-secure-store
 - **`libs/shared-types/`** — Models (User, Order, Product, Inventory, Recipe), enums (UserRole, OrderStatus, InventoryStatus), shared across frontend and backend
 - **`libs/api-client/`** — Angular HTTP client service (`ApiClientService` with get/post/put/delete)
 - **`libs/auth/`** — JWT auth services and guards

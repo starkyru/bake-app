@@ -1,12 +1,15 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { Notification } from './entities/notification.entity';
+import { DOMAIN_EVENTS } from '../websocket/ws-events.constants';
 
 @Injectable()
 export class NotificationsService {
   constructor(
     @InjectRepository(Notification) private notificationRepo: Repository<Notification>,
+    private eventEmitter: EventEmitter2,
   ) {}
 
   async findByUser(userId: string, unreadOnly = false): Promise<Notification[]> {
@@ -16,7 +19,16 @@ export class NotificationsService {
   }
 
   async create(data: Partial<Notification>): Promise<Notification> {
-    return this.notificationRepo.save(this.notificationRepo.create(data));
+    const saved = await this.notificationRepo.save(this.notificationRepo.create(data));
+    this.eventEmitter.emit(DOMAIN_EVENTS.NOTIFICATION_CREATED, {
+      notificationId: saved.id,
+      type: saved.type,
+      title: saved.title,
+      message: saved.message,
+      priority: saved.priority,
+      userId: saved.userId,
+    });
+    return saved;
   }
 
   async markAsRead(id: string, userId: string): Promise<Notification> {

@@ -1,6 +1,7 @@
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import { IoAdapter } from '@nestjs/platform-socket.io';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
@@ -14,10 +15,20 @@ async function bootstrap() {
   }));
 
   // CORS
+  const corsOrigins = (process.env.CORS_ORIGIN || 'http://localhost:4200').split(',').concat([
+    'http://localhost:4200',
+    'http://localhost:4201',
+    'http://localhost:4202',
+    'http://localhost:4203',
+    'http://localhost:4204',
+  ]);
   app.enableCors({
-    origin: process.env.CORS_ORIGIN || 'http://localhost:4200',
+    origin: [...new Set(corsOrigins)],
     credentials: true,
   });
+
+  // WebSocket adapter
+  app.useWebSocketAdapter(new IoAdapter(app));
 
   // Swagger documentation
   const config = new DocumentBuilder()

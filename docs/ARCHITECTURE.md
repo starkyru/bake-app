@@ -1,0 +1,220 @@
+# Architecture Overview
+
+## System Architecture
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                              FRONTEND APPS                                  │
+│                                                                             │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐   │
+│  │   POS App    │  │    Admin     │  │   Kitchen    │  │   Manager    │   │
+│  │  (Angular)   │  │  Dashboard   │  │   Display    │  │  Dashboard   │   │
+│  │  :4200       │  │  :4201       │  │  :4202       │  │  :4203       │   │
+│  └──────┬───────┘  └──────┬───────┘  └──────┬───────┘  └──────┬───────┘   │
+│         │                 │                 │                 │             │
+│         └─────────────────┼─────────────────┼─────────────────┘             │
+│                           │                 │                               │
+│  ┌────────────────────────┼─────────────────┼────────────────────┐          │
+│  │     Shared Libraries   │                 │                    │          │
+│  │  @bake-app/api-client  │  @bake-app/auth │  @bake-app/state  │          │
+│  │  @bake-app/ui-components  @bake-app/shared-types             │          │
+│  └────────────────────────┼─────────────────┼────────────────────┘          │
+└───────────────────────────┼─────────────────┼───────────────────────────────┘
+                            │ HTTP/REST       │ WebSocket (Socket.io)
+                            │ /api/v1/*       │ ws://
+┌───────────────────────────┼─────────────────┼───────────────────────────────┐
+│                     NestJS API Server (:3000)                               │
+│                                                                             │
+│  ┌──────────────────────────────────────────────────────────────────────┐   │
+│  │                        API Gateway Layer                             │   │
+│  │  ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐ │   │
+│  │  │JWT Guard │ │Roles     │ │Validation│ │Swagger   │ │CORS      │ │   │
+│  │  │          │ │Guard     │ │Pipe      │ │/api/docs │ │          │ │   │
+│  │  └──────────┘ └──────────┘ └──────────┘ └──────────┘ └──────────┘ │   │
+│  └──────────────────────────────────────────────────────────────────────┘   │
+│                                                                             │
+│  ┌──────────────────────────────────────────────────────────────────────┐   │
+│  │                      Feature Modules                                 │   │
+│  │                                                                      │   │
+│  │  ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐               │   │
+│  │  │  Auth    │ │  Users   │ │  Roles   │ │   POS    │               │   │
+│  │  │  Module  │ │  Module  │ │  Module  │ │  Module  │               │   │
+│  │  └──────────┘ └──────────┘ └──────────┘ └──────────┘               │   │
+│  │  ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐               │   │
+│  │  │Inventory │ │ Recipes  │ │Production│ │ Finance  │               │   │
+│  │  │  Module  │ │  Module  │ │  Module  │ │  Module  │               │   │
+│  │  └──────────┘ └──────────┘ └──────────┘ └──────────┘               │   │
+│  │  ┌──────────┐ ┌──────────┐ ┌──────────┐                            │   │
+│  │  │Reporting │ │Notific.  │ │WebSocket │                            │   │
+│  │  │  Module  │ │  Module  │ │  Module  │                            │   │
+│  │  └──────────┘ └──────────┘ └──────────┘                            │   │
+│  └──────────────────────────────────────────────────────────────────────┘   │
+│                                                                             │
+│  ┌──────────────────────────────────────────────────────────────────────┐   │
+│  │                    Data & Infrastructure                              │   │
+│  │  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐               │   │
+│  │  │  PostgreSQL  │  │    Redis     │  │  Bull Queue  │               │   │
+│  │  │  (TypeORM)   │  │  (Cache)     │  │  (Jobs)      │               │   │
+│  │  └──────────────┘  └──────────────┘  └──────────────┘               │   │
+│  └──────────────────────────────────────────────────────────────────────┘   │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## Module Dependency Graph
+
+```
+AppModule
+├── ConfigModule (global)
+├── TypeOrmModule (PostgreSQL)
+├── AuthModule
+│   ├── JwtModule
+│   └── PassportModule
+├── UsersModule
+├── RolesModule
+├── PosModule ──────────────────► EventEmitter2
+│   └── entities: Category, Product, Order, OrderItem, Payment
+├── InventoryModule ────────────► EventEmitter2
+│   └── entities: Ingredient, InventoryItem, InventoryBatch, InventoryMovement, Location
+├── RecipesModule
+│   └── entities: Recipe, RecipeIngredient, RecipeVersion
+├── ProductionModule ───────────► EventEmitter2
+│   └── entities: ProductionPlan, ProductionTask
+├── FinanceModule
+│   └── entities: FinanceTransaction, ExpenseRecord
+├── ReportingModule (NEW)
+│   └── reads from: all POS, Finance, Inventory, Production entities
+├── NotificationsModule ────────► EventEmitter2
+│   └── entities: Notification
+└── WebsocketModule (NEW)
+    ├── EventEmitterModule.forRoot()
+    ├── JwtModule (for handshake auth)
+    ├── AppWebSocketGateway
+    └── WsEventsListener
+```
+
+---
+
+## WebSocket Event Flow
+
+```
+┌─────────────┐    emit()     ┌─────────────────┐   @OnEvent()   ┌────────────────┐
+│             │──────────────►│                 │──────────────►│                │
+│  Service    │   EventEmitter│  WsEvents       │  emitToRoom() │  WebSocket     │
+│  (POS,      │               │  Listener       │               │  Gateway       │
+│  Inventory, │               │                 │               │  (Socket.io)   │
+│  etc.)      │               │                 │               │                │
+└─────────────┘               └─────────────────┘               └───────┬────────┘
+                                                                        │
+                                                               Socket.io emit
+                                                                        │
+                                                    ┌───────────────────┼──────────────┐
+                                                    │                   │              │
+                                              ┌─────▼─────┐     ┌──────▼────┐  ┌──────▼────┐
+                                              │  kitchen   │     │   pos     │  │  manager  │
+                                              │   room     │     │   room    │  │   room    │
+                                              │            │     │           │  │           │
+                                              │ chef       │     │ cashier   │  │ owner     │
+                                              │ baker      │     │ barista   │  │ manager   │
+                                              │ barista    │     │           │  │           │
+                                              └────────────┘     └───────────┘  └───────────┘
+```
+
+---
+
+## Reporting Module Data Flow
+
+```
+┌────────────────────────────────────────────────────────────┐
+│                   ReportingModule                           │
+│                                                            │
+│  ReportingController (8 GET endpoints)                     │
+│       │                                                    │
+│       ▼                                                    │
+│  ReportingService                                          │
+│       │                                                    │
+│       ├── getSalesSummary()       ── Order                 │
+│       ├── getTopProducts()        ── OrderItem, Product    │
+│       ├── getSalesByCategory()    ── OrderItem, Category   │
+│       ├── getPaymentMethods()     ── Payment, Order        │
+│       ├── getFinanceSummary()     ── FinanceTransaction    │
+│       ├── getInventoryStatus()    ── InventoryItem, Batch  │
+│       ├── getInventoryMovements() ── InventoryMovement     │
+│       └── getProductionSummary()  ── ProductionPlan, Task  │
+│                                                            │
+│  No new database tables — read-only aggregations           │
+│  via TypeORM QueryBuilder (getRawMany/getRawOne)           │
+└────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## Entity Relationship Overview
+
+```
+┌────────────┐     ┌────────────┐     ┌────────────┐
+│  Category  │◄────│  Product   │     │   Recipe   │
+└────────────┘     └─────┬──────┘     └──────┬─────┘
+                         │                   │
+                   ┌─────▼──────┐     ┌──────▼─────────┐
+                   │ OrderItem  │     │RecipeIngredient │
+                   └─────┬──────┘     └──────┬─────────┘
+                         │                   │
+                   ┌─────▼──────┐     ┌──────▼─────────┐
+                   │   Order    │     │   Ingredient   │
+                   └─────┬──────┘     └──────┬─────────┘
+                         │                   │
+                   ┌─────▼──────┐     ┌──────▼─────────┐
+                   │  Payment   │     │ InventoryItem  │
+                   └────────────┘     └──────┬─────────┘
+                                             │
+┌──────────────┐  ┌───────────────┐   ┌──────▼─────────┐
+│ProductionPlan│  │InventoryBatch │   │InventoryMovement│
+└──────┬───────┘  └───────────────┘   └────────────────┘
+       │
+┌──────▼───────┐  ┌───────────────┐   ┌────────────────┐
+│ProductionTask│  │  FinanceTxn   │   │  Notification  │
+└──────────────┘  └───────────────┘   └────────────────┘
+                  ┌───────────────┐
+                  │ExpenseRecord  │
+                  └───────────────┘
+
+All entities extend BaseEntity: { id: UUID, createdAt: Date, updatedAt: Date }
+```
+
+---
+
+## User Roles & Access Matrix
+
+| Role | POS | Inventory | Recipes | Production | Finance | Reports | Notifications |
+|------|-----|-----------|---------|------------|---------|---------|--------------|
+| Owner | Full | Full | Full | Full | Full | All | Receive |
+| Manager | Full | Full | Full | Full | View | Most | Receive |
+| Accountant | View | - | - | - | Full | Finance | Receive |
+| Chef | - | View | Full | Full | - | Prod/Inv | Receive |
+| Baker | - | View | View | Execute | - | - | Receive |
+| Barista | Operate | View | View | Execute | - | - | Receive |
+| Cashier | Operate | - | - | - | - | - | Receive |
+| Warehouse | - | Full | - | - | - | Inventory | Receive |
+| Marketing | - | - | - | - | - | Sales | Receive |
+
+---
+
+## Technology Stack
+
+| Layer | Technology |
+|-------|-----------|
+| Frontend | Angular 17 (Standalone Components) |
+| UI Library | Angular Material |
+| State Management | NgRx |
+| Backend Framework | NestJS 10 |
+| Database | PostgreSQL (TypeORM) |
+| Cache | Redis |
+| Job Queue | Bull (Redis-backed) |
+| WebSocket | Socket.io via @nestjs/platform-socket.io |
+| Event Bus | @nestjs/event-emitter (EventEmitter2) |
+| Auth | JWT + Passport |
+| API Docs | Swagger (OpenAPI) |
+| Monorepo | Nx |
+| Offline Support | IndexedDB via Dexie (POS) |

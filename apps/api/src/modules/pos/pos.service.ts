@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { Category } from './entities/category.entity';
 import { Product } from './entities/product.entity';
 import { Order } from './entities/order.entity';
@@ -9,6 +10,7 @@ import { Payment } from './entities/payment.entity';
 import { CreateCategoryDto, UpdateCategoryDto, CreateProductDto, UpdateProductDto, CreateOrderDto, CreatePaymentDto, UpdateOrderStatusDto } from './dto';
 import { PaginationDto } from '../../common/dto/pagination.dto';
 import { PaginatedResponseDto } from '../../common/dto/paginated-response.dto';
+import { DOMAIN_EVENTS } from '../websocket/ws-events.constants';
 
 @Injectable()
 export class PosService {
@@ -18,6 +20,7 @@ export class PosService {
     @InjectRepository(Order) private orderRepo: Repository<Order>,
     @InjectRepository(OrderItem) private orderItemRepo: Repository<OrderItem>,
     @InjectRepository(Payment) private paymentRepo: Repository<Payment>,
+    private eventEmitter: EventEmitter2,
   ) {}
 
   // Categories
@@ -140,13 +143,33 @@ export class PosService {
       items: orderItems as OrderItem[],
     });
 
-    return this.orderRepo.save(order);
+    const savedOrder = await this.orderRepo.save(order);
+    this.eventEmitter.emit(DOMAIN_EVENTS.ORDER_CREATED, {
+      order: savedOrder,
+      orderId: savedOrder.id,
+      orderNumber: savedOrder.orderNumber,
+      type: savedOrder.type,
+      total: savedOrder.total,
+      items: orderItems.map(i => ({
+        productName: i.productId,
+        quantity: i.quantity,
+      })),
+    });
+    return savedOrder;
   }
 
   async updateOrderStatus(id: string, dto: UpdateOrderStatusDto): Promise<Order> {
     const order = await this.findOneOrder(id);
+    const previousStatus = order.status;
     order.status = dto.status;
-    return this.orderRepo.save(order);
+    const savedOrder = await this.orderRepo.save(order);
+    this.eventEmitter.emit(DOMAIN_EVENTS.ORDER_STATUS_CHANGED, {
+      orderId: savedOrder.id,
+      orderNumber: savedOrder.orderNumber,
+      previousStatus,
+      newStatus: savedOrder.status,
+    });
+    return savedOrder;
   }
 
   async addPayment(orderId: string, dto: CreatePaymentDto): Promise<Payment> {
@@ -156,6 +179,14 @@ export class PosService {
       method: dto.method,
       orderId: order.id,
     });
-    return this.paymentRepo.save(payment);
+    const savedPayment = await this.paymentRepo.save(payment);
+    this.eventEmitter.emit(DOMAIN_EVENTS.ORDER_PAYMENT_RECEIVED, {
+      orderId: order.id,
+      orderNumber: order.orderNumber,
+      paymentId: savedPayment.id,
+      amount: savedPayment.amount,
+      method: savedPayment.method,
+    });
+    return savedPayment;
   }
 }

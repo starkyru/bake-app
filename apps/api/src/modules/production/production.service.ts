@@ -1,15 +1,18 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { ProductionPlan } from './entities/production-plan.entity';
 import { ProductionTask } from './entities/production-task.entity';
 import { CreateProductionPlanDto, UpdateProductionPlanDto, UpdateTaskStatusDto } from './dto';
+import { DOMAIN_EVENTS } from '../websocket/ws-events.constants';
 
 @Injectable()
 export class ProductionService {
   constructor(
     @InjectRepository(ProductionPlan) private planRepo: Repository<ProductionPlan>,
     @InjectRepository(ProductionTask) private taskRepo: Repository<ProductionTask>,
+    private eventEmitter: EventEmitter2,
   ) {}
 
   async findAll(date?: string, locationId?: string): Promise<ProductionPlan[]> {
@@ -61,6 +64,15 @@ export class ProductionService {
     if (dto.status === 'completed') task.actualEnd = new Date();
     if (dto.actualYield !== undefined) task.actualYield = dto.actualYield;
     if (dto.wasteQuantity !== undefined) task.wasteQuantity = dto.wasteQuantity;
-    return this.taskRepo.save(task);
+    const savedTask = await this.taskRepo.save(task);
+    this.eventEmitter.emit(DOMAIN_EVENTS.PRODUCTION_TASK_UPDATED, {
+      taskId: savedTask.id,
+      planId: savedTask.planId,
+      recipeName: savedTask.recipeName,
+      status: savedTask.status,
+      actualYield: savedTask.actualYield,
+      wasteQuantity: savedTask.wasteQuantity,
+    });
+    return savedTask;
   }
 }

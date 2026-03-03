@@ -1,0 +1,81 @@
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run test -- --passWithNoTests
+
+  build-frontend:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npx ng build pos-app --configuration=production
+      - run: npx ng build admin-dashboard --configuration=production
+      - run: npx ng build kitchen-screen --configuration=production
+      - run: npx ng build manager-dashboard --configuration=production
+      - run: npx ng build hub-app --configuration=production
+      - uses: actions/upload-artifact@v4
+        with:
+          name: frontend-dist
+          path: dist/apps/
+          retention-days: 1
+
+  deploy:
+    needs: [test, build-frontend]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: frontend-dist
+          path: dist/apps/
+
+      - name: Install SSH key
+        uses: shimataro/ssh-key-action@v2
+        with:
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          known_hosts: unnecessary
+          config: |
+            Host vps
+              HostName ${{ secrets.VPS_HOST }}
+              User deploy
+              StrictHostKeyChecking no
+
+      - name: Deploy frontend assets
+        run: |
+          rsync -azP --delete dist/apps/pos-app/ vps:/var/www/bake-app/pos-app/
+          rsync -azP --delete dist/apps/admin-dashboard/ vps:/var/www/bake-app/admin-dashboard/
+          rsync -azP --delete dist/apps/kitchen-screen/ vps:/var/www/bake-app/kitchen-screen/
+          rsync -azP --delete dist/apps/manager-dashboard/ vps:/var/www/bake-app/manager-dashboard/
+          rsync -azP --delete dist/apps/hub-app/ vps:/var/www/bake-app/hub-app/
+
+      - name: Deploy API
+        run: |
+          ssh vps << 'EOF'
+            cd /opt/bake-app
+            git pull origin main
+            docker compose -f docker-compose.prod.yml build api
+            docker compose -f docker-compose.prod.yml up -d api
+          EOF
+
+      - name: Health check
+        run: |
+          sleep 10
+          ssh vps 'curl -f http://127.0.0.1:3000/api/health || exit 1'

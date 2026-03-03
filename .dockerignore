@@ -1,0 +1,12 @@
+node_modules
+dist
+.angular
+.git
+.env*
+coverage
+design
+docs
+*.md
+.vscode
+.idea
+tmp

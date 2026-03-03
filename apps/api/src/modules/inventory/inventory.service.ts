@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { Ingredient } from './entities/ingredient.entity';
 import { InventoryItem } from './entities/inventory-item.entity';
 import { InventoryBatch } from './entities/inventory-batch.entity';
@@ -9,6 +10,7 @@ import { Location } from './entities/location.entity';
 import { CreateIngredientDto, UpdateIngredientDto, CreateLocationDto, UpdateLocationDto, DeliveryDto, WriteOffDto, TransferDto } from './dto';
 import { PaginationDto } from '../../common/dto/pagination.dto';
 import { PaginatedResponseDto } from '../../common/dto/paginated-response.dto';
+import { DOMAIN_EVENTS } from '../websocket/ws-events.constants';
 
 @Injectable()
 export class InventoryService {
@@ -18,6 +20,7 @@ export class InventoryService {
     @InjectRepository(InventoryBatch) private batchRepo: Repository<InventoryBatch>,
     @InjectRepository(InventoryMovement) private movementRepo: Repository<InventoryMovement>,
     @InjectRepository(Location) private locationRepo: Repository<Location>,
+    private eventEmitter: EventEmitter2,
   ) {}
 
   // Ingredients
@@ -99,7 +102,7 @@ export class InventoryService {
       }));
     }
 
-    return this.movementRepo.save(this.movementRepo.create({
+    const movement = await this.movementRepo.save(this.movementRepo.create({
       type: 'delivery',
       quantity: dto.quantity,
       unitCost: dto.unitCost,
@@ -108,6 +111,15 @@ export class InventoryService {
       toLocationId: dto.locationId,
       userId,
     }));
+    const ingredient = await this.ingredientRepo.findOne({ where: { id: dto.ingredientId } });
+    this.eventEmitter.emit(DOMAIN_EVENTS.INVENTORY_DELIVERY, {
+      movementType: 'delivery',
+      ingredientId: dto.ingredientId,
+      ingredientName: ingredient?.name,
+      quantity: dto.quantity,
+      locationId: dto.locationId,
+    });
+    return movement;
   }
 
   // Write-off
@@ -122,7 +134,7 @@ export class InventoryService {
     await this.updateItemStatus(item);
     await this.inventoryItemRepo.save(item);
 
-    return this.movementRepo.save(this.movementRepo.create({
+    const movement = await this.movementRepo.save(this.movementRepo.create({
       type: 'write_off',
       quantity: dto.quantity,
       notes: dto.reason,
@@ -130,6 +142,15 @@ export class InventoryService {
       fromLocationId: dto.locationId,
       userId,
     }));
+    const ingredient = await this.ingredientRepo.findOne({ where: { id: dto.ingredientId } });
+    this.eventEmitter.emit(DOMAIN_EVENTS.INVENTORY_WRITE_OFF, {
+      movementType: 'write_off',
+      ingredientId: dto.ingredientId,
+      ingredientName: ingredient?.name,
+      quantity: dto.quantity,
+      locationId: dto.locationId,
+    });
+    return movement;
   }
 
   // Transfer
@@ -160,7 +181,7 @@ export class InventoryService {
     await this.updateItemStatus(toItem);
     await this.inventoryItemRepo.save(toItem);
 
-    return this.movementRepo.save(this.movementRepo.create({
+    const movement = await this.movementRepo.save(this.movementRepo.create({
       type: 'transfer',
       quantity: dto.quantity,
       notes: dto.notes,
@@ -169,6 +190,15 @@ export class InventoryService {
       toLocationId: dto.toLocationId,
       userId,
     }));
+    const ingredient = await this.ingredientRepo.findOne({ where: { id: dto.ingredientId } });
+    this.eventEmitter.emit(DOMAIN_EVENTS.INVENTORY_TRANSFER, {
+      movementType: 'transfer',
+      ingredientId: dto.ingredientId,
+      ingredientName: ingredient?.name,
+      quantity: dto.quantity,
+      locationId: dto.fromLocationId,
+    });
+    return movement;
   }
 
   private async updateItemStatus(item: InventoryItem): Promise<void> {
@@ -180,6 +210,16 @@ export class InventoryService {
       item.status = 'low_stock';
     } else {
       item.status = 'in_stock';
+    }
+    if (item.status === 'low_stock' || item.status === 'out_of_stock') {
+      this.eventEmitter.emit(DOMAIN_EVENTS.INVENTORY_LOW_STOCK, {
+        ingredientId: item.ingredientId,
+        ingredientName: ingredient.name,
+        currentQuantity: Number(item.quantity),
+        minStockLevel: Number(ingredient.minStockLevel),
+        status: item.status,
+        locationId: item.locationId,
+      });
     }
   }
 }
