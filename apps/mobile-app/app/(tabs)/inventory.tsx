@@ -25,8 +25,8 @@ export default function InventoryScreen() {
 
   async function loadInventory() {
     try {
-      const data = await api.get<any[]>('/inventory');
-      setInventory(data);
+      const res = await api.get<{ data: any[] }>('/v1/inventory');
+      setInventory(res.data);
     } catch {
       // Silently fail
     }

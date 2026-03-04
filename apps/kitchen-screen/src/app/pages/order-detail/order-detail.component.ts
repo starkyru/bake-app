@@ -4,7 +4,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { ApiClientService } from '@bake-app/api-client';
-import { Order } from '@bake-app/shared-types';
+import { Order, Recipe } from '@bake-app/shared-types';
 
 interface RecipeStep {
   step: number;
@@ -515,6 +515,11 @@ export class OrderDetailComponent implements OnInit {
           ingredients: [],
           steps: [],
         };
+
+        const itemWithRecipe = order.items.find(i => i.product?.recipeId);
+        if (itemWithRecipe?.product?.recipeId) {
+          this.loadRecipe(itemWithRecipe.product.recipeId);
+        }
       },
       error: () => {
         this.orderDetail = {
@@ -527,6 +532,29 @@ export class OrderDetailComponent implements OnInit {
           ingredients: [],
           steps: [],
         };
+      },
+    });
+  }
+
+  private loadRecipe(recipeId: string): void {
+    this.apiClient.get<Recipe>(`/v1/recipes/${recipeId}`).subscribe({
+      next: (recipe) => {
+        this.orderDetail.ingredients = recipe.ingredients.map(ing => ({
+          name: ing.ingredientName || 'Ingredient',
+          amount: `${ing.quantity} ${ing.unit}`,
+          inStock: true,
+        }));
+
+        if (recipe.instructions) {
+          this.orderDetail.steps = recipe.instructions
+            .split('\n')
+            .filter(line => line.trim())
+            .map((line, index) => ({
+              step: index + 1,
+              instruction: line.trim(),
+              duration: '',
+            }));
+        }
       },
     });
   }

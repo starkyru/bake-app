@@ -10,6 +10,7 @@ import {
   TableColumn,
 } from '@bake-app/ui-components';
 import { ApiClientService } from '@bake-app/api-client';
+import { forkJoin } from 'rxjs';
 
 interface CostItem {
   category: string;
@@ -45,7 +46,7 @@ interface FoodCostItem {
           title="Daily Revenue"
           [value]="kpis.revenue"
           icon="payments"
-          [trend]="0"
+          [trend]="kpis.revenueTrend"
           trendLabel="vs yesterday"
           color="primary"
         ></bake-stats-card>
@@ -54,7 +55,7 @@ interface FoodCostItem {
           title="Total Costs"
           [value]="kpis.totalCosts"
           icon="receipt"
-          [trend]="0"
+          [trend]="kpis.costsTrend"
           trendLabel="vs yesterday"
           color="warn"
         ></bake-stats-card>
@@ -63,7 +64,7 @@ interface FoodCostItem {
           title="Net Profit"
           [value]="kpis.netProfit"
           icon="account_balance"
-          [trend]="0"
+          [trend]="kpis.profitTrend"
           trendLabel="vs yesterday"
           color="accent"
         ></bake-stats-card>
@@ -72,7 +73,7 @@ interface FoodCostItem {
           title="Profit Margin"
           [value]="kpis.margin"
           icon="trending_up"
-          [trend]="0"
+          [trend]="kpis.marginTrend"
           trendLabel="vs last week"
           color="primary"
         ></bake-stats-card>
@@ -101,7 +102,7 @@ interface FoodCostItem {
                     [style.background-color]="getBarColor(item.category)"
                   ></div>
                 </div>
-                <span class="cost-amount">${{ item.amount | number }}</span>
+                <span class="cost-amount">{{ item.amount | currency:'USD':'symbol':'1.0-0' }}</span>
               </div>
             </div>
 
@@ -130,7 +131,7 @@ interface FoodCostItem {
                   <span class="period-label">{{ period.label }}</span>
                 </div>
                 <div class="revenue-values">
-                  <span class="revenue-amount">${{ period.revenue | number }}</span>
+                  <span class="revenue-amount">{{ period.revenue | currency:'USD':'symbol':'1.0-0' }}</span>
                   <span
                     class="revenue-change"
                     [class.positive]="period.change >= 0"
@@ -369,9 +370,13 @@ interface FoodCostItem {
 export class FinanceComponent implements OnInit {
   kpis = {
     revenue: '$0',
+    revenueTrend: 0,
     totalCosts: '$0',
+    costsTrend: 0,
     netProfit: '$0',
+    profitTrend: 0,
     margin: '0%',
+    marginTrend: 0,
   };
 
   costBreakdown: CostItem[] = [];
@@ -396,77 +401,135 @@ export class FinanceComponent implements OnInit {
   }
 
   private loadFinanceSummary(): void {
-    this.apiClient
-      .get<Record<string, unknown>>('/v1/reports/finance/summary')
-      .subscribe({
-        next: (data) => {
-          const totalRevenue = Number(data['totalRevenue'] || 0);
-          const totalExpenses = Number(data['totalExpenses'] || 0);
-          const netProfit = Number(data['netProfit'] || 0);
-          const margin = Number(data['margin'] || 0);
+    const today = new Date();
+    const startOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    const startOfYesterday = new Date(startOfToday.getTime() - 86400000);
+    const todayStr = startOfToday.toISOString().split('T')[0];
+    const yesterdayStr = startOfYesterday.toISOString().split('T')[0];
 
-          this.kpis = {
-            revenue: `$${totalRevenue.toLocaleString()}`,
-            totalCosts: `$${totalExpenses.toLocaleString()}`,
-            netProfit: `$${netProfit.toLocaleString()}`,
-            margin: `${margin}%`,
+    forkJoin({
+      current: this.apiClient.get<Record<string, unknown>>(
+        `/v1/reports/finance/summary?startDate=${todayStr}&endDate=${todayStr}`,
+      ),
+      previous: this.apiClient.get<Record<string, unknown>>(
+        `/v1/reports/finance/summary?startDate=${yesterdayStr}&endDate=${yesterdayStr}`,
+      ),
+    }).subscribe({
+      next: ({ current, previous }) => {
+        const totalRevenue = Number(current['totalRevenue'] || 0);
+        const totalExpenses = Number(current['totalExpenses'] || 0);
+        const netProfit = Number(current['netProfit'] || 0);
+        const margin = Number(current['margin'] || 0);
+
+        const prevRevenue = Number(previous['totalRevenue'] || 0);
+        const prevExpenses = Number(previous['totalExpenses'] || 0);
+        const prevProfit = Number(previous['netProfit'] || 0);
+        const prevMargin = Number(previous['margin'] || 0);
+
+        const pctChange = (cur: number, prev: number) =>
+          prev !== 0 ? Math.round(((cur - prev) / Math.abs(prev)) * 100) : 0;
+
+        this.kpis = {
+          revenue: `$${totalRevenue.toLocaleString()}`,
+          revenueTrend: pctChange(totalRevenue, prevRevenue),
+          totalCosts: `$${totalExpenses.toLocaleString()}`,
+          costsTrend: pctChange(totalExpenses, prevExpenses),
+          netProfit: `$${netProfit.toLocaleString()}`,
+          profitTrend: pctChange(netProfit, prevProfit),
+          margin: `${margin}%`,
+          marginTrend: pctChange(margin, prevMargin),
+        };
+
+        const breakdown =
+          (current['breakdown'] as Array<Record<string, unknown>>) || [];
+        const prevBreakdown =
+          (previous['breakdown'] as Array<Record<string, unknown>>) || [];
+
+        const expenseRows = breakdown.filter((r) => r['type'] === 'expense');
+        const expenseTotal = expenseRows.reduce(
+          (sum, r) => sum + Math.abs(Number(r['total'] || 0)),
+          0,
+        );
+        this.costBreakdown = expenseRows.map((r) => {
+          const amount = Math.abs(Number(r['total'] || 0));
+          return {
+            category: String(r['category'] || 'Other'),
+            amount,
+            percentage:
+              expenseTotal > 0 ? Math.round((amount / expenseTotal) * 100) : 0,
           };
+        });
 
-          const breakdown =
-            (data['breakdown'] as Array<Record<string, unknown>>) || [];
-          const expenseRows = breakdown.filter((r) => r['type'] === 'expense');
-          const expenseTotal = expenseRows.reduce(
-            (sum, r) => sum + Math.abs(Number(r['total'] || 0)),
-            0,
-          );
-          this.costBreakdown = expenseRows.map((r) => {
-            const amount = Math.abs(Number(r['total'] || 0));
+        const revenueRows = breakdown.filter((r) => r['type'] === 'revenue');
+        const prevRevenueMap = new Map<string, number>();
+        for (const r of prevBreakdown.filter((r) => r['type'] === 'revenue')) {
+          prevRevenueMap.set(String(r['category'] || ''), Number(r['total'] || 0));
+        }
+
+        this.revenuePeriods = [
+          {
+            label: 'Total Revenue',
+            revenue: totalRevenue,
+            change: pctChange(totalRevenue, prevRevenue),
+            icon: 'today',
+          },
+          ...revenueRows.slice(0, 4).map((r) => {
+            const cat = String(r['category'] || '');
+            const curVal = Number(r['total'] || 0);
+            const prevVal = prevRevenueMap.get(cat) || 0;
             return {
-              category: String(r['category'] || 'Other'),
-              amount,
-              percentage:
-                expenseTotal > 0 ? Math.round((amount / expenseTotal) * 100) : 0,
-            };
-          });
-
-          const revenueRows = breakdown.filter((r) => r['type'] === 'revenue');
-          this.revenuePeriods = [
-            {
-              label: 'Total Revenue',
-              revenue: totalRevenue,
-              change: 0,
-              icon: 'today',
-            },
-            ...revenueRows.slice(0, 4).map((r) => ({
-              label: String(r['category'] || ''),
-              revenue: Number(r['total'] || 0),
-              change: 0,
+              label: cat,
+              revenue: curVal,
+              change: pctChange(curVal, prevVal),
               icon: 'receipt',
-            })),
-          ];
-        },
-      });
+            };
+          }),
+        ];
+      },
+    });
   }
 
   private loadSalesByCategory(): void {
-    this.apiClient
-      .get<Array<Record<string, unknown>>>('/v1/reports/sales/by-category')
-      .subscribe({
-        next: (data) => {
-          this.foodCostData = data.map((row) => {
-            const revenue = Number(row['totalRevenue'] || 0);
-            const cost = Math.round(revenue * 0.35);
-            const foodCostPct = revenue > 0 ? Math.round((cost / revenue) * 100) : 0;
-            return {
-              category: String(row['categoryName'] || ''),
-              revenue,
-              cost,
-              foodCost: foodCostPct,
-              margin: 100 - foodCostPct,
-            };
-          });
-        },
-      });
+    forkJoin({
+      sales: this.apiClient.get<Array<Record<string, unknown>>>('/v1/reports/sales/by-category'),
+      products: this.apiClient.get<Record<string, unknown>>('/v1/products?limit=200'),
+    }).subscribe({
+      next: ({ sales, products }) => {
+        const productList = (products['data'] as Array<Record<string, unknown>>) || [];
+
+        // Build cost rate map per categoryId: average(costPrice / price)
+        const categoryRates = new Map<string, { totalRate: number; count: number }>();
+        for (const p of productList) {
+          const price = Number(p['price'] || 0);
+          const costPrice = Number(p['costPrice'] || 0);
+          const catId = String(p['categoryId'] || '');
+          if (price > 0 && catId) {
+            const entry = categoryRates.get(catId) || { totalRate: 0, count: 0 };
+            entry.totalRate += costPrice / price;
+            entry.count += 1;
+            categoryRates.set(catId, entry);
+          }
+        }
+
+        this.foodCostData = sales.map((row) => {
+          const revenue = Number(row['totalRevenue'] || 0);
+          const catId = String(row['categoryId'] || '');
+          const rateEntry = categoryRates.get(catId);
+          const avgCostRate = rateEntry && rateEntry.count > 0
+            ? rateEntry.totalRate / rateEntry.count
+            : 0.35;
+          const cost = Math.round(revenue * avgCostRate);
+          const foodCostPct = revenue > 0 ? Math.round((cost / revenue) * 100) : 0;
+          return {
+            category: String(row['categoryName'] || ''),
+            revenue,
+            cost,
+            foodCost: foodCostPct,
+            margin: 100 - foodCostPct,
+          };
+        });
+      },
+    });
   }
 
   getBarColor(category: string): string {

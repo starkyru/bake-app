@@ -30,8 +30,8 @@ export default function OrdersScreen() {
 
   async function loadOrders() {
     try {
-      const data = await api.get<any[]>('/orders');
-      setOrders(data);
+      const res = await api.get<{ data: any[] }>('/v1/orders?limit=50');
+      setOrders(res.data);
     } catch {
       // Silently fail, user can pull to refresh
     }

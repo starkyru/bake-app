@@ -25,7 +25,7 @@ interface OrderDetail {
   createdAt: string;
   items: {
     id: string;
-    productName: string;
+    product?: { name: string };
     quantity: number;
     price: number;
   }[];
@@ -42,7 +42,7 @@ export default function OrderDetailScreen() {
 
   async function loadOrder() {
     try {
-      const data = await api.get<OrderDetail>(`/orders/${id}`);
+      const data = await api.get<OrderDetail>(`/v1/orders/${id}`);
       setOrder(data);
     } catch {
       // Handle error
@@ -103,7 +103,7 @@ export default function OrderDetailScreen() {
         renderItem={({ item }) => (
           <View style={styles.itemRow}>
             <View style={styles.itemInfo}>
-              <Text style={styles.itemName}>{item.productName}</Text>
+              <Text style={styles.itemName}>{item.product?.name || 'Unknown'}</Text>
               <Text style={styles.itemQty}>x{item.quantity}</Text>
             </View>
             <Text style={styles.itemPrice}>

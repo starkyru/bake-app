@@ -114,7 +114,7 @@ interface PaginatedResponse<T> {
             <div class="item-info">
               <span class="item-name">{{ item.product.name }}</span>
               <span class="item-price">
-                ${{ item.product.price * item.quantity | number: '1.0-0' }}
+                {{ item.product.price * item.quantity | currency:'USD':'symbol':'1.0-0' }}
               </span>
             </div>
             <div class="item-controls">
@@ -141,11 +141,11 @@ interface PaginatedResponse<T> {
         <div class="cart-totals" *ngIf="cart.length > 0">
           <div class="total-row">
             <span>Subtotal</span>
-            <span class="total-value">${{ subtotal | number: '1.0-0' }}</span>
+            <span class="total-value">{{ subtotal | currency:'USD':'symbol':'1.0-0' }}</span>
           </div>
           <div class="total-row tax-row">
             <span>Tax (12%)</span>
-            <span class="total-value">${{ tax | number: '1.0-0' }}</span>
+            <span class="total-value">{{ tax | currency:'USD':'symbol':'1.0-0' }}</span>
           </div>
           <div class="total-row grand-total">
             <span>Total</span>
@@ -164,7 +164,7 @@ interface PaginatedResponse<T> {
           </button>
           <button mat-flat-button class="pay-btn" (click)="openPaymentDialog()">
             <mat-icon>payment</mat-icon>
-            PAY ${{ total | number: '1.0-0' }}
+            PAY {{ total | currency:'USD':'symbol':'1.0-0' }}
           </button>
         </div>
       </div>
@@ -585,18 +585,71 @@ export class PosComponent implements OnInit {
     });
 
     dialogRef.afterClosed().subscribe((result: PaymentDialogResult | undefined) => {
-      if (result) {
-        this.cart = [];
-        this.snackBar.open(
-          `Payment successful! ${result.method === 'cash' ? 'Change: $' + result.change : 'Card approved.'}`,
-          'OK',
-          {
-            duration: 4000,
-            horizontalPosition: 'center',
-            verticalPosition: 'top',
-          }
-        );
-      }
+      if (!result) return;
+
+      const orderPayload = {
+        type: 'dine_in',
+        items: this.cart.map((item) => ({
+          productId: item.product.id,
+          quantity: item.quantity,
+          unitPrice: item.product.price,
+        })),
+      };
+
+      this.apiClient.post<{ id: string }>('/v1/orders', orderPayload).subscribe({
+        next: (order) => {
+          const paymentPayload = {
+            amount: result.amountPaid,
+            method: result.method,
+            status: 'completed',
+          };
+
+          this.apiClient
+            .post(`/v1/orders/${order.id}/payments`, paymentPayload)
+            .subscribe({
+              next: () => {
+                this.apiClient
+                  .put(`/v1/orders/${order.id}/status`, { status: 'confirmed' })
+                  .subscribe({
+                    next: () => {
+                      this.cart = [];
+                      this.snackBar.open(
+                        `Payment successful! ${result.method === 'cash' ? 'Change: $' + result.change : 'Card approved.'}`,
+                        'OK',
+                        {
+                          duration: 4000,
+                          horizontalPosition: 'center',
+                          verticalPosition: 'top',
+                        }
+                      );
+                    },
+                    error: () => {
+                      this.cart = [];
+                      this.snackBar.open(
+                        'Order placed but status update failed.',
+                        'OK',
+                        { duration: 4000 }
+                      );
+                    },
+                  });
+              },
+              error: () => {
+                this.snackBar.open(
+                  'Order created but payment recording failed. Please retry.',
+                  'OK',
+                  { duration: 5000 }
+                );
+              },
+            });
+        },
+        error: () => {
+          this.snackBar.open(
+            'Failed to create order. Please try again.',
+            'OK',
+            { duration: 5000 }
+          );
+        },
+      });
     });
   }
 }

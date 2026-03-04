@@ -13,6 +13,7 @@ export const PERMISSION_RESOURCES = [
   'finance',
   'reports',
   'notifications',
+  'settings',
 ] as const;
 
 export const PERMISSION_ACTIONS = ['read', 'create', 'update', 'delete'] as const;

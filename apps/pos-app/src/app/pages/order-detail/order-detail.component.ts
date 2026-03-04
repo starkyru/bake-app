@@ -99,8 +99,8 @@ interface OrderDetailView {
                 <tr *ngFor="let item of order.items">
                   <td class="col-item">{{ item.name }}</td>
                   <td class="col-qty">{{ item.quantity }}</td>
-                  <td class="col-price">${{ item.unitPrice | number: '1.0-0' }}</td>
-                  <td class="col-total">${{ item.total | number: '1.0-0' }}</td>
+                  <td class="col-price">{{ item.unitPrice | currency:'USD':'symbol':'1.0-0' }}</td>
+                  <td class="col-total">{{ item.total | currency:'USD':'symbol':'1.0-0' }}</td>
                 </tr>
               </tbody>
             </table>
@@ -112,11 +112,11 @@ interface OrderDetailView {
           <div class="totals-section">
             <div class="total-line">
               <span>Subtotal</span>
-              <span class="amount">${{ order.subtotal | number: '1.0-0' }}</span>
+              <span class="amount">{{ order.subtotal | currency:'USD':'symbol':'1.0-0' }}</span>
             </div>
             <div class="total-line tax">
               <span>Tax (12%)</span>
-              <span class="amount">${{ order.tax | number: '1.0-0' }}</span>
+              <span class="amount">{{ order.tax | currency:'USD':'symbol':'1.0-0' }}</span>
             </div>
             <div class="total-line grand">
               <span>Total</span>
@@ -140,13 +140,13 @@ interface OrderDetailView {
               <div class="payment-item">
                 <span class="payment-label">Amount Paid</span>
                 <span class="payment-value mono">
-                  ${{ order.amountPaid | number: '1.0-0' }}
+                  {{ order.amountPaid | currency:'USD':'symbol':'1.0-0' }}
                 </span>
               </div>
               <div class="payment-item" *ngIf="order.change > 0">
                 <span class="payment-label">Change</span>
                 <span class="payment-value mono change-value">
-                  ${{ order.change | number: '1.0-0' }}
+                  {{ order.change | currency:'USD':'symbol':'1.0-0' }}
                 </span>
               </div>
             </div>

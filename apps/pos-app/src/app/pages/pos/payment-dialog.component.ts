@@ -11,7 +11,6 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatTabsModule } from '@angular/material/tabs';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
-import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 
 export interface PaymentDialogData {
   total: number;
@@ -36,7 +35,6 @@ export interface PaymentDialogResult {
     MatTabsModule,
     MatFormFieldModule,
     MatInputModule,
-    MatProgressSpinnerModule,
   ],
   template: `
     <div class="payment-dialog">
@@ -49,7 +47,7 @@ export interface PaymentDialogResult {
 
       <div class="total-display">
         <span class="total-label">Total Due</span>
-        <span class="total-amount">${{ data.total | number: '1.0-0' }}</span>
+        <span class="total-amount">{{ data.total | currency:'USD':'symbol':'1.0-0' }}</span>
       </div>
 
       <mat-tab-group
@@ -119,13 +117,13 @@ export interface PaymentDialogResult {
                 class="quick-btn"
                 (click)="setCashAmount(roundUp(data.total, 1000))"
               >
-                ${{ roundUp(data.total, 1000) | number: '1.0-0' }}
+                {{ roundUp(data.total, 1000) | currency:'USD':'symbol':'1.0-0' }}
               </button>
             </div>
 
             <div class="change-display" *ngIf="cashAmount >= data.total">
               <span class="change-label">Change</span>
-              <span class="change-amount">${{ change | number: '1.0-0' }}</span>
+              <span class="change-amount">{{ change | currency:'USD':'symbol':'1.0-0' }}</span>
             </div>
 
             <div class="insufficient" *ngIf="cashAmount > 0 && cashAmount < data.total">
@@ -153,7 +151,7 @@ export interface PaymentDialogResult {
           </ng-template>
 
           <div class="tab-content card-tab">
-            <div class="card-processing" *ngIf="!cardProcessing">
+            <div class="card-processing">
               <mat-icon class="card-icon">contactless</mat-icon>
               <p class="card-instruction">
                 Tap, insert, or swipe card to process payment
@@ -166,12 +164,6 @@ export interface PaymentDialogResult {
                 <mat-icon>credit_card</mat-icon>
                 Process Card Payment
               </button>
-            </div>
-
-            <div class="card-processing" *ngIf="cardProcessing">
-              <mat-spinner diameter="48"></mat-spinner>
-              <p class="processing-text">Processing payment...</p>
-              <p class="processing-subtext">Please do not remove the card</p>
             </div>
           </div>
         </mat-tab>
@@ -376,7 +368,6 @@ export class PaymentDialogComponent {
   cashAmount = 0;
   change = 0;
   selectedTab = 0;
-  cardProcessing = false;
 
   constructor(
     public dialogRef: MatDialogRef<PaymentDialogComponent>,
@@ -411,11 +402,6 @@ export class PaymentDialogComponent {
   }
 
   processCard(): void {
-    this.cardProcessing = true;
-    // Simulate card processing
-    setTimeout(() => {
-      this.cardProcessing = false;
-      this.confirmPayment('card');
-    }, 2000);
+    this.confirmPayment('card');
   }
 }

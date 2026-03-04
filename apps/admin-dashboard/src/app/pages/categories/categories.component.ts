@@ -15,7 +15,8 @@ import {
   BakeToastService,
 } from '@bake-app/ui-components';
 import { ApiClientService } from '@bake-app/api-client';
-import { Category as SharedCategory } from '@bake-app/shared-types';
+import { Category as SharedCategory, Product } from '@bake-app/shared-types';
+import { forkJoin } from 'rxjs';
 
 interface CategoryView {
   id: string;
@@ -261,13 +262,22 @@ export class CategoriesComponent implements OnInit {
   }
 
   private loadCategories(): void {
-    this.apiClient.get<SharedCategory[]>('/v1/categories').subscribe({
-      next: (cats) => {
+    forkJoin({
+      categories: this.apiClient.get<SharedCategory[]>('/v1/categories'),
+      products: this.apiClient.get<{ data: Product[] }>('/v1/products?limit=200'),
+    }).subscribe({
+      next: ({ categories: cats, products: productsRes }) => {
+        const countMap: Record<string, number> = {};
+        for (const product of productsRes.data) {
+          if (product.categoryId) {
+            countMap[product.categoryId] = (countMap[product.categoryId] || 0) + 1;
+          }
+        }
         this.categories = cats.map((c) => ({
           id: c.id,
           name: c.name,
           parentId: c.parentId || null,
-          productCount: 0,
+          productCount: countMap[c.id] || 0,
         }));
       },
       error: () => {

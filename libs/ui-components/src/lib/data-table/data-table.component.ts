@@ -65,7 +65,7 @@ import { TableColumn } from '../models';
             <td mat-cell *matCellDef="let row">
               <ng-container [ngSwitch]="col.type">
                 <span *ngSwitchCase="'currency'" class="currency">
-                  ${{ row[col.key] | number : '1.0-0' }}
+                  {{ row[col.key] | currency : 'USD' : 'symbol' : '1.0-0' }}
                 </span>
                 <span *ngSwitchCase="'date'">
                   {{ row[col.key] | date : 'short' }}

@@ -20,8 +20,8 @@ export default function POSScreen() {
 
   async function loadProducts() {
     try {
-      const data = await api.get<any[]>('/products');
-      setProducts(data);
+      const res = await api.get<{ data: any[] }>('/v1/products?limit=100');
+      setProducts(res.data);
     } catch (err: any) {
       Alert.alert('Error', err.message || 'Failed to load products');
     } finally {
@@ -44,7 +44,7 @@ export default function POSScreen() {
         price: item.product.price,
       }));
 
-      await api.post('/orders', {
+      await api.post('/v1/orders', {
         items: orderItems,
         type: 'dine_in',
       });

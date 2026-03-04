@@ -25,8 +25,23 @@ export default function DashboardScreen() {
 
   async function loadStats() {
     try {
-      const data = await api.get<DashboardStats>('/reporting/dashboard');
-      setStats(data);
+      const today = new Date().toISOString().slice(0, 10);
+      const [ordersRes, inventoryRes] = await Promise.all([
+        api.get<{ data: any[] }>(`/v1/orders?limit=100`),
+        api.get<{ lowStockCount?: number }>('/v1/reports/inventory/status').catch(() => null),
+      ]);
+
+      const orders = ordersRes.data || [];
+      const todayOrders = orders.filter(
+        (o: any) => o.createdAt?.slice(0, 10) === today
+      );
+
+      setStats({
+        todayOrders: todayOrders.length,
+        todayRevenue: todayOrders.reduce((sum: number, o: any) => sum + (o.total || 0), 0),
+        pendingOrders: orders.filter((o: any) => o.status === 'pending').length,
+        lowStockItems: inventoryRes?.lowStockCount ?? 0,
+      });
     } catch {
       // Use default stats
     }

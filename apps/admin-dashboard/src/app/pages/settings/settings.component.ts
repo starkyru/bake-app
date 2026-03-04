@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatExpansionModule } from '@angular/material/expansion';
@@ -9,6 +9,8 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatDividerModule } from '@angular/material/divider';
 import { BakePageContainerComponent, BakeToastService } from '@bake-app/ui-components';
+import { ApiClientService } from '@bake-app/api-client';
+import { forkJoin } from 'rxjs';
 
 @Component({
   selector: 'bake-app-settings',
@@ -219,7 +221,7 @@ import { BakePageContainerComponent, BakeToastService } from '@bake-app/ui-compo
     `,
   ],
 })
-export class SettingsComponent {
+export class SettingsComponent implements OnInit {
   general = {
     bakeryName: 'Sweet Bake Almaty',
     address: 'ul. Abaya 52, Almaty, Kazakhstan 050000',
@@ -237,17 +239,84 @@ export class SettingsComponent {
     autoPrint: true,
   };
 
-  constructor(private toastService: BakeToastService) {}
+  constructor(
+    private toastService: BakeToastService,
+    private apiClient: ApiClientService,
+  ) {}
+
+  ngOnInit(): void {
+    forkJoin({
+      general: this.apiClient.get<Record<string, unknown>>('/v1/settings/general'),
+      tax: this.apiClient.get<Record<string, unknown>>('/v1/settings/tax'),
+      pos: this.apiClient.get<Record<string, unknown>>('/v1/settings/pos'),
+    }).subscribe({
+      next: (settings) => {
+        if (settings.general && Object.keys(settings.general).length) {
+          this.general = {
+            bakeryName: (settings.general['bakeryName'] as string) || this.general.bakeryName,
+            address: (settings.general['address'] as string) || this.general.address,
+            phone: (settings.general['phone'] as string) || this.general.phone,
+          };
+        }
+        if (settings.tax && Object.keys(settings.tax).length) {
+          this.tax = {
+            name: (settings.tax['taxName'] as string) || this.tax.name,
+            rate: (settings.tax['taxRate'] as number) ?? this.tax.rate,
+            included: settings.tax['taxInclusive'] != null
+              ? (settings.tax['taxInclusive'] as boolean)
+              : this.tax.included,
+          };
+        }
+        if (settings.pos && Object.keys(settings.pos).length) {
+          this.pos = {
+            receiptHeader: (settings.pos['receiptHeader'] as string) || this.pos.receiptHeader,
+            autoPrint: settings.pos['autoPrint'] != null
+              ? (settings.pos['autoPrint'] as boolean)
+              : this.pos.autoPrint,
+          };
+        }
+      },
+      error: () => {
+        this.toastService.error('Failed to load settings');
+      },
+    });
+  }
 
   onSaveGeneral(): void {
-    this.toastService.success('General settings saved successfully');
+    this.apiClient
+      .put('/v1/settings/general', {
+        bakeryName: this.general.bakeryName,
+        address: this.general.address,
+        phone: this.general.phone,
+      })
+      .subscribe({
+        next: () => this.toastService.success('General settings saved successfully'),
+        error: () => this.toastService.error('Failed to save general settings'),
+      });
   }
 
   onSaveTax(): void {
-    this.toastService.success('Tax configuration saved successfully');
+    this.apiClient
+      .put('/v1/settings/tax', {
+        taxName: this.tax.name,
+        taxRate: this.tax.rate,
+        taxInclusive: this.tax.included,
+      })
+      .subscribe({
+        next: () => this.toastService.success('Tax configuration saved successfully'),
+        error: () => this.toastService.error('Failed to save tax configuration'),
+      });
   }
 
   onSavePos(): void {
-    this.toastService.success('POS settings saved successfully');
+    this.apiClient
+      .put('/v1/settings/pos', {
+        receiptHeader: this.pos.receiptHeader,
+        autoPrint: this.pos.autoPrint,
+      })
+      .subscribe({
+        next: () => this.toastService.success('POS settings saved successfully'),
+        error: () => this.toastService.error('Failed to save POS settings'),
+      });
   }
 }

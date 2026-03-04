@@ -39,6 +39,53 @@ export class ReportingService {
     @InjectRepository(ProductionTask) private taskRepo: Repository<ProductionTask>,
   ) {}
 
+  // 0. Sales Today — snapshot with week-over-week trend
+  async getSalesToday() {
+    const now = new Date();
+    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const todayEnd = new Date(todayStart.getTime() + 24 * 60 * 60 * 1000);
+    const lastWeekStart = new Date(todayStart.getTime() - 7 * 24 * 60 * 60 * 1000);
+    const lastWeekEnd = new Date(todayEnd.getTime() - 7 * 24 * 60 * 60 * 1000);
+
+    const todayData = await this.orderRepo
+      .createQueryBuilder('o')
+      .select('COUNT(o.id)', 'orderCount')
+      .addSelect('COALESCE(SUM(o.total), 0)', 'revenue')
+      .where('o.status != :cancelled', { cancelled: 'cancelled' })
+      .andWhere('o.createdAt >= :start AND o.createdAt < :end', {
+        start: todayStart,
+        end: todayEnd,
+      })
+      .getRawOne();
+
+    const lastWeekData = await this.orderRepo
+      .createQueryBuilder('o')
+      .select('COUNT(o.id)', 'orderCount')
+      .addSelect('COALESCE(SUM(o.total), 0)', 'revenue')
+      .where('o.status != :cancelled', { cancelled: 'cancelled' })
+      .andWhere('o.createdAt >= :start AND o.createdAt < :end', {
+        start: lastWeekStart,
+        end: lastWeekEnd,
+      })
+      .getRawOne();
+
+    const totalRevenue = parseFloat(todayData.revenue) || 0;
+    const totalOrders = parseInt(todayData.orderCount, 10) || 0;
+    const avgCheck = totalOrders > 0 ? Math.round((totalRevenue / totalOrders) * 100) / 100 : 0;
+
+    const prevRevenue = parseFloat(lastWeekData.revenue) || 0;
+    const prevOrders = parseInt(lastWeekData.orderCount, 10) || 0;
+
+    const revenueTrend = prevRevenue > 0
+      ? Math.round(((totalRevenue - prevRevenue) / prevRevenue) * 10000) / 100
+      : 0;
+    const ordersTrend = prevOrders > 0
+      ? Math.round(((totalOrders - prevOrders) / prevOrders) * 10000) / 100
+      : 0;
+
+    return { totalRevenue, totalOrders, avgCheck, revenueTrend, ordersTrend };
+  }
+
   // 1. Sales Summary - Revenue by day/week/month, order count, avg check
   async getSalesSummary(query: SalesReportQueryDto) {
     const groupBy = query.groupBy || 'day';
@@ -216,7 +263,13 @@ export class ReportingService {
       expiringQb.andWhere('b.locationId = :locationId', { locationId: query.locationId });
     const expiringBatches = await expiringQb.getRawMany();
 
-    return { stockLevels, statusSummary, expiringBatches };
+    const lowStockItems = stockLevels.filter(
+      (item) =>
+        item.minStockLevel != null &&
+        parseFloat(item.quantity) <= parseFloat(item.minStockLevel),
+    );
+
+    return { stockLevels, statusSummary, expiringBatches, lowStockItems };
   }
 
   // 7. Inventory Movements - Movement summary by type, ingredient usage, waste

@@ -13,6 +13,7 @@ import { ReportingModule } from './modules/reporting/reporting.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
 import { PermissionsModule } from './modules/permissions/permissions.module';
 import { WebsocketModule } from './modules/websocket/websocket.module';
+import { SettingsModule } from './modules/settings/settings.module';
 import { HealthController } from './health.controller';
 
 @Module({
@@ -49,6 +50,7 @@ import { HealthController } from './health.controller';
     NotificationsModule,
     PermissionsModule,
     WebsocketModule,
+    SettingsModule,
   ],
   controllers: [HealthController],
 })

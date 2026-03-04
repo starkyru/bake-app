@@ -5,7 +5,9 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { ApiClientService } from '@bake-app/api-client';
+import { AuthService } from '@bake-app/auth';
 import { Order } from '@bake-app/shared-types';
+import { io, Socket } from 'socket.io-client';
 
 interface PaginatedResponse<T> {
   data: T[];
@@ -494,10 +496,12 @@ interface KitchenOrder {
 export class QueueComponent implements OnInit, OnDestroy {
   orders: KitchenOrder[] = [];
   private timerInterval: ReturnType<typeof setInterval> | null = null;
+  private socket: Socket | null = null;
 
   constructor(
     private router: Router,
     private apiClient: ApiClientService,
+    private authService: AuthService,
   ) {}
 
   get newOrders(): KitchenOrder[] {
@@ -514,6 +518,7 @@ export class QueueComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.loadOrders();
+    this.connectWebSocket();
     this.timerInterval = setInterval(() => {
       this.orders = [...this.orders];
     }, 1000);
@@ -522,6 +527,10 @@ export class QueueComponent implements OnInit, OnDestroy {
   ngOnDestroy(): void {
     if (this.timerInterval) {
       clearInterval(this.timerInterval);
+    }
+    if (this.socket) {
+      this.socket.disconnect();
+      this.socket = null;
     }
   }
 
@@ -549,7 +558,13 @@ export class QueueComponent implements OnInit, OnDestroy {
   }
 
   pickupOrder(order: KitchenOrder): void {
-    this.orders = this.orders.filter(o => o.id !== order.id);
+    this.apiClient
+      .put(`/v1/orders/${order.id}/status`, { status: 'delivered' })
+      .subscribe({
+        next: () => {
+          this.orders = this.orders.filter(o => o.id !== order.id);
+        },
+      });
   }
 
   toggleItem(item: OrderItem): void {
@@ -580,6 +595,42 @@ export class QueueComponent implements OnInit, OnDestroy {
 
   navigateToDetail(orderId: string): void {
     this.router.navigate(['/orders', orderId]);
+  }
+
+  private connectWebSocket(): void {
+    const token = this.authService.getToken();
+    this.socket = io('http://localhost:3000', {
+      auth: { token },
+    });
+
+    this.socket.on('order:new', () => {
+      this.loadOrders();
+    });
+
+    this.socket.on('order:statusChanged', (payload: { orderId: string; newStatus: string }) => {
+      const statusMap: Record<string, KitchenOrder['status']> = {
+        pending: 'NEW',
+        confirmed: 'NEW',
+        in_progress: 'IN_PROGRESS',
+        completed: 'READY',
+      };
+      const mappedStatus = statusMap[payload.newStatus];
+      if (mappedStatus) {
+        const order = this.orders.find(o => o.id === payload.orderId);
+        if (order) {
+          order.status = mappedStatus;
+          if (mappedStatus === 'IN_PROGRESS') {
+            order.startedAt = new Date();
+          } else if (mappedStatus === 'READY') {
+            order.completedAt = new Date();
+            order.items.forEach(item => item.done = true);
+          }
+          this.orders = [...this.orders];
+        }
+      } else if (['delivered', 'cancelled'].includes(payload.newStatus)) {
+        this.orders = this.orders.filter(o => o.id !== payload.orderId);
+      }
+    });
   }
 
   private loadOrders(): void {

@@ -18,6 +18,13 @@ import { RequirePermissions } from '../../common/decorators/permissions.decorato
 export class ReportingController {
   constructor(private reportingService: ReportingService) {}
 
+  @Get('sales/today')
+  @RequirePermissions('reports:read')
+  @ApiOperation({ summary: 'Today sales snapshot with week-over-week trend' })
+  getSalesToday() {
+    return this.reportingService.getSalesToday();
+  }
+
   @Get('sales/summary')
   @RequirePermissions('reports:read')
   @ApiOperation({ summary: 'Sales summary by period' })
