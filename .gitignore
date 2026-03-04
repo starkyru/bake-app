@@ -17,6 +17,7 @@ Thumbs.db
 *.swp
 *.swo
 *~
+.claude/
 .cache/
 .yarn/cache
 .pnp
