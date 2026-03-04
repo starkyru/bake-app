@@ -99,6 +99,18 @@ export class AuthService {
     if (perms.includes('*')) return true;
     return permissions.every((p) => perms.includes(p));
   }
+
+  /** Get the display name from the current JWT. */
+  getUserName(): string {
+    const payload = this.decodePayload();
+    return payload?.name || '';
+  }
+
+  /** Get the role name from the current JWT. */
+  getUserRole(): string {
+    const payload = this.decodePayload();
+    return payload?.role || '';
+  }
 }
 
 /**

@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
@@ -8,6 +8,7 @@ import {
   BakePageContainerComponent,
   TableColumn,
 } from '@bake-app/ui-components';
+import { ApiClientService } from '@bake-app/api-client';
 
 interface InventoryItem {
   ingredient: string;
@@ -234,7 +235,7 @@ interface InventoryItem {
     `,
   ],
 })
-export class InventoryComponent {
+export class InventoryComponent implements OnInit {
   columns: TableColumn[] = [
     { key: 'ingredient', label: 'Ingredient', type: 'text' },
     { key: 'category', label: 'Category', type: 'text' },
@@ -245,22 +246,42 @@ export class InventoryComponent {
     { key: 'actions', label: 'Actions', type: 'actions', width: '100px', sortable: false },
   ];
 
-  inventoryData: InventoryItem[] = [
-    { ingredient: 'Wheat Flour', category: 'Flour', quantity: 5, unit: 'kg', minLevel: 20, status: 'Low Stock' },
-    { ingredient: 'Sugar', category: 'Sweetener', quantity: 25, unit: 'kg', minLevel: 10, status: 'In Stock' },
-    { ingredient: 'Butter', category: 'Dairy', quantity: 8, unit: 'kg', minLevel: 5, status: 'In Stock' },
-    { ingredient: 'Whole Milk', category: 'Dairy', quantity: 12, unit: 'L', minLevel: 10, status: 'In Stock' },
-    { ingredient: 'Eggs', category: 'Dairy', quantity: 60, unit: 'pcs', minLevel: 30, status: 'In Stock' },
-    { ingredient: 'Coffee Beans', category: 'Beverages', quantity: 3, unit: 'kg', minLevel: 5, status: 'Low Stock' },
-    { ingredient: 'Dark Chocolate', category: 'Confectionery', quantity: 0, unit: 'kg', minLevel: 3, status: 'Out of Stock' },
-    { ingredient: 'Vanilla Extract', category: 'Flavoring', quantity: 0.5, unit: 'L', minLevel: 0.3, status: 'In Stock' },
-    { ingredient: 'Dry Yeast', category: 'Leavening', quantity: 2, unit: 'kg', minLevel: 1, status: 'In Stock' },
-    { ingredient: 'Heavy Cream', category: 'Dairy', quantity: 4, unit: 'L', minLevel: 5, status: 'Low Stock' },
-    { ingredient: 'Almonds', category: 'Nuts', quantity: 6, unit: 'kg', minLevel: 3, status: 'In Stock' },
-    { ingredient: 'Fresh Berries', category: 'Fruits', quantity: 0, unit: 'kg', minLevel: 2, status: 'Out of Stock' },
-    { ingredient: 'Rye Flour', category: 'Flour', quantity: 15, unit: 'kg', minLevel: 10, status: 'In Stock' },
-    { ingredient: 'Powdered Sugar', category: 'Sweetener', quantity: 8, unit: 'kg', minLevel: 5, status: 'In Stock' },
-  ];
+  inventoryData: InventoryItem[] = [];
+
+  constructor(private apiClient: ApiClientService) {}
+
+  ngOnInit(): void {
+    this.loadInventory();
+  }
+
+  private loadInventory(): void {
+    this.apiClient
+      .get<Record<string, unknown>>('/v1/reports/inventory/status')
+      .subscribe({
+        next: (data) => {
+          const stockLevels =
+            (data['stockLevels'] as Array<Record<string, unknown>>) || [];
+          this.inventoryData = stockLevels.map((item) => {
+            const qty = Number(item['quantity'] || 0);
+            const minLevel = Number(item['minStockLevel'] || 0);
+            let status = 'In Stock';
+            if (qty <= 0) {
+              status = 'Out of Stock';
+            } else if (qty <= minLevel) {
+              status = 'Low Stock';
+            }
+            return {
+              ingredient: String(item['ingredientName'] || ''),
+              category: String(item['locationName'] || ''),
+              quantity: qty,
+              unit: String(item['unit'] || ''),
+              minLevel,
+              status,
+            };
+          });
+        },
+      });
+  }
 
   get lowStockCount(): number {
     return this.inventoryData.filter((i) => i.status === 'Low Stock').length;
@@ -274,7 +295,7 @@ export class InventoryComponent {
     return this.inventoryData.filter((i) => i.status === 'In Stock').length;
   }
 
-  onRowAction(event: { action: string; row: any }): void {
+  onRowAction(event: { action: string; row: unknown }): void {
     console.log('Row action:', event.action, event.row);
   }
 }

@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, RouterOutlet, RouterLink, RouterLinkActive } from '@angular/router';
 import { MatSidenavModule } from '@angular/material/sidenav';
@@ -58,8 +58,8 @@ interface NavItem {
           <div class="user-info">
             <mat-icon class="user-avatar">account_circle</mat-icon>
             <div class="user-details">
-              <span class="user-name">Manager</span>
-              <span class="user-role">Manager</span>
+              <span class="user-name">{{ userName }}</span>
+              <span class="user-role">{{ userRole }}</span>
             </div>
           </div>
           <button mat-icon-button class="logout-btn" (click)="onLogout()">
@@ -191,7 +191,10 @@ interface NavItem {
     `,
   ],
 })
-export class ShellComponent {
+export class ShellComponent implements OnInit {
+  userName = '';
+  userRole = '';
+
   navItems: NavItem[] = [
     { label: 'Dashboard', icon: 'dashboard', route: '/dashboard' },
     { label: 'Inventory', icon: 'inventory_2', route: '/inventory' },
@@ -202,8 +205,13 @@ export class ShellComponent {
 
   constructor(
     private router: Router,
-    private authService: AuthService
+    private authService: AuthService,
   ) {}
+
+  ngOnInit(): void {
+    this.userName = this.authService.getUserName() || 'Manager';
+    this.userRole = this.authService.getUserRole() || 'Manager';
+  }
 
   onLogout(): void {
     this.authService.logout();

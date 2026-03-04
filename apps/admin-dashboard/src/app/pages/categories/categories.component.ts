@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatListModule } from '@angular/material/list';
@@ -14,12 +14,14 @@ import {
   BakeConfirmationService,
   BakeToastService,
 } from '@bake-app/ui-components';
+import { ApiClientService } from '@bake-app/api-client';
+import { Category as SharedCategory } from '@bake-app/shared-types';
 
-interface Category {
+interface CategoryView {
   id: string;
   name: string;
   parentId: string | null;
-  children?: Category[];
+  children?: CategoryView[];
   productCount: number;
 }
 
@@ -241,37 +243,44 @@ interface Category {
     `,
   ],
 })
-export class CategoriesComponent {
-  categories: Category[] = [
-    { id: '1', name: 'Bread', parentId: null, productCount: 5 },
-    { id: '2', name: 'Pastry', parentId: null, productCount: 8 },
-    { id: '3', name: 'Cake', parentId: null, productCount: 6 },
-    { id: '4', name: 'Cookie', parentId: null, productCount: 4 },
-    { id: '5', name: 'Beverage', parentId: null, productCount: 7 },
-    { id: '6', name: 'Sandwich', parentId: null, productCount: 3 },
-    { id: '7', name: 'Savory', parentId: null, productCount: 5 },
-    { id: '8', name: 'Sourdough', parentId: '1', productCount: 2 },
-    { id: '9', name: 'White Bread', parentId: '1', productCount: 3 },
-    { id: '10', name: 'Croissants', parentId: '2', productCount: 3 },
-    { id: '11', name: 'Danish', parentId: '2', productCount: 2 },
-    { id: '12', name: 'Coffee', parentId: '5', productCount: 4 },
-    { id: '13', name: 'Tea', parentId: '5', productCount: 3 },
-  ];
+export class CategoriesComponent implements OnInit {
+  categories: CategoryView[] = [];
 
   formName = '';
   formParentId: string | null = null;
-  editingCategory: Category | null = null;
+  editingCategory: CategoryView | null = null;
 
   constructor(
     private confirmService: BakeConfirmationService,
-    private toastService: BakeToastService
+    private toastService: BakeToastService,
+    private apiClient: ApiClientService,
   ) {}
 
-  get topLevelCategories(): Category[] {
+  ngOnInit(): void {
+    this.loadCategories();
+  }
+
+  private loadCategories(): void {
+    this.apiClient.get<SharedCategory[]>('/v1/categories').subscribe({
+      next: (cats) => {
+        this.categories = cats.map((c) => ({
+          id: c.id,
+          name: c.name,
+          parentId: c.parentId || null,
+          productCount: 0,
+        }));
+      },
+      error: () => {
+        this.toastService.error('Failed to load categories');
+      },
+    });
+  }
+
+  get topLevelCategories(): CategoryView[] {
     return this.categories.filter((c) => c.parentId === null);
   }
 
-  get categoriesTree(): Category[] {
+  get categoriesTree(): CategoryView[] {
     const topLevel = this.categories.filter((c) => c.parentId === null);
     return topLevel.map((parent) => ({
       ...parent,
@@ -283,28 +292,48 @@ export class CategoriesComponent {
     if (!this.formName.trim()) return;
 
     if (this.editingCategory) {
-      this.categories = this.categories.map((c) =>
-        c.id === this.editingCategory!.id
-          ? { ...c, name: this.formName, parentId: this.formParentId }
-          : c
-      );
-      this.toastService.success('Category updated successfully');
-      this.cancelEdit();
+      const dto = { name: this.formName, parentId: this.formParentId || undefined };
+      this.apiClient
+        .put<SharedCategory>(`/v1/categories/${this.editingCategory.id}`, dto)
+        .subscribe({
+          next: (updated) => {
+            this.categories = this.categories.map((c) =>
+              c.id === this.editingCategory!.id
+                ? { ...c, name: updated.name, parentId: updated.parentId || null }
+                : c,
+            );
+            this.toastService.success('Category updated successfully');
+            this.cancelEdit();
+          },
+          error: () => {
+            this.toastService.error('Failed to update category');
+          },
+        });
     } else {
-      const newCategory: Category = {
-        id: String(Date.now()),
-        name: this.formName,
-        parentId: this.formParentId,
-        productCount: 0,
-      };
-      this.categories = [...this.categories, newCategory];
-      this.toastService.success('Category created successfully');
-      this.formName = '';
-      this.formParentId = null;
+      const dto = { name: this.formName, parentId: this.formParentId || undefined };
+      this.apiClient.post<SharedCategory>('/v1/categories', dto).subscribe({
+        next: (created) => {
+          this.categories = [
+            ...this.categories,
+            {
+              id: created.id,
+              name: created.name,
+              parentId: created.parentId || null,
+              productCount: 0,
+            },
+          ];
+          this.toastService.success('Category created successfully');
+          this.formName = '';
+          this.formParentId = null;
+        },
+        error: () => {
+          this.toastService.error('Failed to create category');
+        },
+      });
     }
   }
 
-  onEdit(category: Category): void {
+  onEdit(category: CategoryView): void {
     this.editingCategory = category;
     this.formName = category.name;
     this.formParentId = category.parentId;
@@ -316,7 +345,7 @@ export class CategoriesComponent {
     this.formParentId = null;
   }
 
-  onDelete(category: Category): void {
+  onDelete(category: CategoryView): void {
     const hasChildren = this.categories.some((c) => c.parentId === category.id);
     const message = hasChildren
       ? `"${category.name}" has subcategories. Deleting it will also remove all subcategories. Continue?`
@@ -331,14 +360,21 @@ export class CategoriesComponent {
       })
       .subscribe((confirmed) => {
         if (confirmed) {
-          this.categories = this.categories.filter(
-            (c) => c.id !== category.id && c.parentId !== category.id
-          );
-          this.toastService.success('Category deleted successfully');
+          this.apiClient.delete(`/v1/categories/${category.id}`).subscribe({
+            next: () => {
+              this.categories = this.categories.filter(
+                (c) => c.id !== category.id && c.parentId !== category.id,
+              );
+              this.toastService.success('Category deleted successfully');
 
-          if (this.editingCategory?.id === category.id) {
-            this.cancelEdit();
-          }
+              if (this.editingCategory?.id === category.id) {
+                this.cancelEdit();
+              }
+            },
+            error: () => {
+              this.toastService.error('Failed to delete category');
+            },
+          });
         }
       });
   }

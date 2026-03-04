@@ -11,8 +11,11 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatTableModule } from '@angular/material/table';
 import { MatDividerModule } from '@angular/material/divider';
 import { BakePageContainerComponent, BakeToastService } from '@bake-app/ui-components';
+import { ApiClientService } from '@bake-app/api-client';
+import { Recipe, Category as SharedCategory } from '@bake-app/shared-types';
 
-interface Ingredient {
+interface IngredientRow {
+  ingredientId?: string;
   name: string;
   quantity: number;
   unit: string;
@@ -359,27 +362,68 @@ export class RecipeEditorComponent implements OnInit {
   yieldUnit = 'pcs';
   instructions = '';
 
-  categories = ['Bread', 'Pastry', 'Cake', 'Cookie', 'Beverage', 'Savory'];
+  categories: string[] = [];
 
   ingredientColumns = ['name', 'quantity', 'unit', 'cost', 'total', 'remove'];
 
-  ingredients: Ingredient[] = [
+  ingredients: IngredientRow[] = [
     { name: '', quantity: 0, unit: 'g', cost: 0, total: 0 },
   ];
 
   constructor(
     private route: ActivatedRoute,
     private router: Router,
-    private toastService: BakeToastService
+    private toastService: BakeToastService,
+    private apiClient: ApiClientService,
   ) {}
 
   ngOnInit(): void {
     this.recipeId = this.route.snapshot.paramMap.get('id') || 'new';
     this.isNew = this.recipeId === 'new';
 
+    this.loadCategories();
+
     if (!this.isNew) {
-      this.loadSampleRecipe();
+      this.loadRecipe();
     }
+  }
+
+  private loadCategories(): void {
+    this.apiClient.get<SharedCategory[]>('/v1/categories').subscribe({
+      next: (cats) => {
+        this.categories = cats.map((c) => c.name);
+      },
+      error: () => {
+        this.categories = [];
+      },
+    });
+  }
+
+  private loadRecipe(): void {
+    this.apiClient.get<Recipe>(`/v1/recipes/${this.recipeId}`).subscribe({
+      next: (recipe) => {
+        this.recipeName = recipe.name;
+        this.recipeCategory = recipe.category || '';
+        this.yieldQuantity = recipe.yieldQuantity;
+        this.yieldUnit = recipe.yieldUnit;
+        this.instructions = recipe.instructions || '';
+        this.ingredients = recipe.ingredients.map((ing) => ({
+          ingredientId: ing.ingredientId,
+          name: ing.ingredientName || '',
+          quantity: ing.quantity,
+          unit: ing.unit,
+          cost: Number(ing.costPerUnit),
+          total: Math.round(ing.quantity * Number(ing.costPerUnit)),
+        }));
+        if (this.ingredients.length === 0) {
+          this.ingredients = [{ name: '', quantity: 0, unit: 'g', cost: 0, total: 0 }];
+        }
+      },
+      error: () => {
+        this.toastService.error('Failed to load recipe');
+        this.router.navigate(['/recipes']);
+      },
+    });
   }
 
   get totalCost(): number {
@@ -392,9 +436,8 @@ export class RecipeEditorComponent implements OnInit {
       : 0;
   }
 
-  recalculate(row: Ingredient): void {
+  recalculate(row: IngredientRow): void {
     row.total = Math.round(row.quantity * row.cost);
-    // Trigger change detection by reassigning array
     this.ingredients = [...this.ingredients];
   }
 
@@ -414,35 +457,40 @@ export class RecipeEditorComponent implements OnInit {
       this.toastService.warning('Please enter a recipe name');
       return;
     }
-    this.toastService.success('Recipe saved successfully');
-    this.router.navigate(['/recipes']);
+
+    const dto = {
+      name: this.recipeName,
+      category: this.recipeCategory,
+      yieldQuantity: this.yieldQuantity,
+      yieldUnit: this.yieldUnit,
+      instructions: this.instructions,
+      ingredients: this.ingredients
+        .filter((ing) => ing.name.trim())
+        .map((ing) => ({
+          ingredientId: ing.ingredientId || ing.name,
+          ingredientName: ing.name,
+          quantity: ing.quantity,
+          unit: ing.unit,
+          costPerUnit: ing.cost,
+        })),
+    };
+
+    const request$ = this.isNew
+      ? this.apiClient.post<Recipe>('/v1/recipes', dto)
+      : this.apiClient.put<Recipe>(`/v1/recipes/${this.recipeId}`, dto);
+
+    request$.subscribe({
+      next: () => {
+        this.toastService.success('Recipe saved successfully');
+        this.router.navigate(['/recipes']);
+      },
+      error: () => {
+        this.toastService.error('Failed to save recipe');
+      },
+    });
   }
 
   onCancel(): void {
     this.router.navigate(['/recipes']);
-  }
-
-  private loadSampleRecipe(): void {
-    // Simulate loading a recipe for editing
-    this.recipeName = 'Classic Sourdough';
-    this.recipeCategory = 'Bread';
-    this.yieldQuantity = 10;
-    this.yieldUnit = 'loaves';
-    this.instructions =
-      '1. Mix flour and water for autolyse (30 min)\n' +
-      '2. Add starter and salt, mix until incorporated\n' +
-      '3. Bulk ferment 4-5 hours with stretch & folds every 30 min\n' +
-      '4. Pre-shape and bench rest 20 min\n' +
-      '5. Final shape and cold proof overnight (12-16 hours)\n' +
-      '6. Preheat oven to 250C with Dutch oven\n' +
-      '7. Bake covered 20 min, uncovered 20-25 min until deep golden';
-
-    this.ingredients = [
-      { name: 'Bread Flour', quantity: 5000, unit: 'g', cost: 1, total: 5000 },
-      { name: 'Water', quantity: 3500, unit: 'ml', cost: 0, total: 0 },
-      { name: 'Sourdough Starter', quantity: 1000, unit: 'g', cost: 1, total: 1000 },
-      { name: 'Salt', quantity: 100, unit: 'g', cost: 1, total: 100 },
-      { name: 'Olive Oil', quantity: 50, unit: 'ml', cost: 8, total: 400 },
-    ];
   }
 }

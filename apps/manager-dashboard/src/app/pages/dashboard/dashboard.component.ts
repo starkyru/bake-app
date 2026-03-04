@@ -1,10 +1,11 @@
-import { Component } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
 import { MatListModule } from '@angular/material/list';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { BakeStatsCardComponent, BakePageContainerComponent } from '@bake-app/ui-components';
+import { ApiClientService } from '@bake-app/api-client';
 
 interface Alert {
   message: string;
@@ -44,36 +45,36 @@ interface PlanCategory {
       <div class="kpi-grid">
         <bake-stats-card
           title="Revenue"
-          value="$1,245,000"
+          [value]="kpis.revenue"
           icon="payments"
-          [trend]="12.5"
+          [trend]="kpis.revenueTrend"
           trendLabel="vs last week"
           color="primary"
         ></bake-stats-card>
 
         <bake-stats-card
           title="Net Profit"
-          value="$312,000"
+          [value]="kpis.profit"
           icon="account_balance"
-          [trend]="8.3"
+          [trend]="kpis.profitTrend"
           trendLabel="vs last week"
           color="accent"
         ></bake-stats-card>
 
         <bake-stats-card
           title="Orders Today"
-          value="156"
+          [value]="kpis.orders"
           icon="receipt_long"
-          [trend]="-3.2"
+          [trend]="kpis.ordersTrend"
           trendLabel="vs yesterday"
           color="primary"
         ></bake-stats-card>
 
         <bake-stats-card
           title="Avg Check"
-          value="$7,980"
+          [value]="kpis.avgCheck"
           icon="shopping_cart"
-          [trend]="5.1"
+          [trend]="kpis.avgCheckTrend"
           trendLabel="vs last week"
           color="accent"
         ></bake-stats-card>
@@ -377,48 +378,101 @@ interface PlanCategory {
     `,
   ],
 })
-export class DashboardComponent {
-  alerts: Alert[] = [
-    {
-      message: 'Flour stock below minimum level (5 kg remaining)',
-      severity: 'red',
-      icon: 'error',
-      time: '10 minutes ago',
-    },
-    {
-      message: 'Butter expiring in 2 days (3 kg)',
-      severity: 'amber',
-      icon: 'warning',
-      time: '30 minutes ago',
-    },
-    {
-      message: 'Morning bread batch behind schedule',
-      severity: 'amber',
-      icon: 'schedule',
-      time: '1 hour ago',
-    },
-    {
-      message: 'Daily revenue target reached (102%)',
-      severity: 'green',
-      icon: 'check_circle',
-      time: '2 hours ago',
-    },
-  ];
+export class DashboardComponent implements OnInit {
+  kpis = {
+    revenue: '$0',
+    revenueTrend: 0,
+    profit: '$0',
+    profitTrend: 0,
+    orders: '0',
+    ordersTrend: 0,
+    avgCheck: '$0',
+    avgCheckTrend: 0,
+  };
 
-  topProducts: TopProduct[] = [
-    { rank: 1, name: 'Sourdough Bread', sold: 42, revenue: '$126,000' },
-    { rank: 2, name: 'Croissant', sold: 38, revenue: '$76,000' },
-    { rank: 3, name: 'Napoleon Cake', sold: 15, revenue: '$112,500' },
-    { rank: 4, name: 'Cappuccino', sold: 65, revenue: '$58,500' },
-    { rank: 5, name: 'Eclair', sold: 28, revenue: '$47,600' },
-  ];
+  alerts: Alert[] = [];
+  topProducts: TopProduct[] = [];
+  planCategories: PlanCategory[] = [];
 
-  planCategories: PlanCategory[] = [
-    { name: 'Bread', percentage: 95, color: 'green' },
-    { name: 'Pastries', percentage: 78, color: 'amber' },
-    { name: 'Cakes', percentage: 60, color: 'red' },
-    { name: 'Coffee Drinks', percentage: 88, color: 'green' },
-  ];
+  constructor(private apiClient: ApiClientService) {}
+
+  ngOnInit(): void {
+    this.loadSalesSummary();
+    this.loadTopProducts();
+    this.loadInventoryAlerts();
+    this.loadProductionSummary();
+  }
+
+  private loadSalesSummary(): void {
+    this.apiClient
+      .get<Record<string, number>>('/v1/reports/sales/summary?period=daily')
+      .subscribe({
+        next: (data) => {
+          const revenue = data['totalRevenue'] || 0;
+          const orders = data['totalOrders'] || 0;
+          const avgCheck = orders > 0 ? Math.round(revenue / orders) : 0;
+          this.kpis.revenue = `$${revenue.toLocaleString()}`;
+          this.kpis.orders = String(orders);
+          this.kpis.avgCheck = `$${avgCheck.toLocaleString()}`;
+        },
+      });
+
+    this.apiClient
+      .get<Record<string, number>>('/v1/reports/finance/summary')
+      .subscribe({
+        next: (data) => {
+          const profit = data['netProfit'] || 0;
+          this.kpis.profit = `$${profit.toLocaleString()}`;
+        },
+      });
+  }
+
+  private loadTopProducts(): void {
+    this.apiClient
+      .get<Array<Record<string, unknown>>>('/v1/reports/sales/top-products')
+      .subscribe({
+        next: (data) => {
+          this.topProducts = data.slice(0, 5).map((p, i) => ({
+            rank: i + 1,
+            name: String(p['productName'] || p['name'] || ''),
+            sold: Number(p['quantity'] || p['sold'] || 0),
+            revenue: `$${Number(p['revenue'] || 0).toLocaleString()}`,
+          }));
+        },
+      });
+  }
+
+  private loadInventoryAlerts(): void {
+    this.apiClient
+      .get<Record<string, unknown>>('/v1/reports/inventory/status')
+      .subscribe({
+        next: (data) => {
+          const lowStock = (data['lowStockItems'] as Array<Record<string, unknown>>) || [];
+          this.alerts = lowStock.slice(0, 5).map((item) => ({
+            message: `${item['ingredientName'] || 'Item'} stock low (${item['quantity'] || 0} ${item['unit'] || ''} remaining)`,
+            severity: 'red' as const,
+            icon: 'error',
+            time: 'Now',
+          }));
+        },
+      });
+  }
+
+  private loadProductionSummary(): void {
+    this.apiClient
+      .get<Record<string, unknown>>('/v1/reports/production/summary')
+      .subscribe({
+        next: (data) => {
+          const categories =
+            (data['categoryBreakdown'] as Array<Record<string, unknown>>) || [];
+          this.planCategories = categories.map((c) => ({
+            name: String(c['category'] || c['name'] || ''),
+            percentage: Number(c['completionRate'] || c['percentage'] || 0),
+            color: this.getBarColor(Number(c['completionRate'] || c['percentage'] || 0)),
+          }));
+        },
+      });
+  }
 
   getBarColor(percentage: number): string {
     if (percentage >= 85) return 'green';

@@ -5,25 +5,28 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatCardModule } from '@angular/material/card';
 import { MatDividerModule } from '@angular/material/divider';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import {
   BakeStatusBadgeComponent,
   BakeCurrencyDisplayComponent,
 } from '@bake-app/ui-components';
+import { ApiClientService } from '@bake-app/api-client';
+import { Order } from '@bake-app/shared-types';
 
-interface OrderItem {
+interface OrderItemView {
   name: string;
   quantity: number;
   unitPrice: number;
   total: number;
 }
 
-interface OrderDetail {
-  id: number;
+interface OrderDetailView {
+  id: string;
   orderNumber: string;
   date: Date;
   status: string;
   paymentMethod: string;
-  items: OrderItem[];
+  items: OrderItemView[];
   subtotal: number;
   tax: number;
   total: number;
@@ -31,94 +34,6 @@ interface OrderDetail {
   change: number;
   cashier: string;
 }
-
-const SAMPLE_ORDER_DETAILS: Record<number, OrderDetail> = {
-  1: {
-    id: 1,
-    orderNumber: '#001',
-    date: new Date(2026, 2, 1, 9, 15),
-    status: 'Completed',
-    paymentMethod: 'Cash',
-    items: [
-      { name: 'Cappuccino', quantity: 2, unitPrice: 1200, total: 2400 },
-      { name: 'Croissant', quantity: 1, unitPrice: 650, total: 650 },
-    ],
-    subtotal: 3050,
-    tax: 366,
-    total: 3416,
-    amountPaid: 4000,
-    change: 584,
-    cashier: 'Anna K.',
-  },
-  2: {
-    id: 2,
-    orderNumber: '#002',
-    date: new Date(2026, 2, 1, 9, 32),
-    status: 'Completed',
-    paymentMethod: 'Card',
-    items: [
-      { name: 'Latte', quantity: 1, unitPrice: 1400, total: 1400 },
-      { name: 'Tiramisu', quantity: 1, unitPrice: 1400, total: 1400 },
-    ],
-    subtotal: 2800,
-    tax: 336,
-    total: 3136,
-    amountPaid: 3136,
-    change: 0,
-    cashier: 'Anna K.',
-  },
-  3: {
-    id: 3,
-    orderNumber: '#003',
-    date: new Date(2026, 2, 1, 10, 5),
-    status: 'In Progress',
-    paymentMethod: 'Card',
-    items: [
-      { name: 'Americano', quantity: 1, unitPrice: 900, total: 900 },
-      { name: 'Turkey Club', quantity: 1, unitPrice: 1800, total: 1800 },
-    ],
-    subtotal: 2700,
-    tax: 324,
-    total: 3024,
-    amountPaid: 3024,
-    change: 0,
-    cashier: 'Dmitry S.',
-  },
-  4: {
-    id: 4,
-    orderNumber: '#004',
-    date: new Date(2026, 2, 1, 10, 20),
-    status: 'Pending',
-    paymentMethod: 'Cash',
-    items: [
-      { name: 'Espresso', quantity: 3, unitPrice: 800, total: 2400 },
-      { name: 'Danish Pastry', quantity: 2, unitPrice: 700, total: 1400 },
-    ],
-    subtotal: 3800,
-    tax: 456,
-    total: 4256,
-    amountPaid: 5000,
-    change: 744,
-    cashier: 'Dmitry S.',
-  },
-  5: {
-    id: 5,
-    orderNumber: '#005',
-    date: new Date(2026, 2, 1, 10, 45),
-    status: 'Completed',
-    paymentMethod: 'Card',
-    items: [
-      { name: 'Flat White', quantity: 1, unitPrice: 1300, total: 1300 },
-      { name: 'Cheesecake', quantity: 1, unitPrice: 1300, total: 1300 },
-    ],
-    subtotal: 2600,
-    tax: 312,
-    total: 2912,
-    amountPaid: 2912,
-    change: 0,
-    cashier: 'Anna K.',
-  },
-};
 
 @Component({
   selector: 'bake-app-order-detail',
@@ -129,6 +44,7 @@ const SAMPLE_ORDER_DETAILS: Record<number, OrderDetail> = {
     MatIconModule,
     MatCardModule,
     MatDividerModule,
+    MatProgressSpinnerModule,
     BakeStatusBadgeComponent,
     BakeCurrencyDisplayComponent,
   ],
@@ -487,18 +403,60 @@ const SAMPLE_ORDER_DETAILS: Record<number, OrderDetail> = {
   ],
 })
 export class OrderDetailComponent implements OnInit {
-  order: OrderDetail | null = null;
+  order: OrderDetailView | null = null;
   loaded = false;
+  loading = true;
 
   constructor(
     private route: ActivatedRoute,
-    private router: Router
+    private router: Router,
+    private apiClient: ApiClientService,
   ) {}
 
   ngOnInit(): void {
-    const id = Number(this.route.snapshot.paramMap.get('id'));
-    this.order = SAMPLE_ORDER_DETAILS[id] ?? null;
-    this.loaded = true;
+    const id = this.route.snapshot.paramMap.get('id') || '';
+    this.apiClient.get<Order>(`/v1/orders/${id}`).subscribe({
+      next: (apiOrder) => {
+        const statusMap: Record<string, string> = {
+          pending: 'Pending',
+          confirmed: 'Confirmed',
+          in_progress: 'In Progress',
+          completed: 'Completed',
+          cancelled: 'Cancelled',
+        };
+        const payment = apiOrder.payments?.[0];
+        const amountPaid = apiOrder.payments?.reduce(
+          (sum, p) => sum + p.amount,
+          0,
+        ) || 0;
+        this.order = {
+          id: apiOrder.id,
+          orderNumber: apiOrder.orderNumber,
+          date: new Date(apiOrder.createdAt),
+          status: statusMap[apiOrder.status] || apiOrder.status,
+          paymentMethod: payment?.method === 'cash' ? 'Cash' : 'Card',
+          items: apiOrder.items.map((item) => ({
+            name: item.product?.name || 'Item',
+            quantity: item.quantity,
+            unitPrice: item.unitPrice,
+            total: item.subtotal,
+          })),
+          subtotal: apiOrder.subtotal,
+          tax: apiOrder.tax,
+          total: apiOrder.total,
+          amountPaid,
+          change: Math.max(0, amountPaid - apiOrder.total),
+          cashier: apiOrder.userId || 'Unknown',
+        };
+        this.loaded = true;
+        this.loading = false;
+      },
+      error: () => {
+        this.order = null;
+        this.loaded = true;
+        this.loading = false;
+      },
+    });
   }
 
   goBack(): void {

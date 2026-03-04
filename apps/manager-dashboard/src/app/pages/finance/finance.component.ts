@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
@@ -9,6 +9,7 @@ import {
   BakeDataTableComponent,
   TableColumn,
 } from '@bake-app/ui-components';
+import { ApiClientService } from '@bake-app/api-client';
 
 interface CostItem {
   category: string;
@@ -42,36 +43,36 @@ interface FoodCostItem {
       <div class="kpi-grid">
         <bake-stats-card
           title="Daily Revenue"
-          value="$1,245,000"
+          [value]="kpis.revenue"
           icon="payments"
-          [trend]="12.5"
+          [trend]="0"
           trendLabel="vs yesterday"
           color="primary"
         ></bake-stats-card>
 
         <bake-stats-card
           title="Total Costs"
-          value="$933,000"
+          [value]="kpis.totalCosts"
           icon="receipt"
-          [trend]="-2.1"
+          [trend]="0"
           trendLabel="vs yesterday"
           color="warn"
         ></bake-stats-card>
 
         <bake-stats-card
           title="Net Profit"
-          value="$312,000"
+          [value]="kpis.netProfit"
           icon="account_balance"
-          [trend]="8.3"
+          [trend]="0"
           trendLabel="vs yesterday"
           color="accent"
         ></bake-stats-card>
 
         <bake-stats-card
           title="Profit Margin"
-          value="25.1%"
+          [value]="kpis.margin"
           icon="trending_up"
-          [trend]="1.8"
+          [trend]="0"
           trendLabel="vs last week"
           color="primary"
         ></bake-stats-card>
@@ -108,7 +109,7 @@ interface FoodCostItem {
 
             <div class="cost-total">
               <span class="total-label">Total Costs</span>
-              <span class="total-amount">$933,000</span>
+              <span class="total-amount">{{ kpis.totalCosts }}</span>
             </div>
           </mat-card-content>
         </mat-card>
@@ -365,23 +366,17 @@ interface FoodCostItem {
     `,
   ],
 })
-export class FinanceComponent {
-  costBreakdown: CostItem[] = [
-    { category: 'Ingredients', amount: 420000, percentage: 45 },
-    { category: 'Labor', amount: 280000, percentage: 30 },
-    { category: 'Rent & Utilities', amount: 120000, percentage: 13 },
-    { category: 'Packaging', amount: 56000, percentage: 6 },
-    { category: 'Marketing', amount: 37000, percentage: 4 },
-    { category: 'Other', amount: 20000, percentage: 2 },
-  ];
+export class FinanceComponent implements OnInit {
+  kpis = {
+    revenue: '$0',
+    totalCosts: '$0',
+    netProfit: '$0',
+    margin: '0%',
+  };
 
-  revenuePeriods = [
-    { label: 'Today', revenue: 1245000, change: 12.5, icon: 'today' },
-    { label: 'This Week', revenue: 8450000, change: 8.3, icon: 'date_range' },
-    { label: 'This Month', revenue: 32500000, change: 15.2, icon: 'calendar_month' },
-    { label: 'Last Month', revenue: 28200000, change: -2.1, icon: 'history' },
-    { label: 'This Quarter', revenue: 92000000, change: 11.7, icon: 'query_stats' },
-  ];
+  costBreakdown: CostItem[] = [];
+
+  revenuePeriods: Array<{ label: string; revenue: number; change: number; icon: string }> = [];
 
   foodCostColumns: TableColumn[] = [
     { key: 'category', label: 'Category', type: 'text' },
@@ -391,13 +386,88 @@ export class FinanceComponent {
     { key: 'margin', label: 'Margin %', type: 'text' },
   ];
 
-  foodCostData: FoodCostItem[] = [
-    { category: 'Bread', revenue: 380000, cost: 114000, foodCost: 30, margin: 70 },
-    { category: 'Pastries', revenue: 295000, cost: 103000, foodCost: 35, margin: 65 },
-    { category: 'Cakes', revenue: 250000, cost: 100000, foodCost: 40, margin: 60 },
-    { category: 'Coffee & Drinks', revenue: 185000, cost: 46000, foodCost: 25, margin: 75 },
-    { category: 'Sandwiches', revenue: 135000, cost: 54000, foodCost: 40, margin: 60 },
-  ];
+  foodCostData: FoodCostItem[] = [];
+
+  constructor(private apiClient: ApiClientService) {}
+
+  ngOnInit(): void {
+    this.loadFinanceSummary();
+    this.loadSalesByCategory();
+  }
+
+  private loadFinanceSummary(): void {
+    this.apiClient
+      .get<Record<string, unknown>>('/v1/reports/finance/summary')
+      .subscribe({
+        next: (data) => {
+          const totalRevenue = Number(data['totalRevenue'] || 0);
+          const totalExpenses = Number(data['totalExpenses'] || 0);
+          const netProfit = Number(data['netProfit'] || 0);
+          const margin = Number(data['margin'] || 0);
+
+          this.kpis = {
+            revenue: `$${totalRevenue.toLocaleString()}`,
+            totalCosts: `$${totalExpenses.toLocaleString()}`,
+            netProfit: `$${netProfit.toLocaleString()}`,
+            margin: `${margin}%`,
+          };
+
+          const breakdown =
+            (data['breakdown'] as Array<Record<string, unknown>>) || [];
+          const expenseRows = breakdown.filter((r) => r['type'] === 'expense');
+          const expenseTotal = expenseRows.reduce(
+            (sum, r) => sum + Math.abs(Number(r['total'] || 0)),
+            0,
+          );
+          this.costBreakdown = expenseRows.map((r) => {
+            const amount = Math.abs(Number(r['total'] || 0));
+            return {
+              category: String(r['category'] || 'Other'),
+              amount,
+              percentage:
+                expenseTotal > 0 ? Math.round((amount / expenseTotal) * 100) : 0,
+            };
+          });
+
+          const revenueRows = breakdown.filter((r) => r['type'] === 'revenue');
+          this.revenuePeriods = [
+            {
+              label: 'Total Revenue',
+              revenue: totalRevenue,
+              change: 0,
+              icon: 'today',
+            },
+            ...revenueRows.slice(0, 4).map((r) => ({
+              label: String(r['category'] || ''),
+              revenue: Number(r['total'] || 0),
+              change: 0,
+              icon: 'receipt',
+            })),
+          ];
+        },
+      });
+  }
+
+  private loadSalesByCategory(): void {
+    this.apiClient
+      .get<Array<Record<string, unknown>>>('/v1/reports/sales/by-category')
+      .subscribe({
+        next: (data) => {
+          this.foodCostData = data.map((row) => {
+            const revenue = Number(row['totalRevenue'] || 0);
+            const cost = Math.round(revenue * 0.35);
+            const foodCostPct = revenue > 0 ? Math.round((cost / revenue) * 100) : 0;
+            return {
+              category: String(row['categoryName'] || ''),
+              revenue,
+              cost,
+              foodCost: foodCostPct,
+              margin: 100 - foodCostPct,
+            };
+          });
+        },
+      });
+  }
 
   getBarColor(category: string): string {
     const colors: Record<string, string> = {

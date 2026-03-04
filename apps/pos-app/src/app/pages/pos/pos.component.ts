@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -6,79 +6,35 @@ import { MatTabsModule } from '@angular/material/tabs';
 import { MatBadgeModule } from '@angular/material/badge';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { BakeProductCardComponent, BakeCurrencyDisplayComponent } from '@bake-app/ui-components';
+import { ApiClientService } from '@bake-app/api-client';
+import { Product as SharedProduct, Category as SharedCategory } from '@bake-app/shared-types';
 import {
   PaymentDialogComponent,
   PaymentDialogData,
   PaymentDialogResult,
 } from './payment-dialog.component';
 
-interface Product {
-  id: number;
+interface PosProduct {
+  id: string;
   name: string;
   price: number;
   category: string;
 }
 
 interface CartItem {
-  product: Product;
+  product: PosProduct;
   quantity: number;
 }
 
-const SAMPLE_PRODUCTS: Product[] = [
-  // Coffee
-  { id: 1, name: 'Espresso', price: 800, category: 'Coffee' },
-  { id: 2, name: 'Cappuccino', price: 1200, category: 'Coffee' },
-  { id: 3, name: 'Latte', price: 1400, category: 'Coffee' },
-  { id: 4, name: 'Americano', price: 900, category: 'Coffee' },
-  { id: 5, name: 'Flat White', price: 1300, category: 'Coffee' },
-  { id: 6, name: 'Mocha', price: 1500, category: 'Coffee' },
-
-  // Pastries
-  { id: 7, name: 'Croissant', price: 650, category: 'Pastries' },
-  { id: 8, name: 'Pain au Chocolat', price: 750, category: 'Pastries' },
-  { id: 9, name: 'Danish Pastry', price: 700, category: 'Pastries' },
-  { id: 10, name: 'Cinnamon Roll', price: 800, category: 'Pastries' },
-  { id: 11, name: 'Muffin', price: 600, category: 'Pastries' },
-  { id: 12, name: 'Scone', price: 550, category: 'Pastries' },
-
-  // Bread
-  { id: 13, name: 'Sourdough Loaf', price: 1200, category: 'Bread' },
-  { id: 14, name: 'Baguette', price: 600, category: 'Bread' },
-  { id: 15, name: 'Rye Bread', price: 900, category: 'Bread' },
-  { id: 16, name: 'Ciabatta', price: 700, category: 'Bread' },
-  { id: 17, name: 'Focaccia', price: 850, category: 'Bread' },
-
-  // Sandwiches
-  { id: 18, name: 'Turkey Club', price: 1800, category: 'Sandwiches' },
-  { id: 19, name: 'Caprese Panini', price: 1600, category: 'Sandwiches' },
-  { id: 20, name: 'Ham & Cheese', price: 1500, category: 'Sandwiches' },
-  { id: 21, name: 'Veggie Wrap', price: 1400, category: 'Sandwiches' },
-  { id: 22, name: 'Chicken Avocado', price: 1900, category: 'Sandwiches' },
-
-  // Drinks
-  { id: 23, name: 'Fresh Orange Juice', price: 1000, category: 'Drinks' },
-  { id: 24, name: 'Green Smoothie', price: 1300, category: 'Drinks' },
-  { id: 25, name: 'Hot Chocolate', price: 1100, category: 'Drinks' },
-  { id: 26, name: 'Chai Latte', price: 1200, category: 'Drinks' },
-  { id: 27, name: 'Iced Tea', price: 800, category: 'Drinks' },
-
-  // Desserts
-  { id: 28, name: 'Tiramisu', price: 1400, category: 'Desserts' },
-  { id: 29, name: 'Cheesecake', price: 1300, category: 'Desserts' },
-  { id: 30, name: 'Eclair', price: 900, category: 'Desserts' },
-  { id: 31, name: 'Macaron (3pc)', price: 1100, category: 'Desserts' },
-  { id: 32, name: 'Brownie', price: 700, category: 'Desserts' },
-];
-
-const CATEGORIES = [
-  'Coffee',
-  'Pastries',
-  'Bread',
-  'Sandwiches',
-  'Drinks',
-  'Desserts',
-];
+interface PaginatedResponse<T> {
+  data: T[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}
 
 @Component({
   selector: 'bake-app-pos',
@@ -91,6 +47,7 @@ const CATEGORIES = [
     MatBadgeModule,
     MatDialogModule,
     MatSnackBarModule,
+    MatProgressSpinnerModule,
     BakeProductCardComponent,
     BakeCurrencyDisplayComponent,
   ],
@@ -98,7 +55,19 @@ const CATEGORIES = [
     <div class="pos-layout">
       <!-- Left Panel: Product Selection -->
       <div class="products-panel">
+        <div class="loading-overlay" *ngIf="loading">
+          <mat-spinner diameter="48"></mat-spinner>
+          <p>Loading products...</p>
+        </div>
+
+        <div class="error-banner" *ngIf="errorMessage">
+          <mat-icon>error</mat-icon>
+          <span>{{ errorMessage }}</span>
+          <button mat-button (click)="loadData()">Retry</button>
+        </div>
+
         <mat-tab-group
+          *ngIf="!loading"
           class="category-tabs"
           [(selectedIndex)]="selectedCategoryIndex"
           animationDuration="150ms"
@@ -111,7 +80,7 @@ const CATEGORIES = [
           </mat-tab>
         </mat-tab-group>
 
-        <div class="product-grid">
+        <div class="product-grid" *ngIf="!loading">
           <bake-product-card
             *ngFor="let product of filteredProducts"
             [name]="product.name"
@@ -437,25 +406,98 @@ const CATEGORIES = [
       .pay-btn mat-icon {
         margin-right: 4px;
       }
+
+      .loading-overlay {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        flex: 1;
+        gap: 16px;
+        color: #8d6e63;
+      }
+
+      .error-banner {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 12px 16px;
+        background-color: #ffebee;
+        color: #c62828;
+        font-size: 13px;
+      }
+
+      .error-banner mat-icon {
+        font-size: 18px;
+        width: 18px;
+        height: 18px;
+      }
     `,
   ],
 })
-export class PosComponent {
-  categories = CATEGORIES;
-  products = SAMPLE_PRODUCTS;
+export class PosComponent implements OnInit {
+  categories: string[] = [];
+  products: PosProduct[] = [];
   cart: CartItem[] = [];
   selectedCategoryIndex = 0;
+  loading = true;
+  errorMessage = '';
 
   constructor(
     private dialog: MatDialog,
-    private snackBar: MatSnackBar
+    private snackBar: MatSnackBar,
+    private apiClient: ApiClientService,
   ) {}
+
+  ngOnInit(): void {
+    this.loadData();
+  }
+
+  loadData(): void {
+    this.loading = true;
+    this.errorMessage = '';
+
+    this.apiClient.get<SharedCategory[]>('/v1/categories').subscribe({
+      next: (cats) => {
+        this.categories = cats.map((c) => c.name);
+        this.loadProducts();
+      },
+      error: () => {
+        this.categories = [];
+        this.loadProducts();
+      },
+    });
+  }
+
+  private loadProducts(): void {
+    this.apiClient
+      .get<PaginatedResponse<SharedProduct>>('/v1/products?limit=100')
+      .subscribe({
+        next: (response) => {
+          this.products = response.data.map((p) => ({
+            id: p.id,
+            name: p.name,
+            price: p.price,
+            category: p.category?.name || 'Other',
+          }));
+          if (this.categories.length === 0) {
+            this.categories = [...new Set(this.products.map((p) => p.category))];
+          }
+          this.loading = false;
+        },
+        error: (err) => {
+          this.errorMessage =
+            'Failed to load products. Please check your connection and try again.';
+          this.loading = false;
+        },
+      });
+  }
 
   get selectedCategory(): string {
     return this.categories[this.selectedCategoryIndex];
   }
 
-  get filteredProducts(): Product[] {
+  get filteredProducts(): PosProduct[] {
     return this.products.filter((p) => p.category === this.selectedCategory);
   }
 
@@ -490,7 +532,7 @@ export class PosComponent {
     return icons[category] || 'restaurant';
   }
 
-  addToCart(product: Product): void {
+  addToCart(product: PosProduct): void {
     const existingIndex = this.cart.findIndex(
       (item) => item.product.id === product.id
     );

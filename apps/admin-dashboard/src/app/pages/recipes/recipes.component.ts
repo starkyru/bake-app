@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
@@ -10,6 +10,16 @@ import {
   BakeToastService,
   TableColumn,
 } from '@bake-app/ui-components';
+import { ApiClientService } from '@bake-app/api-client';
+import { Recipe } from '@bake-app/shared-types';
+
+interface PaginatedResponse<T> {
+  data: T[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}
 
 interface RecipeData {
   id: string;
@@ -62,7 +72,7 @@ interface RecipeData {
     `,
   ],
 })
-export class RecipesComponent {
+export class RecipesComponent implements OnInit {
   columns: TableColumn[] = [
     { key: 'name', label: 'Name', sortable: true },
     { key: 'category', label: 'Category', type: 'badge', sortable: true },
@@ -72,86 +82,39 @@ export class RecipesComponent {
     { key: 'actions', label: 'Actions', type: 'actions', width: '120px' },
   ];
 
-  recipes: RecipeData[] = [
-    {
-      id: '1',
-      name: 'Classic Sourdough',
-      category: 'Bread',
-      yield: '10 loaves',
-      costPerUnit: 320,
-      version: 'v2.1',
-      actions: '',
-    },
-    {
-      id: '2',
-      name: 'Butter Croissant',
-      category: 'Pastry',
-      yield: '24 pcs',
-      costPerUnit: 210,
-      version: 'v1.3',
-      actions: '',
-    },
-    {
-      id: '3',
-      name: 'Napoleon Cake',
-      category: 'Cake',
-      yield: '1 cake',
-      costPerUnit: 1100,
-      version: 'v1.0',
-      actions: '',
-    },
-    {
-      id: '4',
-      name: 'Chocolate Chip Cookie',
-      category: 'Cookie',
-      yield: '48 pcs',
-      costPerUnit: 120,
-      version: 'v2.0',
-      actions: '',
-    },
-    {
-      id: '5',
-      name: 'French Baguette',
-      category: 'Bread',
-      yield: '12 baguettes',
-      costPerUnit: 180,
-      version: 'v1.5',
-      actions: '',
-    },
-    {
-      id: '6',
-      name: 'Medovik (Honey Cake)',
-      category: 'Cake',
-      yield: '1 cake',
-      costPerUnit: 950,
-      version: 'v1.2',
-      actions: '',
-    },
-    {
-      id: '7',
-      name: 'Chicken Puff',
-      category: 'Savory',
-      yield: '20 pcs',
-      costPerUnit: 310,
-      version: 'v1.1',
-      actions: '',
-    },
-    {
-      id: '8',
-      name: 'Classic Eclair',
-      category: 'Pastry',
-      yield: '30 pcs',
-      costPerUnit: 190,
-      version: 'v1.4',
-      actions: '',
-    },
-  ];
+  recipes: RecipeData[] = [];
 
   constructor(
     private router: Router,
     private confirmService: BakeConfirmationService,
-    private toastService: BakeToastService
+    private toastService: BakeToastService,
+    private apiClient: ApiClientService,
   ) {}
+
+  ngOnInit(): void {
+    this.loadRecipes();
+  }
+
+  private loadRecipes(): void {
+    this.apiClient
+      .get<PaginatedResponse<Recipe>>('/v1/recipes?limit=100')
+      .subscribe({
+        next: (response) => {
+          this.recipes = response.data.map((r) => ({
+            id: r.id,
+            name: r.name,
+            category: r.category || '',
+            yield: `${r.yieldQuantity} ${r.yieldUnit}`,
+            costPerUnit: Number(r.costPerUnit),
+            version: `v${r.currentVersion}.0`,
+            actions: '',
+          }));
+        },
+        error: () => {
+          this.toastService.error('Failed to load recipes');
+        },
+      });
+  }
 
   onAddRecipe(): void {
     this.router.navigate(['/recipes', 'new']);
@@ -174,8 +137,15 @@ export class RecipesComponent {
         })
         .subscribe((confirmed) => {
           if (confirmed) {
-            this.recipes = this.recipes.filter((r) => r.id !== event.row.id);
-            this.toastService.success('Recipe deleted successfully');
+            this.apiClient.delete(`/v1/recipes/${event.row.id}`).subscribe({
+              next: () => {
+                this.recipes = this.recipes.filter((r) => r.id !== event.row.id);
+                this.toastService.success('Recipe deleted successfully');
+              },
+              error: () => {
+                this.toastService.error('Failed to delete recipe');
+              },
+            });
           }
         });
     }

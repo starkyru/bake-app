@@ -1,4 +1,4 @@
-import { Component, Inject } from '@angular/core';
+import { Component, Inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import {
@@ -20,13 +20,23 @@ import {
   BakeToastService,
   TableColumn,
 } from '@bake-app/ui-components';
-import { UserRole } from '@bake-app/shared-types';
+import { ApiClientService } from '@bake-app/api-client';
+import { User, UserRole } from '@bake-app/shared-types';
+
+interface PaginatedResponse<T> {
+  data: T[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}
 
 interface UserData {
   id: string;
   name: string;
   email: string;
   role: string;
+  roleId: string;
   status: string;
   actions: string;
 }
@@ -206,7 +216,7 @@ export class UserDialogComponent {
 
   constructor(
     public dialogRef: MatDialogRef<UserDialogComponent>,
-    @Inject(MAT_DIALOG_DATA) public data: UserDialogData
+    @Inject(MAT_DIALOG_DATA) public data: UserDialogData,
   ) {
     if (data.user) {
       const parts = data.user.name.split(' ');
@@ -220,10 +230,11 @@ export class UserDialogComponent {
 
   onSave(): void {
     this.dialogRef.close({
-      name: `${this.firstName} ${this.lastName}`.trim(),
+      firstName: this.firstName,
+      lastName: this.lastName,
       email: this.email,
       role: this.role,
-      status: this.isActive ? 'Active' : 'Inactive',
+      isActive: this.isActive,
     });
   }
 }
@@ -268,7 +279,7 @@ export class UserDialogComponent {
     `,
   ],
 })
-export class UsersComponent {
+export class UsersComponent implements OnInit {
   columns: TableColumn[] = [
     { key: 'name', label: 'Name', sortable: true },
     { key: 'email', label: 'Email', sortable: true },
@@ -284,78 +295,43 @@ export class UsersComponent {
     },
   ];
 
-  users: UserData[] = [
-    {
-      id: '1',
-      name: 'Aisha Nurzhanova',
-      email: 'aisha@bakery.com',
-      role: 'Owner',
-      status: 'Active',
-      actions: '',
-    },
-    {
-      id: '2',
-      name: 'Timur Serikbayev',
-      email: 'timur@bakery.com',
-      role: 'Manager',
-      status: 'Active',
-      actions: '',
-    },
-    {
-      id: '3',
-      name: 'Dariya Omarova',
-      email: 'dariya@bakery.com',
-      role: 'Chef',
-      status: 'Active',
-      actions: '',
-    },
-    {
-      id: '4',
-      name: 'Yerassyl Kairatov',
-      email: 'yerassyl@bakery.com',
-      role: 'Baker',
-      status: 'Active',
-      actions: '',
-    },
-    {
-      id: '5',
-      name: 'Meruert Abenova',
-      email: 'meruert@bakery.com',
-      role: 'Cashier',
-      status: 'Active',
-      actions: '',
-    },
-    {
-      id: '6',
-      name: 'Nurlan Bektemirov',
-      email: 'nurlan@bakery.com',
-      role: 'Barista',
-      status: 'Active',
-      actions: '',
-    },
-    {
-      id: '7',
-      name: 'Saule Tursunova',
-      email: 'saule@bakery.com',
-      role: 'Accountant',
-      status: 'Inactive',
-      actions: '',
-    },
-    {
-      id: '8',
-      name: 'Arman Zhunisbekov',
-      email: 'arman@bakery.com',
-      role: 'Warehouse',
-      status: 'Active',
-      actions: '',
-    },
-  ];
+  users: UserData[] = [];
 
   constructor(
     private dialog: MatDialog,
     private confirmService: BakeConfirmationService,
-    private toastService: BakeToastService
+    private toastService: BakeToastService,
+    private apiClient: ApiClientService,
   ) {}
+
+  ngOnInit(): void {
+    this.loadUsers();
+  }
+
+  private loadUsers(): void {
+    this.apiClient
+      .get<PaginatedResponse<User>>('/v1/users?limit=100')
+      .subscribe({
+        next: (response) => {
+          this.users = response.data.map((u) => this.mapUser(u));
+        },
+        error: () => {
+          this.toastService.error('Failed to load users');
+        },
+      });
+  }
+
+  private mapUser(u: User): UserData {
+    return {
+      id: u.id,
+      name: `${u.firstName} ${u.lastName}`.trim(),
+      email: u.email,
+      role: u.role?.name || '',
+      roleId: u.role?.id || '',
+      status: u.isActive ? 'Active' : 'Inactive',
+      actions: '',
+    };
+  }
 
   openCreateDialog(): void {
     const dialogRef = this.dialog.open(UserDialogComponent, {
@@ -365,11 +341,22 @@ export class UsersComponent {
 
     dialogRef.afterClosed().subscribe((result) => {
       if (result) {
-        this.users = [
-          ...this.users,
-          { id: String(this.users.length + 1), ...result, actions: '' },
-        ];
-        this.toastService.success('User created successfully');
+        const dto = {
+          firstName: result.firstName,
+          lastName: result.lastName,
+          email: result.email,
+          password: 'changeme123',
+          roleId: result.role,
+        };
+        this.apiClient.post<User>('/v1/users', dto).subscribe({
+          next: (created) => {
+            this.users = [...this.users, this.mapUser(created)];
+            this.toastService.success('User created successfully');
+          },
+          error: () => {
+            this.toastService.error('Failed to create user');
+          },
+        });
       }
     });
   }
@@ -382,10 +369,23 @@ export class UsersComponent {
 
     dialogRef.afterClosed().subscribe((result) => {
       if (result) {
-        this.users = this.users.map((u) =>
-          u.id === user.id ? { ...u, ...result } : u
-        );
-        this.toastService.success('User updated successfully');
+        const dto = {
+          firstName: result.firstName,
+          lastName: result.lastName,
+          email: result.email,
+          isActive: result.isActive,
+        };
+        this.apiClient.put<User>(`/v1/users/${user.id}`, dto).subscribe({
+          next: (updated) => {
+            this.users = this.users.map((u) =>
+              u.id === user.id ? this.mapUser(updated) : u,
+            );
+            this.toastService.success('User updated successfully');
+          },
+          error: () => {
+            this.toastService.error('Failed to update user');
+          },
+        });
       }
     });
   }
@@ -398,7 +398,16 @@ export class UsersComponent {
 
     dialogRef.afterClosed().subscribe((newPassword) => {
       if (newPassword) {
-        this.toastService.success(`Password changed for ${user.name}`);
+        this.apiClient
+          .put(`/v1/users/${user.id}`, { password: newPassword })
+          .subscribe({
+            next: () => {
+              this.toastService.success(`Password changed for ${user.name}`);
+            },
+            error: () => {
+              this.toastService.error('Failed to change password');
+            },
+          });
       }
     });
   }
@@ -418,8 +427,15 @@ export class UsersComponent {
         })
         .subscribe((confirmed) => {
           if (confirmed) {
-            this.users = this.users.filter((u) => u.id !== event.row.id);
-            this.toastService.success('User deleted successfully');
+            this.apiClient.delete(`/v1/users/${event.row.id}`).subscribe({
+              next: () => {
+                this.users = this.users.filter((u) => u.id !== event.row.id);
+                this.toastService.success('User deleted successfully');
+              },
+              error: () => {
+                this.toastService.error('Failed to delete user');
+              },
+            });
           }
         });
     }

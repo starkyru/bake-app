@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
@@ -8,6 +8,7 @@ import {
   BakeStatsCardComponent,
   TableColumn,
 } from '@bake-app/ui-components';
+import { ApiClientService } from '@bake-app/api-client';
 
 interface SalesItem {
   rank: number;
@@ -35,36 +36,36 @@ interface SalesItem {
       <div class="kpi-grid">
         <bake-stats-card
           title="Total Sales"
-          value="$1,245,000"
+          [value]="kpis.totalSales"
           icon="point_of_sale"
-          [trend]="12.5"
+          [trend]="0"
           trendLabel="vs yesterday"
           color="primary"
         ></bake-stats-card>
 
         <bake-stats-card
           title="Items Sold"
-          value="342"
+          [value]="kpis.itemsSold"
           icon="shopping_basket"
-          [trend]="5.8"
+          [trend]="0"
           trendLabel="vs yesterday"
           color="accent"
         ></bake-stats-card>
 
         <bake-stats-card
           title="Avg Check"
-          value="$7,980"
+          [value]="kpis.avgCheck"
           icon="receipt"
-          [trend]="5.1"
+          [trend]="0"
           trendLabel="vs last week"
           color="primary"
         ></bake-stats-card>
 
         <bake-stats-card
           title="Orders"
-          value="156"
+          [value]="kpis.orders"
           icon="receipt_long"
-          [trend]="-3.2"
+          [trend]="0"
           trendLabel="vs yesterday"
           color="warn"
         ></bake-stats-card>
@@ -157,7 +158,14 @@ interface SalesItem {
     `,
   ],
 })
-export class SalesComponent {
+export class SalesComponent implements OnInit {
+  kpis = {
+    totalSales: '$0',
+    itemsSold: '0',
+    avgCheck: '$0',
+    orders: '0',
+  };
+
   topColumns: TableColumn[] = [
     { key: 'rank', label: '#', type: 'number', width: '60px' },
     { key: 'product', label: 'Product', type: 'text' },
@@ -176,24 +184,55 @@ export class SalesComponent {
     { key: 'trend', label: 'Trend', type: 'badge', width: '100px' },
   ];
 
-  topProducts: SalesItem[] = [
-    { rank: 1, product: 'Sourdough Bread', category: 'Bread', qtySold: 42, revenue: 126000, trend: 'Active' },
-    { rank: 2, product: 'Croissant', category: 'Pastries', qtySold: 38, revenue: 76000, trend: 'Active' },
-    { rank: 3, product: 'Napoleon Cake', category: 'Cakes', qtySold: 15, revenue: 112500, trend: 'Active' },
-    { rank: 4, product: 'Cappuccino', category: 'Coffee', qtySold: 65, revenue: 58500, trend: 'Active' },
-    { rank: 5, product: 'Eclair', category: 'Pastries', qtySold: 28, revenue: 47600, trend: 'Active' },
-    { rank: 6, product: 'Baguette', category: 'Bread', qtySold: 35, revenue: 42000, trend: 'Active' },
-    { rank: 7, product: 'Americano', category: 'Coffee', qtySold: 52, revenue: 41600, trend: 'Active' },
-    { rank: 8, product: 'Cheesecake', category: 'Cakes', qtySold: 12, revenue: 48000, trend: 'Active' },
-    { rank: 9, product: 'Cinnamon Roll', category: 'Pastries', qtySold: 25, revenue: 37500, trend: 'Active' },
-    { rank: 10, product: 'Latte', category: 'Coffee', qtySold: 45, revenue: 36000, trend: 'Active' },
-  ];
+  topProducts: SalesItem[] = [];
+  bottomProducts: SalesItem[] = [];
 
-  bottomProducts: SalesItem[] = [
-    { rank: 1, product: 'Rye Bread', category: 'Bread', qtySold: 3, revenue: 4500, trend: 'Low Stock' },
-    { rank: 2, product: 'Fruit Tart', category: 'Pastries', qtySold: 2, revenue: 5000, trend: 'Low Stock' },
-    { rank: 3, product: 'Matcha Latte', category: 'Coffee', qtySold: 4, revenue: 4800, trend: 'Pending' },
-    { rank: 4, product: 'Macaron Set', category: 'Pastries', qtySold: 1, revenue: 3500, trend: 'Low Stock' },
-    { rank: 5, product: 'Herbal Tea', category: 'Beverages', qtySold: 5, revenue: 3000, trend: 'Pending' },
-  ];
+  constructor(private apiClient: ApiClientService) {}
+
+  ngOnInit(): void {
+    this.loadSalesSummary();
+    this.loadTopProducts();
+  }
+
+  private loadSalesSummary(): void {
+    this.apiClient
+      .get<Array<Record<string, unknown>>>('/v1/reports/sales/summary?period=daily')
+      .subscribe({
+        next: (rows) => {
+          let totalRevenue = 0;
+          let totalOrders = 0;
+          let totalItems = 0;
+          for (const row of rows) {
+            totalRevenue += Number(row['revenue'] || 0);
+            totalOrders += Number(row['orderCount'] || 0);
+          }
+          const avgCheck = totalOrders > 0 ? Math.round(totalRevenue / totalOrders) : 0;
+          this.kpis.totalSales = `$${totalRevenue.toLocaleString()}`;
+          this.kpis.orders = String(totalOrders);
+          this.kpis.avgCheck = `$${avgCheck.toLocaleString()}`;
+          this.kpis.itemsSold = String(totalOrders);
+        },
+      });
+  }
+
+  private loadTopProducts(): void {
+    this.apiClient
+      .get<Array<Record<string, unknown>>>('/v1/reports/sales/top-products')
+      .subscribe({
+        next: (data) => {
+          const items: SalesItem[] = data.map((p, i) => ({
+            rank: i + 1,
+            product: String(p['productName'] || ''),
+            category: String(p['categoryName'] || ''),
+            qtySold: Number(p['totalQuantity'] || 0),
+            revenue: Number(p['totalRevenue'] || 0),
+            trend: 'Active',
+          }));
+          this.topProducts = items.slice(0, 10);
+          this.bottomProducts = items.length > 10
+            ? items.slice(-5).map((item, i) => ({ ...item, rank: i + 1, trend: 'Pending' }))
+            : [];
+        },
+      });
+  }
 }

@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
@@ -9,6 +9,8 @@ import {
   BakeStatsCardComponent,
   TableColumn,
 } from '@bake-app/ui-components';
+import { ApiClientService } from '@bake-app/api-client';
+import { ProductionPlan, ProductionTask } from '@bake-app/shared-types';
 
 interface ProductionItem {
   time: string;
@@ -46,30 +48,30 @@ interface IngredientRequirement {
       <div class="kpi-grid">
         <bake-stats-card
           title="Planned Items"
-          value="480"
+          [value]="kpis.planned"
           icon="assignment"
           color="primary"
         ></bake-stats-card>
 
         <bake-stats-card
           title="Completed"
-          value="312"
+          [value]="kpis.completed"
           icon="check_circle"
-          [trend]="65"
+          [trend]="kpis.completionPct"
           trendLabel="% done"
           color="accent"
         ></bake-stats-card>
 
         <bake-stats-card
           title="In Progress"
-          value="98"
+          [value]="kpis.inProgress"
           icon="pending"
           color="primary"
         ></bake-stats-card>
 
         <bake-stats-card
           title="Behind Schedule"
-          value="3"
+          [value]="kpis.behindSchedule"
           icon="warning"
           color="warn"
         ></bake-stats-card>
@@ -158,7 +160,15 @@ interface IngredientRequirement {
     `,
   ],
 })
-export class ProductionComponent {
+export class ProductionComponent implements OnInit {
+  kpis = {
+    planned: '0',
+    completed: '0',
+    completionPct: 0,
+    inProgress: '0',
+    behindSchedule: '0',
+  };
+
   productionColumns: TableColumn[] = [
     { key: 'time', label: 'Time', type: 'text', width: '90px' },
     { key: 'recipe', label: 'Recipe', type: 'text' },
@@ -169,20 +179,7 @@ export class ProductionComponent {
     { key: 'assigned', label: 'Assigned', type: 'text', width: '120px' },
   ];
 
-  productionData: ProductionItem[] = [
-    { time: '05:00', recipe: 'Sourdough Bread', category: 'Bread', planned: 50, completed: 50, status: 'Completed', assigned: 'Baker A' },
-    { time: '05:30', recipe: 'Baguette', category: 'Bread', planned: 40, completed: 40, status: 'Completed', assigned: 'Baker A' },
-    { time: '06:00', recipe: 'Rye Bread', category: 'Bread', planned: 20, completed: 20, status: 'Completed', assigned: 'Baker B' },
-    { time: '06:00', recipe: 'Croissant', category: 'Pastries', planned: 60, completed: 45, status: 'In Progress', assigned: 'Baker C' },
-    { time: '06:30', recipe: 'Cinnamon Roll', category: 'Pastries', planned: 30, completed: 30, status: 'Completed', assigned: 'Baker C' },
-    { time: '07:00', recipe: 'Napoleon Cake', category: 'Cakes', planned: 8, completed: 5, status: 'In Progress', assigned: 'Baker D' },
-    { time: '07:00', recipe: 'Eclair', category: 'Pastries', planned: 40, completed: 28, status: 'In Progress', assigned: 'Baker B' },
-    { time: '07:30', recipe: 'Cheesecake', category: 'Cakes', planned: 6, completed: 0, status: 'Pending', assigned: 'Baker D' },
-    { time: '08:00', recipe: 'Fruit Tart', category: 'Pastries', planned: 15, completed: 0, status: 'Pending', assigned: 'Baker C' },
-    { time: '08:00', recipe: 'Macaron Set', category: 'Pastries', planned: 20, completed: 0, status: 'Pending', assigned: 'Baker B' },
-    { time: '09:00', recipe: 'Sandwich Bread', category: 'Bread', planned: 30, completed: 30, status: 'Completed', assigned: 'Baker A' },
-    { time: '10:00', recipe: 'Chocolate Cake', category: 'Cakes', planned: 4, completed: 0, status: 'Pending', assigned: 'Baker D' },
-  ];
+  productionData: ProductionItem[] = [];
 
   ingredientColumns: TableColumn[] = [
     { key: 'ingredient', label: 'Ingredient', type: 'text' },
@@ -192,17 +189,98 @@ export class ProductionComponent {
     { key: 'status', label: 'Status', type: 'badge', width: '130px' },
   ];
 
-  ingredientData: IngredientRequirement[] = [
-    { ingredient: 'Wheat Flour', required: 45, available: 5, unit: 'kg', status: 'Low Stock' },
-    { ingredient: 'Butter', required: 12, available: 8, unit: 'kg', status: 'Low Stock' },
-    { ingredient: 'Sugar', required: 15, available: 25, unit: 'kg', status: 'In Stock' },
-    { ingredient: 'Eggs', required: 80, available: 60, unit: 'pcs', status: 'Low Stock' },
-    { ingredient: 'Heavy Cream', required: 8, available: 4, unit: 'L', status: 'Low Stock' },
-    { ingredient: 'Whole Milk', required: 10, available: 12, unit: 'L', status: 'In Stock' },
-    { ingredient: 'Dark Chocolate', required: 5, available: 0, unit: 'kg', status: 'Out of Stock' },
-    { ingredient: 'Dry Yeast', required: 1.5, available: 2, unit: 'kg', status: 'In Stock' },
-    { ingredient: 'Vanilla Extract', required: 0.2, available: 0.5, unit: 'L', status: 'In Stock' },
-    { ingredient: 'Almonds', required: 3, available: 6, unit: 'kg', status: 'In Stock' },
-    { ingredient: 'Fresh Berries', required: 4, available: 0, unit: 'kg', status: 'Out of Stock' },
-  ];
+  ingredientData: IngredientRequirement[] = [];
+
+  constructor(private apiClient: ApiClientService) {}
+
+  ngOnInit(): void {
+    this.loadProductionPlans();
+    this.loadIngredientRequirements();
+  }
+
+  private loadProductionPlans(): void {
+    const todayStr = new Date().toISOString().split('T')[0];
+    this.apiClient
+      .get<ProductionPlan[]>(`/v1/production/plans?date=${todayStr}`)
+      .subscribe({
+        next: (plans) => {
+          const items: ProductionItem[] = [];
+          for (const plan of plans) {
+            for (const task of plan.tasks) {
+              items.push(this.mapTask(task));
+            }
+          }
+          this.productionData = items;
+          this.updateKpis(items);
+        },
+      });
+  }
+
+  private mapTask(task: ProductionTask): ProductionItem {
+    const statusMap: Record<string, string> = {
+      pending: 'Pending',
+      in_progress: 'In Progress',
+      completed: 'Completed',
+      delayed: 'Delayed',
+    };
+    const time = task.scheduledStart
+      ? new Date(task.scheduledStart).toLocaleTimeString('en-US', {
+          hour: '2-digit',
+          minute: '2-digit',
+          hour12: false,
+        })
+      : '--:--';
+    return {
+      time,
+      recipe: task.recipeName || 'Recipe',
+      category: '',
+      planned: task.plannedQuantity,
+      completed: task.actualYield || 0,
+      status: statusMap[task.status] || 'Pending',
+      assigned: task.assigneeName || '',
+    };
+  }
+
+  private updateKpis(items: ProductionItem[]): void {
+    const totalPlanned = items.reduce((s, i) => s + i.planned, 0);
+    const totalCompleted = items.reduce((s, i) => s + i.completed, 0);
+    const inProgress = items.filter((i) => i.status === 'In Progress').length;
+    const delayed = items.filter((i) => i.status === 'Delayed').length;
+    const pct = totalPlanned > 0 ? Math.round((totalCompleted / totalPlanned) * 100) : 0;
+    this.kpis = {
+      planned: String(totalPlanned),
+      completed: String(totalCompleted),
+      completionPct: pct,
+      inProgress: String(inProgress),
+      behindSchedule: String(delayed),
+    };
+  }
+
+  private loadIngredientRequirements(): void {
+    this.apiClient
+      .get<Record<string, unknown>>('/v1/reports/inventory/status')
+      .subscribe({
+        next: (data) => {
+          const stockLevels =
+            (data['stockLevels'] as Array<Record<string, unknown>>) || [];
+          this.ingredientData = stockLevels.map((item) => {
+            const available = Number(item['quantity'] || 0);
+            const minLevel = Number(item['minStockLevel'] || 0);
+            let status = 'In Stock';
+            if (available <= 0) {
+              status = 'Out of Stock';
+            } else if (available <= minLevel) {
+              status = 'Low Stock';
+            }
+            return {
+              ingredient: String(item['ingredientName'] || ''),
+              required: minLevel,
+              available,
+              unit: String(item['unit'] || ''),
+              status,
+            };
+          });
+        },
+      });
+  }
 }

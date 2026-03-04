@@ -1,16 +1,19 @@
-import { Component } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import {
   BakeDataTableComponent,
   BakeStatusBadgeComponent,
   TableColumn,
 } from '@bake-app/ui-components';
+import { ApiClientService } from '@bake-app/api-client';
+import { Order } from '@bake-app/shared-types';
 
 interface OrderRow {
-  id: number;
+  id: string;
   orderNumber: string;
   date: Date;
   items: string;
@@ -18,88 +21,13 @@ interface OrderRow {
   status: string;
 }
 
-const SAMPLE_ORDERS: OrderRow[] = [
-  {
-    id: 1,
-    orderNumber: '#001',
-    date: new Date(2026, 2, 1, 9, 15),
-    items: 'Cappuccino x2, Croissant x1',
-    total: 3050,
-    status: 'Completed',
-  },
-  {
-    id: 2,
-    orderNumber: '#002',
-    date: new Date(2026, 2, 1, 9, 32),
-    items: 'Latte x1, Tiramisu x1',
-    total: 3136,
-    status: 'Completed',
-  },
-  {
-    id: 3,
-    orderNumber: '#003',
-    date: new Date(2026, 2, 1, 10, 5),
-    items: 'Americano x1, Turkey Club x1',
-    total: 3024,
-    status: 'In Progress',
-  },
-  {
-    id: 4,
-    orderNumber: '#004',
-    date: new Date(2026, 2, 1, 10, 20),
-    items: 'Espresso x3, Danish Pastry x2',
-    total: 4256,
-    status: 'Pending',
-  },
-  {
-    id: 5,
-    orderNumber: '#005',
-    date: new Date(2026, 2, 1, 10, 45),
-    items: 'Flat White x1, Cheesecake x1',
-    total: 2912,
-    status: 'Completed',
-  },
-  {
-    id: 6,
-    orderNumber: '#006',
-    date: new Date(2026, 2, 1, 11, 0),
-    items: 'Mocha x2, Brownie x2',
-    total: 4928,
-    status: 'Cancelled',
-  },
-  {
-    id: 7,
-    orderNumber: '#007',
-    date: new Date(2026, 2, 1, 11, 22),
-    items: 'Chai Latte x1, Cinnamon Roll x1',
-    total: 2240,
-    status: 'Completed',
-  },
-  {
-    id: 8,
-    orderNumber: '#008',
-    date: new Date(2026, 2, 1, 11, 40),
-    items: 'Cappuccino x1, Ham & Cheese x1',
-    total: 3024,
-    status: 'In Progress',
-  },
-  {
-    id: 9,
-    orderNumber: '#009',
-    date: new Date(2026, 2, 1, 12, 5),
-    items: 'Green Smoothie x2, Veggie Wrap x1',
-    total: 4480,
-    status: 'Pending',
-  },
-  {
-    id: 10,
-    orderNumber: '#010',
-    date: new Date(2026, 2, 1, 12, 30),
-    items: 'Hot Chocolate x1, Eclair x2',
-    total: 3136,
-    status: 'Completed',
-  },
-];
+interface PaginatedResponse<T> {
+  data: T[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}
 
 @Component({
   selector: 'bake-app-orders',
@@ -108,6 +36,7 @@ const SAMPLE_ORDERS: OrderRow[] = [
     CommonModule,
     MatButtonModule,
     MatIconModule,
+    MatProgressSpinnerModule,
     BakeDataTableComponent,
     BakeStatusBadgeComponent,
   ],
@@ -207,8 +136,10 @@ const SAMPLE_ORDERS: OrderRow[] = [
     `,
   ],
 })
-export class OrdersComponent {
-  orders: OrderRow[] = SAMPLE_ORDERS;
+export class OrdersComponent implements OnInit {
+  orders: OrderRow[] = [];
+  loading = true;
+  errorMessage = '';
 
   columns: TableColumn[] = [
     { key: 'orderNumber', label: 'Order #', sortable: true, width: '100px' },
@@ -219,7 +150,49 @@ export class OrdersComponent {
     { key: 'actions', label: '', type: 'actions', width: '100px' },
   ];
 
-  constructor(private router: Router) {}
+  constructor(
+    private router: Router,
+    private apiClient: ApiClientService,
+  ) {}
+
+  ngOnInit(): void {
+    this.loadOrders();
+  }
+
+  loadOrders(): void {
+    this.loading = true;
+    this.errorMessage = '';
+    this.apiClient.get<PaginatedResponse<Order>>('/v1/orders?limit=50').subscribe({
+      next: (response) => {
+        this.orders = response.data.map((order) => ({
+          id: order.id,
+          orderNumber: order.orderNumber,
+          date: new Date(order.createdAt),
+          items: order.items
+            .map((item) => `${item.product?.name || 'Item'} x${item.quantity}`)
+            .join(', '),
+          total: order.total,
+          status: this.formatStatus(order.status),
+        }));
+        this.loading = false;
+      },
+      error: () => {
+        this.errorMessage = 'Failed to load orders.';
+        this.loading = false;
+      },
+    });
+  }
+
+  private formatStatus(status: string): string {
+    const statusMap: Record<string, string> = {
+      pending: 'Pending',
+      confirmed: 'Confirmed',
+      in_progress: 'In Progress',
+      completed: 'Completed',
+      cancelled: 'Cancelled',
+    };
+    return statusMap[status] || status;
+  }
 
   get completedCount(): number {
     return this.orders.filter((o) => o.status === 'Completed').length;

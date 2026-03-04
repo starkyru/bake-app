@@ -3,6 +3,8 @@ import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
+import { ApiClientService } from '@bake-app/api-client';
+import { Order } from '@bake-app/shared-types';
 
 interface RecipeStep {
   step: number;
@@ -482,95 +484,50 @@ export class OrderDetailComponent implements OnInit {
   constructor(
     private route: ActivatedRoute,
     private router: Router,
+    private apiClient: ApiClientService,
   ) {}
 
   ngOnInit(): void {
     this.orderId = this.route.snapshot.paramMap.get('id') || '';
-    this.loadSampleDetail();
+    this.loadOrderDetail();
   }
 
   goBack(): void {
     this.router.navigate(['/queue']);
   }
 
-  private loadSampleDetail(): void {
-    const details: Record<string, OrderDetailData> = {
-      '1': {
-        id: '1',
-        orderNumber: '0147',
-        customerName: 'Sarah M.',
-        recipeName: 'Croissant Batch',
-        status: 'NEW',
-        notes: 'Customer prefers extra flaky. No nuts due to allergy.',
-        ingredients: [
-          { name: 'Bread Flour', amount: '500g', inStock: true },
-          { name: 'Unsalted Butter', amount: '280g', inStock: true },
-          { name: 'Whole Milk', amount: '150ml', inStock: true },
-          { name: 'Sugar', amount: '50g', inStock: true },
-          { name: 'Salt', amount: '10g', inStock: true },
-          { name: 'Active Dry Yeast', amount: '7g', inStock: true },
-          { name: 'Egg (for wash)', amount: '1 pc', inStock: true },
-        ],
-        steps: [
-          { step: 1, instruction: 'Mix flour, sugar, salt, and yeast in a large bowl. Add milk and combine until a rough dough forms.', duration: '5 min' },
-          { step: 2, instruction: 'Knead dough on a floured surface until smooth and elastic. Wrap in plastic and refrigerate for 1 hour.', duration: '1 hr 10 min' },
-          { step: 3, instruction: 'Roll butter block into a flat rectangle between parchment paper. Keep cold.', duration: '5 min' },
-          { step: 4, instruction: 'Roll out chilled dough, place butter in center, and perform 3 letter folds with 30-minute rests between each.', duration: '2 hr' },
-          { step: 5, instruction: 'Roll final dough to 5mm thickness, cut triangles, and roll into croissant shapes.', duration: '15 min' },
-          { step: 6, instruction: 'Proof at room temperature until doubled in size (about 1.5-2 hours). Brush with egg wash.', duration: '2 hr' },
-          { step: 7, instruction: 'Bake at 200C (400F) until golden brown and flaky.', duration: '15 min' },
-        ],
+  private loadOrderDetail(): void {
+    this.apiClient.get<Order>(`/v1/orders/${this.orderId}`).subscribe({
+      next: (order) => {
+        const statusMap: Record<string, string> = {
+          pending: 'NEW',
+          confirmed: 'NEW',
+          in_progress: 'IN_PROGRESS',
+          completed: 'READY',
+        };
+        this.orderDetail = {
+          id: order.id,
+          orderNumber: order.orderNumber,
+          customerName: order.notes || `Order ${order.orderNumber}`,
+          recipeName: order.items.map((i) => i.product?.name || 'Item').join(', '),
+          status: statusMap[order.status] || order.status,
+          notes: order.notes || '',
+          ingredients: [],
+          steps: [],
+        };
       },
-      '4': {
-        id: '4',
-        orderNumber: '0144',
-        customerName: 'Michael T.',
-        recipeName: 'Fruit Tart',
-        status: 'IN_PROGRESS',
-        notes: 'Use seasonal berries. Extra glaze on top.',
-        ingredients: [
-          { name: 'All-Purpose Flour', amount: '250g', inStock: true },
-          { name: 'Unsalted Butter', amount: '125g', inStock: true },
-          { name: 'Powdered Sugar', amount: '75g', inStock: true },
-          { name: 'Egg Yolks', amount: '2 pcs', inStock: true },
-          { name: 'Pastry Cream', amount: '400ml', inStock: true },
-          { name: 'Mixed Berries', amount: '300g', inStock: false },
-          { name: 'Apricot Jam', amount: '100g', inStock: true },
-        ],
-        steps: [
-          { step: 1, instruction: 'Prepare the sweet tart dough (pate sucree). Combine flour, butter, and sugar. Add egg yolks.', duration: '10 min' },
-          { step: 2, instruction: 'Press dough into tart ring, prick bottom with fork. Blind bake at 180C with weights.', duration: '20 min' },
-          { step: 3, instruction: 'Remove weights, bake until golden. Allow to cool completely.', duration: '25 min' },
-          { step: 4, instruction: 'Fill cooled shell with pastry cream, spreading evenly to edges.', duration: '5 min' },
-          { step: 5, instruction: 'Arrange fresh berries decoratively over pastry cream in concentric circles.', duration: '10 min' },
-          { step: 6, instruction: 'Heat apricot jam and brush over berries for shine. Refrigerate until service.', duration: '5 min' },
-        ],
+      error: () => {
+        this.orderDetail = {
+          id: this.orderId,
+          orderNumber: '',
+          customerName: 'Unknown',
+          recipeName: 'Unknown Order',
+          status: 'NEW',
+          notes: '',
+          ingredients: [],
+          steps: [],
+        };
       },
-    };
-
-    this.orderDetail = details[this.orderId] || {
-      id: this.orderId,
-      orderNumber: this.orderId.padStart(4, '0'),
-      customerName: 'Guest Customer',
-      recipeName: 'Standard Order',
-      status: 'NEW',
-      notes: '',
-      ingredients: [
-        { name: 'Bread Flour', amount: '500g', inStock: true },
-        { name: 'Butter', amount: '200g', inStock: true },
-        { name: 'Sugar', amount: '100g', inStock: true },
-        { name: 'Eggs', amount: '4 pcs', inStock: true },
-        { name: 'Milk', amount: '250ml', inStock: true },
-        { name: 'Vanilla Extract', amount: '5ml', inStock: true },
-      ],
-      steps: [
-        { step: 1, instruction: 'Preheat oven to 180C (350F). Prepare baking trays with parchment paper.', duration: '5 min' },
-        { step: 2, instruction: 'Combine dry ingredients in a large mixing bowl. Whisk together.', duration: '3 min' },
-        { step: 3, instruction: 'In a separate bowl, cream butter and sugar until light and fluffy.', duration: '5 min' },
-        { step: 4, instruction: 'Add eggs one at a time, beating well after each addition. Add vanilla.', duration: '4 min' },
-        { step: 5, instruction: 'Fold dry ingredients into wet mixture. Do not overmix.', duration: '3 min' },
-        { step: 6, instruction: 'Portion dough onto prepared trays. Bake until golden and a toothpick comes out clean.', duration: '18 min' },
-      ],
-    };
+    });
   }
 }

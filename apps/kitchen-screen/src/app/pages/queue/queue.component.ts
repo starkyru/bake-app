@@ -4,6 +4,16 @@ import { Router } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCheckboxModule } from '@angular/material/checkbox';
+import { ApiClientService } from '@bake-app/api-client';
+import { Order } from '@bake-app/shared-types';
+
+interface PaginatedResponse<T> {
+  data: T[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}
 
 interface OrderItem {
   name: string;
@@ -485,7 +495,10 @@ export class QueueComponent implements OnInit, OnDestroy {
   orders: KitchenOrder[] = [];
   private timerInterval: ReturnType<typeof setInterval> | null = null;
 
-  constructor(private router: Router) {}
+  constructor(
+    private router: Router,
+    private apiClient: ApiClientService,
+  ) {}
 
   get newOrders(): KitchenOrder[] {
     return this.orders.filter(o => o.status === 'NEW');
@@ -500,9 +513,8 @@ export class QueueComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit(): void {
-    this.loadSampleData();
+    this.loadOrders();
     this.timerInterval = setInterval(() => {
-      // Force change detection for elapsed times
       this.orders = [...this.orders];
     }, 1000);
   }
@@ -514,14 +526,26 @@ export class QueueComponent implements OnInit, OnDestroy {
   }
 
   startOrder(order: KitchenOrder): void {
-    order.status = 'IN_PROGRESS';
-    order.startedAt = new Date();
+    this.apiClient
+      .put(`/v1/orders/${order.id}/status`, { status: 'in_progress' })
+      .subscribe({
+        next: () => {
+          order.status = 'IN_PROGRESS';
+          order.startedAt = new Date();
+        },
+      });
   }
 
   completeOrder(order: KitchenOrder): void {
-    order.status = 'READY';
-    order.completedAt = new Date();
-    order.items.forEach(item => item.done = true);
+    this.apiClient
+      .put(`/v1/orders/${order.id}/status`, { status: 'completed' })
+      .subscribe({
+        next: () => {
+          order.status = 'READY';
+          order.completedAt = new Date();
+          order.items.forEach(item => item.done = true);
+        },
+      });
   }
 
   pickupOrder(order: KitchenOrder): void {
@@ -558,100 +582,38 @@ export class QueueComponent implements OnInit, OnDestroy {
     this.router.navigate(['/orders', orderId]);
   }
 
-  private loadSampleData(): void {
-    const now = new Date();
-    this.orders = [
-      // NEW orders
-      {
-        id: '1',
-        orderNumber: '0147',
-        customerName: 'Sarah M.',
-        status: 'NEW',
-        createdAt: new Date(now.getTime() - 3 * 60 * 1000),
-        items: [
-          { name: 'Croissant', quantity: 2, done: false },
-          { name: 'Cappuccino', quantity: 1, done: false },
-          { name: 'Blueberry Muffin', quantity: 1, done: false },
-        ],
-      },
-      {
-        id: '2',
-        orderNumber: '0148',
-        customerName: 'James K.',
-        status: 'NEW',
-        createdAt: new Date(now.getTime() - 1 * 60 * 1000),
-        items: [
-          { name: 'Sourdough Loaf', quantity: 1, done: false },
-          { name: 'Cinnamon Roll', quantity: 3, done: false },
-        ],
-      },
-      {
-        id: '3',
-        orderNumber: '0149',
-        customerName: 'Emily R.',
-        status: 'NEW',
-        createdAt: new Date(now.getTime() - 30 * 1000),
-        items: [
-          { name: 'Almond Danish', quantity: 2, done: false },
-          { name: 'Espresso', quantity: 2, done: false },
-          { name: 'Chocolate Eclair', quantity: 1, done: false },
-        ],
-      },
+  private loadOrders(): void {
+    this.apiClient
+      .get<PaginatedResponse<Order>>('/v1/orders?limit=50')
+      .subscribe({
+        next: (response) => {
+          this.orders = response.data
+            .filter((o) => ['pending', 'confirmed', 'in_progress', 'completed'].includes(o.status))
+            .map((o) => this.mapOrder(o));
+        },
+      });
+  }
 
-      // IN PROGRESS orders
-      {
-        id: '4',
-        orderNumber: '0144',
-        customerName: 'Michael T.',
-        status: 'IN_PROGRESS',
-        createdAt: new Date(now.getTime() - 12 * 60 * 1000),
-        startedAt: new Date(now.getTime() - 8 * 60 * 1000),
-        items: [
-          { name: 'Baguette', quantity: 2, done: true },
-          { name: 'Pain au Chocolat', quantity: 4, done: true },
-          { name: 'Fruit Tart', quantity: 1, done: false },
-        ],
-      },
-      {
-        id: '5',
-        orderNumber: '0145',
-        customerName: 'Lisa W.',
-        status: 'IN_PROGRESS',
-        createdAt: new Date(now.getTime() - 10 * 60 * 1000),
-        startedAt: new Date(now.getTime() - 5 * 60 * 1000),
-        items: [
-          { name: 'Rye Bread', quantity: 1, done: false },
-          { name: 'Cheese Scone', quantity: 6, done: false },
-          { name: 'Latte', quantity: 2, done: true },
-        ],
-      },
-      {
-        id: '6',
-        orderNumber: '0146',
-        customerName: 'David C.',
-        status: 'IN_PROGRESS',
-        createdAt: new Date(now.getTime() - 7 * 60 * 1000),
-        startedAt: new Date(now.getTime() - 3 * 60 * 1000),
-        items: [
-          { name: 'Brioche Bun', quantity: 4, done: false },
-          { name: 'Apple Turnover', quantity: 2, done: false },
-        ],
-      },
-
-      // READY orders
-      {
-        id: '7',
-        orderNumber: '0141',
-        customerName: 'Anna P.',
-        status: 'READY',
-        createdAt: new Date(now.getTime() - 20 * 60 * 1000),
-        startedAt: new Date(now.getTime() - 15 * 60 * 1000),
-        completedAt: new Date(now.getTime() - 2 * 60 * 1000),
-        items: [
-          { name: 'Whole Wheat Loaf', quantity: 1, done: true },
-          { name: 'Croissant', quantity: 3, done: true },
-        ],
-      },
-    ];
+  private mapOrder(o: Order): KitchenOrder {
+    const statusMap: Record<string, KitchenOrder['status']> = {
+      pending: 'NEW',
+      confirmed: 'NEW',
+      in_progress: 'IN_PROGRESS',
+      completed: 'READY',
+    };
+    return {
+      id: o.id,
+      orderNumber: o.orderNumber,
+      customerName: o.notes || `Order ${o.orderNumber}`,
+      status: statusMap[o.status] || 'NEW',
+      createdAt: new Date(o.createdAt),
+      startedAt: o.status === 'in_progress' ? new Date(o.updatedAt) : undefined,
+      completedAt: o.status === 'completed' ? new Date(o.updatedAt) : undefined,
+      items: o.items.map((item) => ({
+        name: item.product?.name || 'Item',
+        quantity: item.quantity,
+        done: o.status === 'completed',
+      })),
+    };
   }
 }

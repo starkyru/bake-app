@@ -1,7 +1,17 @@
-import { Component } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
+import { ApiClientService } from '@bake-app/api-client';
+import { ProductionPlan, ProductionTask } from '@bake-app/shared-types';
+
+interface PaginatedResponse<T> {
+  data: T[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}
 
 type ProductionStatus = 'Scheduled' | 'In Progress' | 'Completed' | 'Delayed';
 
@@ -400,114 +410,61 @@ interface ProductionItem {
     }
   `],
 })
-export class ProductionComponent {
-  productionItems: ProductionItem[] = [
-    {
-      id: '1',
-      time: '05:00',
-      recipe: 'Sourdough Bread',
-      plannedQty: 30,
-      actualQty: 30,
-      status: 'Completed',
-      progress: 100,
-      notes: 'Morning batch done',
-    },
-    {
-      id: '2',
-      time: '05:30',
-      recipe: 'Baguettes',
-      plannedQty: 40,
-      actualQty: 40,
-      status: 'Completed',
-      progress: 100,
-    },
-    {
-      id: '3',
-      time: '06:00',
-      recipe: 'Croissants',
-      plannedQty: 50,
-      actualQty: 48,
-      status: 'Completed',
-      progress: 100,
-      notes: '2 short on butter',
-    },
-    {
-      id: '4',
-      time: '06:30',
-      recipe: 'Pain au Chocolat',
-      plannedQty: 36,
-      actualQty: 36,
-      status: 'Completed',
-      progress: 100,
-    },
-    {
-      id: '5',
-      time: '07:00',
-      recipe: 'Cinnamon Rolls',
-      plannedQty: 24,
-      actualQty: 18,
-      status: 'In Progress',
-      progress: 75,
-      notes: 'Proofing final batch',
-    },
-    {
-      id: '6',
-      time: '07:30',
-      recipe: 'Blueberry Muffins',
-      plannedQty: 48,
-      actualQty: 24,
-      status: 'In Progress',
-      progress: 50,
-      notes: 'Second tray in oven',
-    },
-    {
-      id: '7',
-      time: '08:00',
-      recipe: 'Fruit Tarts',
-      plannedQty: 12,
-      actualQty: 0,
-      status: 'Delayed',
-      progress: 10,
-      notes: 'Waiting on berries delivery',
-    },
-    {
-      id: '8',
-      time: '08:30',
-      recipe: 'Danish Pastries',
-      plannedQty: 30,
-      actualQty: 0,
-      status: 'Scheduled',
-      progress: 0,
-    },
-    {
-      id: '9',
-      time: '09:00',
-      recipe: 'Rye Bread',
-      plannedQty: 20,
-      actualQty: 0,
-      status: 'Scheduled',
-      progress: 0,
-    },
-    {
-      id: '10',
-      time: '09:30',
-      recipe: 'Chocolate Eclairs',
-      plannedQty: 24,
-      actualQty: 0,
-      status: 'Scheduled',
-      progress: 0,
-      notes: 'Choux prep at 09:00',
-    },
-    {
-      id: '11',
-      time: '10:00',
-      recipe: 'Focaccia',
-      plannedQty: 15,
-      actualQty: 0,
-      status: 'Scheduled',
-      progress: 0,
-    },
-  ];
+export class ProductionComponent implements OnInit {
+  productionItems: ProductionItem[] = [];
+
+  constructor(private apiClient: ApiClientService) {}
+
+  ngOnInit(): void {
+    this.loadProduction();
+  }
+
+  private loadProduction(): void {
+    const todayStr = new Date().toISOString().split('T')[0];
+    this.apiClient
+      .get<ProductionPlan[]>(`/v1/production/plans?date=${todayStr}`)
+      .subscribe({
+        next: (plans) => {
+          this.productionItems = [];
+          for (const plan of plans) {
+            for (const task of plan.tasks) {
+              this.productionItems.push(this.mapTask(task));
+            }
+          }
+        },
+        error: () => {
+          this.productionItems = [];
+        },
+      });
+  }
+
+  private mapTask(task: ProductionTask): ProductionItem {
+    const statusMap: Record<string, ProductionStatus> = {
+      pending: 'Scheduled',
+      in_progress: 'In Progress',
+      completed: 'Completed',
+      delayed: 'Delayed',
+    };
+    const planned = task.plannedQuantity;
+    const actual = task.actualYield || 0;
+    const progress = planned > 0 ? Math.round((actual / planned) * 100) : 0;
+    const time = task.scheduledStart
+      ? new Date(task.scheduledStart).toLocaleTimeString('en-US', {
+          hour: '2-digit',
+          minute: '2-digit',
+          hour12: false,
+        })
+      : '--:--';
+    return {
+      id: task.id,
+      time,
+      recipe: task.recipeName || 'Recipe',
+      plannedQty: planned,
+      actualQty: actual,
+      status: statusMap[task.status] || 'Scheduled',
+      progress: Math.min(progress, 100),
+    };
+  }
 
   get today(): string {
     return new Date().toLocaleDateString('en-US', {
