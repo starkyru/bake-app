@@ -11,6 +11,7 @@ import { ProductionModule } from './modules/production/production.module';
 import { FinanceModule } from './modules/finance/finance.module';
 import { ReportingModule } from './modules/reporting/reporting.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
+import { PermissionsModule } from './modules/permissions/permissions.module';
 import { WebsocketModule } from './modules/websocket/websocket.module';
 import { HealthController } from './health.controller';
 
@@ -46,6 +47,7 @@ import { HealthController } from './health.controller';
     FinanceModule,
     ReportingModule,
     NotificationsModule,
+    PermissionsModule,
     WebsocketModule,
   ],
   controllers: [HealthController],

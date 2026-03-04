@@ -1,15 +1,15 @@
 import { DataSource } from 'typeorm';
 
 const roles = [
-  { name: 'owner', description: 'Business owner with full access', permissions: ['*'] },
-  { name: 'manager', description: 'Store manager', permissions: ['users:read', 'users:write', 'orders:*', 'inventory:*', 'reports:read', 'finance:read'] },
-  { name: 'accountant', description: 'Financial management', permissions: ['finance:*', 'reports:read', 'orders:read'] },
-  { name: 'chef', description: 'Head chef / kitchen manager', permissions: ['recipes:*', 'production:*', 'inventory:read', 'orders:read'] },
-  { name: 'baker', description: 'Baker / pastry chef', permissions: ['recipes:read', 'production:read', 'production:update', 'orders:read'] },
-  { name: 'barista', description: 'Barista / drink preparation', permissions: ['orders:read', 'orders:update', 'recipes:read'] },
-  { name: 'cashier', description: 'POS operator', permissions: ['orders:*', 'products:read', 'categories:read'] },
-  { name: 'warehouse', description: 'Warehouse / inventory management', permissions: ['inventory:*', 'orders:read'] },
-  { name: 'marketing', description: 'Marketing and promotions', permissions: ['products:read', 'reports:read', 'categories:read'] },
+  { name: 'owner', description: 'Business owner with full access', permissions: ['*'], isAdmin: true },
+  { name: 'manager', description: 'Store manager', permissions: ['users:read', 'users:write', 'orders:*', 'inventory:*', 'reports:read', 'finance:read'], isAdmin: false },
+  { name: 'accountant', description: 'Financial management', permissions: ['finance:*', 'reports:read', 'orders:read'], isAdmin: false },
+  { name: 'chef', description: 'Head chef / kitchen manager', permissions: ['recipes:*', 'production:*', 'inventory:read', 'orders:read'], isAdmin: false },
+  { name: 'baker', description: 'Baker / pastry chef', permissions: ['recipes:read', 'production:read', 'production:update', 'orders:read'], isAdmin: false },
+  { name: 'barista', description: 'Barista / drink preparation', permissions: ['orders:read', 'orders:update', 'recipes:read'], isAdmin: false },
+  { name: 'cashier', description: 'POS operator', permissions: ['orders:*', 'products:read', 'categories:read'], isAdmin: false },
+  { name: 'warehouse', description: 'Warehouse / inventory management', permissions: ['inventory:*', 'orders:read'], isAdmin: false },
+  { name: 'marketing', description: 'Marketing and promotions', permissions: ['products:read', 'reports:read', 'categories:read'], isAdmin: false },
 ];
 
 const locations = [
@@ -27,6 +27,86 @@ const categories = [
   { name: 'Desserts', sortOrder: 6 },
 ];
 
+// --- Normalized permissions ---
+
+const RESOURCES_WITH_CRUD = [
+  'users', 'roles', 'permissions', 'orders', 'products', 'categories',
+  'inventory', 'ingredients', 'locations', 'recipes', 'production', 'finance',
+];
+const RESOURCES_LIMITED: Record<string, string[]> = {
+  reports: ['read'],
+  notifications: ['read', 'update'],
+};
+
+function buildPermissionList(): { resource: string; action: string }[] {
+  const perms: { resource: string; action: string }[] = [];
+  for (const resource of RESOURCES_WITH_CRUD) {
+    for (const action of ['read', 'create', 'update', 'delete']) {
+      perms.push({ resource, action });
+    }
+  }
+  for (const [resource, actions] of Object.entries(RESOURCES_LIMITED)) {
+    for (const action of actions) {
+      perms.push({ resource, action });
+    }
+  }
+  return perms;
+}
+
+// Role → permission strings mapping (normalized)
+const rolePermissionMap: Record<string, string[]> = {
+  // owner is isAdmin, bypasses all checks — no explicit permissions needed
+  manager: [
+    'users:read', 'users:create', 'users:update',
+    'orders:read', 'orders:create', 'orders:update', 'orders:delete',
+    'products:read', 'products:create', 'products:update', 'products:delete',
+    'categories:read', 'categories:create', 'categories:update', 'categories:delete',
+    'inventory:read', 'inventory:create', 'inventory:update', 'inventory:delete',
+    'ingredients:read', 'ingredients:create', 'ingredients:update', 'ingredients:delete',
+    'locations:read', 'locations:create', 'locations:update',
+    'reports:read', 'finance:read',
+    'recipes:read', 'production:read',
+    'notifications:read', 'notifications:update',
+  ],
+  cashier: [
+    'orders:read', 'orders:create', 'orders:update', 'orders:delete',
+    'products:read', 'categories:read',
+    'notifications:read', 'notifications:update',
+  ],
+  chef: [
+    'recipes:read', 'recipes:create', 'recipes:update', 'recipes:delete',
+    'production:read', 'production:create', 'production:update', 'production:delete',
+    'inventory:read', 'ingredients:read', 'orders:read',
+    'notifications:read', 'notifications:update',
+  ],
+  baker: [
+    'recipes:read',
+    'production:read', 'production:update',
+    'orders:read',
+    'notifications:read', 'notifications:update',
+  ],
+  barista: [
+    'orders:read', 'orders:update',
+    'recipes:read',
+    'notifications:read', 'notifications:update',
+  ],
+  accountant: [
+    'finance:read', 'finance:create', 'finance:update', 'finance:delete',
+    'reports:read', 'orders:read',
+    'notifications:read', 'notifications:update',
+  ],
+  warehouse: [
+    'inventory:read', 'inventory:create', 'inventory:update', 'inventory:delete',
+    'ingredients:read', 'ingredients:create', 'ingredients:update', 'ingredients:delete',
+    'locations:read', 'orders:read',
+    'notifications:read', 'notifications:update',
+  ],
+  marketing: [
+    'products:read', 'categories:read', 'reports:read',
+    'notifications:read', 'notifications:update',
+  ],
+};
+
 export async function seed(dataSource: DataSource): Promise<void> {
   console.log('Starting database seed...');
 
@@ -37,6 +117,10 @@ export async function seed(dataSource: DataSource): Promise<void> {
     if (!existing) {
       await roleRepo.save(roleRepo.create(role));
       console.log(`  Created role: ${role.name}`);
+    } else if (existing.isAdmin !== role.isAdmin) {
+      existing.isAdmin = role.isAdmin;
+      await roleRepo.save(existing);
+      console.log(`  Updated role: ${role.name} (isAdmin=${role.isAdmin})`);
     }
   }
 
@@ -58,6 +142,42 @@ export async function seed(dataSource: DataSource): Promise<void> {
       await categoryRepo.save(categoryRepo.create(category));
       console.log(`  Created category: ${category.name}`);
     }
+  }
+
+  // Seed normalized permissions
+  const permissionRepo = dataSource.getRepository('permissions');
+  const permissionList = buildPermissionList();
+  const permissionMap = new Map<string, any>(); // key -> entity
+
+  for (const perm of permissionList) {
+    let existing = await permissionRepo.findOne({
+      where: { resource: perm.resource, action: perm.action },
+    });
+    if (!existing) {
+      existing = await permissionRepo.save(permissionRepo.create(perm));
+      console.log(`  Created permission: ${perm.resource}:${perm.action}`);
+    }
+    permissionMap.set(`${perm.resource}:${perm.action}`, existing);
+  }
+
+  // Seed role-permission mappings
+  const rolePermRepo = dataSource.getRepository('role_permissions');
+  for (const [roleName, permStrings] of Object.entries(rolePermissionMap)) {
+    const role = await roleRepo.findOne({ where: { name: roleName } });
+    if (!role) continue;
+
+    const existingCount = await rolePermRepo.count({ where: { roleId: role.id } });
+    if (existingCount > 0) continue; // skip if already seeded
+
+    for (const permStr of permStrings) {
+      const permEntity = permissionMap.get(permStr);
+      if (permEntity) {
+        await rolePermRepo.save(
+          rolePermRepo.create({ roleId: role.id, permissionId: permEntity.id }),
+        );
+      }
+    }
+    console.log(`  Assigned ${permStrings.length} permissions to role: ${roleName}`);
   }
 
   // Seed admin user

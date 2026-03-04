@@ -1,4 +1,5 @@
 // Shared constants
+export * from './permissions';
 export const API_BASE_URL = '/api';
 export const API_VERSION = 'v1';
 

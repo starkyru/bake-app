@@ -8,67 +8,67 @@ import {
   ProductionReportQueryDto,
 } from './dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
-import { RolesGuard } from '../../common/guards/roles.guard';
-import { Roles } from '../../common/decorators/roles.decorator';
+import { PermissionsGuard } from '../../common/guards/permissions.guard';
+import { RequirePermissions } from '../../common/decorators/permissions.decorator';
 
 @ApiTags('Reports')
 @Controller('api/v1/reports')
-@UseGuards(JwtAuthGuard, RolesGuard)
+@UseGuards(JwtAuthGuard, PermissionsGuard)
 @ApiBearerAuth()
 export class ReportingController {
   constructor(private reportingService: ReportingService) {}
 
   @Get('sales/summary')
-  @Roles('owner', 'manager', 'accountant')
+  @RequirePermissions('reports:read')
   @ApiOperation({ summary: 'Sales summary by period' })
   getSalesSummary(@Query() query: SalesReportQueryDto) {
     return this.reportingService.getSalesSummary(query);
   }
 
   @Get('sales/top-products')
-  @Roles('owner', 'manager')
+  @RequirePermissions('reports:read')
   @ApiOperation({ summary: 'Top 20 products by revenue' })
   getTopProducts(@Query() query: DateRangeQueryDto) {
     return this.reportingService.getTopProducts(query);
   }
 
   @Get('sales/by-category')
-  @Roles('owner', 'manager')
+  @RequirePermissions('reports:read')
   @ApiOperation({ summary: 'Revenue breakdown by category' })
   getSalesByCategory(@Query() query: DateRangeQueryDto) {
     return this.reportingService.getSalesByCategory(query);
   }
 
   @Get('sales/payment-methods')
-  @Roles('owner', 'manager', 'accountant')
+  @RequirePermissions('reports:read')
   @ApiOperation({ summary: 'Payment method distribution' })
   getPaymentMethods(@Query() query: DateRangeQueryDto) {
     return this.reportingService.getPaymentMethods(query);
   }
 
   @Get('finance/summary')
-  @Roles('owner', 'accountant')
+  @RequirePermissions('reports:read', 'finance:read')
   @ApiOperation({ summary: 'Financial P&L summary' })
   getFinanceSummary(@Query() query: DateRangeQueryDto) {
     return this.reportingService.getFinanceSummary(query);
   }
 
   @Get('inventory/status')
-  @Roles('owner', 'manager', 'chef', 'warehouse')
+  @RequirePermissions('reports:read', 'inventory:read')
   @ApiOperation({ summary: 'Inventory stock levels and alerts' })
   getInventoryStatus(@Query() query: InventoryReportQueryDto) {
     return this.reportingService.getInventoryStatus(query);
   }
 
   @Get('inventory/movements')
-  @Roles('owner', 'manager', 'chef', 'warehouse')
+  @RequirePermissions('reports:read', 'inventory:read')
   @ApiOperation({ summary: 'Inventory movement summary' })
   getInventoryMovements(@Query() query: InventoryReportQueryDto) {
     return this.reportingService.getInventoryMovements(query);
   }
 
   @Get('production/summary')
-  @Roles('owner', 'manager', 'chef')
+  @RequirePermissions('reports:read', 'production:read')
   @ApiOperation({ summary: 'Production plan execution summary' })
   getProductionSummary(@Query() query: ProductionReportQueryDto) {
     return this.reportingService.getProductionSummary(query);

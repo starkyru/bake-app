@@ -68,6 +68,37 @@ export class AuthService {
   isAuthenticated(): boolean {
     return !!this.getToken();
   }
+
+  /** Decode JWT payload without verification (for frontend permission checks). */
+  private decodePayload(): Record<string, any> | null {
+    const token = this.getToken();
+    if (!token) return null;
+    try {
+      const payload = token.split('.')[1];
+      return JSON.parse(atob(payload));
+    } catch {
+      return null;
+    }
+  }
+
+  /** Get the permissions array from the current JWT. */
+  getPermissions(): string[] {
+    const payload = this.decodePayload();
+    return payload?.permissions || [];
+  }
+
+  /** Check if the current user has a specific permission. Admins (with '*') pass all checks. */
+  hasPermission(permission: string): boolean {
+    const perms = this.getPermissions();
+    return perms.includes('*') || perms.includes(permission);
+  }
+
+  /** Check if the current user has ALL of the specified permissions. */
+  hasAllPermissions(...permissions: string[]): boolean {
+    const perms = this.getPermissions();
+    if (perms.includes('*')) return true;
+    return permissions.every((p) => perms.includes(p));
+  }
 }
 
 /**

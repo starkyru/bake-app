@@ -5,6 +5,8 @@ import { Repository } from 'typeorm';
 import * as bcrypt from 'bcryptjs';
 import { User } from '../users/entities/user.entity';
 import { RefreshToken } from './entities/refresh-token.entity';
+import { RolePermission } from '../permissions/entities/role-permission.entity';
+import { UserPermission } from '../permissions/entities/user-permission.entity';
 import { LoginDto, RegisterDto, AuthResponseDto } from './dto';
 import { randomBytes, createHash } from 'crypto';
 
@@ -15,6 +17,10 @@ export class AuthService {
     private usersRepository: Repository<User>,
     @InjectRepository(RefreshToken)
     private refreshTokenRepository: Repository<RefreshToken>,
+    @InjectRepository(RolePermission)
+    private rolePermissionRepository: Repository<RolePermission>,
+    @InjectRepository(UserPermission)
+    private userPermissionRepository: Repository<UserPermission>,
     private jwtService: JwtService,
   ) {}
 
@@ -68,12 +74,46 @@ export class AuthService {
     return this.generateTokens(refreshToken.user);
   }
 
+  private async computePermissions(user: User): Promise<string[]> {
+    if (user.role?.isAdmin) {
+      return ['*'];
+    }
+
+    const rolePerms = user.role
+      ? await this.rolePermissionRepository.find({
+          where: { roleId: user.role.id },
+          relations: ['permission'],
+        })
+      : [];
+
+    const userOverrides = await this.userPermissionRepository.find({
+      where: { userId: user.id },
+      relations: ['permission'],
+    });
+
+    const permissions = new Set<string>();
+    for (const rp of rolePerms) {
+      permissions.add(`${rp.permission.resource}:${rp.permission.action}`);
+    }
+    for (const up of userOverrides) {
+      const key = `${up.permission.resource}:${up.permission.action}`;
+      if (up.grantType === 'grant') {
+        permissions.add(key);
+      } else {
+        permissions.delete(key);
+      }
+    }
+    return Array.from(permissions);
+  }
+
   private async generateTokens(user: User): Promise<AuthResponseDto> {
+    const permissions = await this.computePermissions(user);
     const payload = {
       sub: user.id,
       email: user.email,
       role: user.role?.name || '',
       name: `${user.firstName} ${user.lastName}`.trim(),
+      permissions,
     };
     const accessToken = this.jwtService.sign(payload);
     const refreshTokenStr = randomBytes(40).toString('hex');

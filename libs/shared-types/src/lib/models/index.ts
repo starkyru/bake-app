@@ -15,7 +15,23 @@ export interface Role {
   id: string;
   name: string;
   description?: string;
-  permissions: string[];
+  isAdmin: boolean;
+  permissions: Permission[];
+}
+
+export interface Permission {
+  id: string;
+  resource: string;
+  action: string;
+  description?: string;
+}
+
+export interface UserPermission {
+  id: string;
+  userId: string;
+  permissionId: string;
+  grantType: 'grant' | 'deny';
+  permission?: Permission;
 }
 
 export interface Order {
