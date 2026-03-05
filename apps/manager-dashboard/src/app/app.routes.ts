@@ -1,4 +1,5 @@
 import { Routes } from '@angular/router';
+import { AuthGuard } from '@bake-app/auth';
 
 export const routes: Routes = [
   { path: '', redirectTo: 'login', pathMatch: 'full' },
@@ -11,6 +12,7 @@ export const routes: Routes = [
     path: '',
     loadComponent: () =>
       import('./layout/shell.component').then((m) => m.ShellComponent),
+    canActivate: [AuthGuard],
     children: [
       {
         path: 'dashboard',
