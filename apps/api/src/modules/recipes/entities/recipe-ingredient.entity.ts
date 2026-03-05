@@ -1,6 +1,7 @@
 import { Entity, Column, ManyToOne, JoinColumn } from 'typeorm';
 import { BaseEntity } from '../../../common/entities/base.entity';
 import { Recipe } from './recipe.entity';
+import { Ingredient } from '../../inventory/entities/ingredient.entity';
 
 @Entity('recipe_ingredients')
 export class RecipeIngredient extends BaseEntity {
@@ -10,7 +11,11 @@ export class RecipeIngredient extends BaseEntity {
   @Column({ default: 'g' })
   unit: string;
 
-  @Column({ name: 'ingredient_id' })
+  @ManyToOne(() => Ingredient, { eager: true, nullable: true, onDelete: 'SET NULL' })
+  @JoinColumn({ name: 'ingredient_id' })
+  ingredient: Ingredient;
+
+  @Column({ name: 'ingredient_id', nullable: true })
   ingredientId: string;
 
   @Column({ name: 'ingredient_name', nullable: true })

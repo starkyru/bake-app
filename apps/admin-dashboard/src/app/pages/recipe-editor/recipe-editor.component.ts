@@ -12,10 +12,18 @@ import { MatTableModule } from '@angular/material/table';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatExpansionModule } from '@angular/material/expansion';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatAutocompleteModule } from '@angular/material/autocomplete';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { BakePageContainerComponent, BakeToastService } from '@bake-app/ui-components';
 import { ApiClientService } from '@bake-app/api-client';
-import { Recipe, Category as SharedCategory } from '@bake-app/shared-types';
+import { Recipe, Category as SharedCategory, Ingredient } from '@bake-app/shared-types';
+
+interface PaginatedResponse<T> {
+  data: T[];
+  total: number;
+  page: number;
+  limit: number;
+}
 
 interface IngredientRow {
   ingredientId?: string;
@@ -50,6 +58,7 @@ interface LinkRow {
     MatDividerModule,
     MatExpansionModule,
     MatProgressSpinnerModule,
+    MatAutocompleteModule,
     BakePageContainerComponent,
   ],
   template: `
@@ -165,8 +174,22 @@ interface LinkRow {
                         <input
                           matInput
                           [(ngModel)]="row.name"
-                          placeholder="Ingredient name"
+                          [matAutocomplete]="autoIng"
+                          (ngModelChange)="filterIngredients(row)"
+                          placeholder="Type or select"
                         />
+                        <mat-autocomplete
+                          #autoIng="matAutocomplete"
+                          (optionSelected)="onIngredientPicked($event, row)"
+                          [displayWith]="displayIngredient"
+                        >
+                          <mat-option
+                            *ngFor="let ing of filteredIngredients"
+                            [value]="ing"
+                          >
+                            {{ ing.name }} ({{ ing.unit }})
+                          </mat-option>
+                        </mat-autocomplete>
                       </mat-form-field>
                     </td>
                   </ng-container>
@@ -645,6 +668,8 @@ export class RecipeEditorComponent implements OnInit {
   instructions = '';
 
   categories: string[] = [];
+  availableIngredients: Ingredient[] = [];
+  filteredIngredients: Ingredient[] = [];
 
   ingredientColumns = ['name', 'quantity', 'unit', 'cost', 'total', 'remove'];
 
@@ -672,6 +697,7 @@ export class RecipeEditorComponent implements OnInit {
     this.isNew = this.recipeId === 'new';
 
     this.loadCategories();
+    this.loadAvailableIngredients();
 
     if (!this.isNew) {
       this.loadRecipe();
@@ -688,6 +714,40 @@ export class RecipeEditorComponent implements OnInit {
       },
     });
   }
+
+  private loadAvailableIngredients(): void {
+    this.apiClient.get<PaginatedResponse<Ingredient>>('/v1/ingredients?limit=200').subscribe({
+      next: (res) => {
+        this.availableIngredients = res.data;
+        this.filteredIngredients = res.data;
+      },
+      error: () => {
+        this.availableIngredients = [];
+      },
+    });
+  }
+
+  filterIngredients(row: IngredientRow): void {
+    const query = (row.name || '').toLowerCase();
+    this.filteredIngredients = query
+      ? this.availableIngredients.filter((i) => i.name.toLowerCase().includes(query))
+      : this.availableIngredients;
+  }
+
+  onIngredientPicked(event: any, row: IngredientRow): void {
+    const ing: Ingredient = event.option.value;
+    row.ingredientId = ing.id;
+    row.name = ing.name;
+    row.unit = ing.unit;
+    row.cost = Number(ing.costPerUnit);
+    row.total = Math.round(row.quantity * row.cost);
+    this.ingredients = [...this.ingredients];
+  }
+
+  displayIngredient = (value: any): string => {
+    if (typeof value === 'string') return value;
+    return value?.name || '';
+  };
 
   private loadRecipe(): void {
     this.apiClient.get<Recipe>(`/v1/recipes/${this.recipeId}`).subscribe({

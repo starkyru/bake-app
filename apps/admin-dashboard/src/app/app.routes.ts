@@ -1,10 +1,23 @@
 import { Routes } from '@angular/router';
-import { AuthGuard } from '@bake-app/auth';
+import { inject } from '@angular/core';
+import { Router } from '@angular/router';
+import { AuthGuard, AuthService } from '@bake-app/auth';
+
+const loginGuard = () => {
+  const auth = inject(AuthService);
+  const router = inject(Router);
+  if (auth.isAuthenticated()) {
+    router.navigate(['/users']);
+    return false;
+  }
+  return true;
+};
 
 export const routes: Routes = [
   { path: '', redirectTo: 'login', pathMatch: 'full' },
   {
     path: 'login',
+    canActivate: [loginGuard],
     loadComponent: () =>
       import('./pages/login/login.component').then((m) => m.LoginComponent),
   },
@@ -33,6 +46,13 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./pages/categories/categories.component').then(
             (m) => m.CategoriesComponent
+          ),
+      },
+      {
+        path: 'ingredients',
+        loadComponent: () =>
+          import('./pages/ingredients/ingredients.component').then(
+            (m) => m.IngredientsComponent
           ),
       },
       {
