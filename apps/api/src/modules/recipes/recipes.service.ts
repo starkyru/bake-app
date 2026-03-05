@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { ConfigService } from '@nestjs/config';
 import { Repository } from 'typeorm';
@@ -123,13 +123,10 @@ export class RecipesService {
   }
 
   async generateFromUrl(url: string): Promise<Partial<CreateRecipeDto>> {
-    const response = await this.anthropic.messages.create({
-      model: 'claude-sonnet-4-20250514',
-      max_tokens: 4096,
-      messages: [
-        {
-          role: 'user',
-          content: `You are a recipe parser. Given this URL to a recipe page: ${url}
+    const response = await this.callAnthropic([
+      {
+        role: 'user',
+        content: `You are a recipe parser. Given this URL to a recipe page: ${url}
 
 Please fetch and parse the recipe from this URL and return a JSON object with the following structure:
 {
@@ -156,35 +153,30 @@ Please fetch and parse the recipe from this URL and return a JSON object with th
 }
 
 Return ONLY valid JSON, no markdown, no explanation.`,
-        },
-      ],
-    });
+      },
+    ]);
 
-    const text = response.content[0].type === 'text' ? response.content[0].text : '';
-    return JSON.parse(text);
+    return JSON.parse(response);
   }
 
   async generateFromImage(imageBase64: string, mimeType = 'image/jpeg'): Promise<Partial<CreateRecipeDto>> {
     const mediaType = mimeType as 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp';
 
-    const response = await this.anthropic.messages.create({
-      model: 'claude-sonnet-4-20250514',
-      max_tokens: 4096,
-      messages: [
-        {
-          role: 'user',
-          content: [
-            {
-              type: 'image',
-              source: {
-                type: 'base64',
-                media_type: mediaType,
-                data: imageBase64,
-              },
+    const response = await this.callAnthropic([
+      {
+        role: 'user',
+        content: [
+          {
+            type: 'image',
+            source: {
+              type: 'base64',
+              media_type: mediaType,
+              data: imageBase64,
             },
-            {
-              type: 'text',
-              text: `You are a recipe parser. Look at this image of a recipe and extract all the information you can see.
+          },
+          {
+            type: 'text',
+            text: `You are a recipe parser. Look at this image of a recipe and extract all the information you can see.
 
 Return a JSON object with the following structure:
 {
@@ -205,14 +197,38 @@ Return a JSON object with the following structure:
 }
 
 Return ONLY valid JSON, no markdown, no explanation.`,
-            },
-          ],
-        },
-      ],
-    });
+          },
+        ],
+      },
+    ]);
 
-    const text = response.content[0].type === 'text' ? response.content[0].text : '';
-    return JSON.parse(text);
+    return JSON.parse(response);
+  }
+
+  private async callAnthropic(messages: any[]): Promise<string> {
+    try {
+      const response = await this.anthropic.messages.create({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 4096,
+        messages,
+      });
+      const text = response.content[0].type === 'text' ? response.content[0].text : '';
+      if (!text) throw new BadRequestException('AI returned empty response');
+      return text;
+    } catch (error) {
+      if (error instanceof BadRequestException) throw error;
+      const message = error?.message || 'AI service error';
+      if (message.includes('credit balance is too low')) {
+        throw new BadRequestException('AI service: not enough credits. Please top up your Anthropic account.');
+      }
+      if (message.includes('invalid_api_key') || message.includes('authentication')) {
+        throw new BadRequestException('AI service: invalid API key.');
+      }
+      if (message.includes('rate_limit') || message.includes('overloaded')) {
+        throw new BadRequestException('AI service is temporarily overloaded. Please try again later.');
+      }
+      throw new BadRequestException(`AI service error: ${message}`);
+    }
   }
 
   private processLink(link: { url: string; title?: string; description?: string; isYoutube?: boolean; youtubeVideoId?: string }) {

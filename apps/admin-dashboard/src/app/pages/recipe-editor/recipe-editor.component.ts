@@ -793,8 +793,8 @@ export class RecipeEditorComponent implements OnInit {
         this.toastService.success('Recipe generated from URL');
         this.aiLoading = false;
       },
-      error: () => {
-        this.toastService.error('Failed to generate recipe from URL');
+      error: (err: any) => {
+        this.toastService.error(err?.error?.message || 'Failed to generate recipe from URL');
         this.aiLoading = false;
       },
     });
@@ -825,8 +825,8 @@ export class RecipeEditorComponent implements OnInit {
             this.toastService.success('Recipe generated from image');
             this.aiLoading = false;
           },
-          error: () => {
-            this.toastService.error('Failed to generate recipe from image');
+          error: (err: any) => {
+            this.toastService.error(err?.error?.message || 'Failed to generate recipe from image');
             this.aiLoading = false;
           },
         });
