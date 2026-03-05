@@ -1,4 +1,13 @@
-import { IsString, IsNumber, IsOptional, IsArray, ValidateNested, Min } from 'class-validator';
+import {
+  IsString,
+  IsNumber,
+  IsOptional,
+  IsArray,
+  IsBoolean,
+  IsUrl,
+  ValidateNested,
+  Min,
+} from 'class-validator';
 import { ApiProperty, ApiPropertyOptional, PartialType } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 
@@ -27,6 +36,32 @@ class RecipeIngredientDto {
   @Type(() => Number)
   @IsNumber()
   costPerUnit?: number;
+}
+
+class RecipeLinkDto {
+  @ApiProperty({ example: 'https://youtube.com/watch?v=abc123' })
+  @IsString()
+  url: string;
+
+  @ApiPropertyOptional({ example: 'How to make croissants' })
+  @IsOptional()
+  @IsString()
+  title?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  description?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsBoolean()
+  isYoutube?: boolean;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  youtubeVideoId?: string;
 }
 
 export class CreateRecipeDto {
@@ -66,6 +101,13 @@ export class CreateRecipeDto {
   @ValidateNested({ each: true })
   @Type(() => RecipeIngredientDto)
   ingredients?: RecipeIngredientDto[];
+
+  @ApiPropertyOptional({ type: [RecipeLinkDto] })
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => RecipeLinkDto)
+  links?: RecipeLinkDto[];
 }
 
 export class UpdateRecipeDto extends PartialType(CreateRecipeDto) {}
@@ -76,4 +118,21 @@ export class ScaleRecipeDto {
   @IsNumber()
   @Min(0.1)
   scaleFactor: number;
+}
+
+export class GenerateFromUrlDto {
+  @ApiProperty({ example: 'https://example.com/recipe/croissant' })
+  @IsUrl()
+  url: string;
+}
+
+export class GenerateFromImageDto {
+  @ApiProperty({ description: 'Base64-encoded image data' })
+  @IsString()
+  imageBase64: string;
+
+  @ApiPropertyOptional({ example: 'image/jpeg' })
+  @IsOptional()
+  @IsString()
+  mimeType?: string;
 }

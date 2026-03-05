@@ -128,6 +128,7 @@ export interface Recipe {
   productId?: string;
   isActive: boolean;
   ingredients: RecipeIngredient[];
+  links: RecipeLink[];
 }
 
 export interface RecipeIngredient {
@@ -137,6 +138,15 @@ export interface RecipeIngredient {
   quantity: number;
   unit: string;
   costPerUnit: number;
+}
+
+export interface RecipeLink {
+  id: string;
+  url: string;
+  title?: string;
+  description?: string;
+  isYoutube: boolean;
+  youtubeVideoId?: string;
 }
 
 export interface Location {

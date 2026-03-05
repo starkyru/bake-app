@@ -1,8 +1,11 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
+import { ConfigService } from '@nestjs/config';
 import { Repository } from 'typeorm';
+import Anthropic from '@anthropic-ai/sdk';
 import { Recipe } from './entities/recipe.entity';
 import { RecipeIngredient } from './entities/recipe-ingredient.entity';
+import { RecipeLink } from './entities/recipe-link.entity';
 import { RecipeVersion } from './entities/recipe-version.entity';
 import { CreateRecipeDto, UpdateRecipeDto } from './dto';
 import { PaginationDto } from '../../common/dto/pagination.dto';
@@ -10,16 +13,25 @@ import { PaginatedResponseDto } from '../../common/dto/paginated-response.dto';
 
 @Injectable()
 export class RecipesService {
+  private anthropic: Anthropic;
+
   constructor(
     @InjectRepository(Recipe) private recipeRepo: Repository<Recipe>,
     @InjectRepository(RecipeIngredient) private ingredientRepo: Repository<RecipeIngredient>,
+    @InjectRepository(RecipeLink) private linkRepo: Repository<RecipeLink>,
     @InjectRepository(RecipeVersion) private versionRepo: Repository<RecipeVersion>,
-  ) {}
+    private configService: ConfigService,
+  ) {
+    this.anthropic = new Anthropic({
+      apiKey: this.configService.get('ANTHROPIC_API_KEY'),
+    });
+  }
 
   async findAll(query: PaginationDto): Promise<PaginatedResponseDto<Recipe>> {
     const { page, limit, search } = query;
     const qb = this.recipeRepo.createQueryBuilder('r')
-      .leftJoinAndSelect('r.ingredients', 'ingredients');
+      .leftJoinAndSelect('r.ingredients', 'ingredients')
+      .leftJoinAndSelect('r.links', 'links');
     if (search) qb.where('r.name ILIKE :search', { search: `%${search}%` });
     qb.andWhere('r.isActive = true').orderBy('r.name', 'ASC');
     const [data, total] = await qb.skip((page - 1) * limit).take(limit).getManyAndCount();
@@ -27,7 +39,10 @@ export class RecipesService {
   }
 
   async findOne(id: string): Promise<Recipe> {
-    const recipe = await this.recipeRepo.findOne({ where: { id }, relations: ['ingredients', 'versions'] });
+    const recipe = await this.recipeRepo.findOne({
+      where: { id },
+      relations: ['ingredients', 'links', 'versions'],
+    });
     if (!recipe) throw new NotFoundException('Recipe not found');
     return recipe;
   }
@@ -41,6 +56,7 @@ export class RecipesService {
       instructions: dto.instructions,
       productId: dto.productId,
       ingredients: dto.ingredients?.map(i => this.ingredientRepo.create(i)),
+      links: dto.links?.map(l => this.linkRepo.create(this.processLink(l))),
     });
     const saved = await this.recipeRepo.save(recipe);
     await this.calculateCost(saved.id);
@@ -61,6 +77,10 @@ export class RecipesService {
     if (dto.ingredients) {
       await this.ingredientRepo.delete({ recipeId: id });
       recipe.ingredients = dto.ingredients.map(i => this.ingredientRepo.create({ ...i, recipeId: id }));
+    }
+    if (dto.links) {
+      await this.linkRepo.delete({ recipeId: id });
+      recipe.links = dto.links.map(l => this.linkRepo.create({ ...this.processLink(l), recipeId: id }));
     }
     Object.assign(recipe, {
       ...(dto.name && { name: dto.name }),
@@ -100,6 +120,110 @@ export class RecipesService {
 
   async getVersions(id: string): Promise<RecipeVersion[]> {
     return this.versionRepo.find({ where: { recipeId: id }, order: { versionNumber: 'DESC' } });
+  }
+
+  async generateFromUrl(url: string): Promise<Partial<CreateRecipeDto>> {
+    const response = await this.anthropic.messages.create({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 4096,
+      messages: [
+        {
+          role: 'user',
+          content: `You are a recipe parser. Given this URL to a recipe page: ${url}
+
+Please fetch and parse the recipe from this URL and return a JSON object with the following structure:
+{
+  "name": "Recipe Name",
+  "category": "one of: bread, pastry, cake, beverage, sandwich, other",
+  "yieldQuantity": number,
+  "yieldUnit": "pcs or kg or loaves or cakes or liters",
+  "instructions": "Step by step instructions as plain text",
+  "ingredients": [
+    {
+      "ingredientId": "ingredient-name-slugified",
+      "ingredientName": "Ingredient Name",
+      "quantity": number,
+      "unit": "g or kg or ml or l or pcs or tbsp or tsp",
+      "costPerUnit": 0
+    }
+  ],
+  "links": [
+    {
+      "url": "${url}",
+      "title": "Source recipe page title"
+    }
+  ]
+}
+
+Return ONLY valid JSON, no markdown, no explanation.`,
+        },
+      ],
+    });
+
+    const text = response.content[0].type === 'text' ? response.content[0].text : '';
+    return JSON.parse(text);
+  }
+
+  async generateFromImage(imageBase64: string, mimeType = 'image/jpeg'): Promise<Partial<CreateRecipeDto>> {
+    const mediaType = mimeType as 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp';
+
+    const response = await this.anthropic.messages.create({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 4096,
+      messages: [
+        {
+          role: 'user',
+          content: [
+            {
+              type: 'image',
+              source: {
+                type: 'base64',
+                media_type: mediaType,
+                data: imageBase64,
+              },
+            },
+            {
+              type: 'text',
+              text: `You are a recipe parser. Look at this image of a recipe and extract all the information you can see.
+
+Return a JSON object with the following structure:
+{
+  "name": "Recipe Name",
+  "category": "one of: bread, pastry, cake, beverage, sandwich, other",
+  "yieldQuantity": number,
+  "yieldUnit": "pcs or kg or loaves or cakes or liters",
+  "instructions": "Step by step instructions as plain text",
+  "ingredients": [
+    {
+      "ingredientId": "ingredient-name-slugified",
+      "ingredientName": "Ingredient Name",
+      "quantity": number,
+      "unit": "g or kg or ml or l or pcs or tbsp or tsp",
+      "costPerUnit": 0
+    }
+  ]
+}
+
+Return ONLY valid JSON, no markdown, no explanation.`,
+            },
+          ],
+        },
+      ],
+    });
+
+    const text = response.content[0].type === 'text' ? response.content[0].text : '';
+    return JSON.parse(text);
+  }
+
+  private processLink(link: { url: string; title?: string; description?: string; isYoutube?: boolean; youtubeVideoId?: string }) {
+    const youtubeMatch = link.url.match(
+      /(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/,
+    );
+    return {
+      ...link,
+      isYoutube: !!youtubeMatch,
+      youtubeVideoId: youtubeMatch ? youtubeMatch[1] : null,
+    };
   }
 
   private async calculateCost(id: string): Promise<void> {

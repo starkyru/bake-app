@@ -10,6 +10,9 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTableModule } from '@angular/material/table';
 import { MatDividerModule } from '@angular/material/divider';
+import { MatExpansionModule } from '@angular/material/expansion';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { BakePageContainerComponent, BakeToastService } from '@bake-app/ui-components';
 import { ApiClientService } from '@bake-app/api-client';
 import { Recipe, Category as SharedCategory } from '@bake-app/shared-types';
@@ -21,6 +24,14 @@ interface IngredientRow {
   unit: string;
   cost: number;
   total: number;
+}
+
+interface LinkRow {
+  url: string;
+  title: string;
+  isYoutube: boolean;
+  youtubeVideoId: string;
+  editing: boolean;
 }
 
 @Component({
@@ -37,6 +48,8 @@ interface IngredientRow {
     MatIconModule,
     MatTableModule,
     MatDividerModule,
+    MatExpansionModule,
+    MatProgressSpinnerModule,
     BakePageContainerComponent,
   ],
   template: `
@@ -45,6 +58,52 @@ interface IngredientRow {
       subtitle="Define ingredients, quantities, and instructions"
     >
       <div class="editor-layout">
+        <!-- AI Generation Card -->
+        <mat-card class="ai-card">
+          <mat-card-content>
+            <div class="section-header">
+              <h3 class="section-title">AI Generate Recipe</h3>
+            </div>
+            <p class="ai-hint">Generate recipe data from a URL or image using AI</p>
+            <div class="ai-actions">
+              <div class="ai-url-row">
+                <mat-form-field appearance="outline" class="flex-2">
+                  <mat-label>Recipe URL</mat-label>
+                  <input
+                    matInput
+                    [(ngModel)]="aiUrl"
+                    placeholder="https://example.com/recipe/croissant"
+                  />
+                </mat-form-field>
+                <button
+                  mat-stroked-button
+                  class="ai-btn"
+                  (click)="generateFromUrl()"
+                  [disabled]="aiLoading || !aiUrl.trim()"
+                >
+                  <mat-icon>auto_awesome</mat-icon>
+                  Generate from URL
+                </button>
+              </div>
+              <div class="ai-image-row">
+                <button mat-stroked-button class="ai-btn" (click)="fileInput.click()" [disabled]="aiLoading">
+                  <mat-icon>image</mat-icon>
+                  Generate from Image
+                </button>
+                <input
+                  #fileInput
+                  type="file"
+                  accept="image/*"
+                  (change)="onImageSelected($event)"
+                  style="display: none"
+                />
+                <span class="ai-filename" *ngIf="aiImageName">{{ aiImageName }}</span>
+              </div>
+              <mat-spinner *ngIf="aiLoading" diameter="24"></mat-spinner>
+            </div>
+          </mat-card-content>
+        </mat-card>
+
         <mat-card class="editor-card">
           <mat-card-content>
             <div class="form-section">
@@ -91,7 +150,7 @@ interface IngredientRow {
             <div class="form-section">
               <div class="section-header">
                 <h3 class="section-title">Ingredients</h3>
-                <button mat-stroked-button class="add-ingredient-btn" (click)="addIngredient()">
+                <button mat-stroked-button class="add-btn" (click)="addIngredient()">
                   <mat-icon>add</mat-icon>
                   Add Ingredient
                 </button>
@@ -200,6 +259,81 @@ interface IngredientRow {
             <mat-divider class="section-divider"></mat-divider>
 
             <div class="form-section">
+              <div class="section-header">
+                <h3 class="section-title">Links</h3>
+                <button mat-stroked-button class="add-btn" (click)="addLink()">
+                  <mat-icon>add</mat-icon>
+                  Add Link
+                </button>
+              </div>
+
+              <div class="links-list">
+                <div *ngFor="let link of links; let i = index" class="link-item">
+                  <div class="link-row">
+                    <div class="link-fields" *ngIf="link.editing">
+                      <mat-form-field appearance="outline" class="flex-2">
+                        <mat-label>URL</mat-label>
+                        <input
+                          matInput
+                          [(ngModel)]="link.url"
+                          (ngModelChange)="onLinkUrlChange(link)"
+                          placeholder="https://..."
+                        />
+                      </mat-form-field>
+                      <mat-form-field appearance="outline" class="flex-2">
+                        <mat-label>Title</mat-label>
+                        <input matInput [(ngModel)]="link.title" placeholder="Link title" />
+                      </mat-form-field>
+                      <button mat-icon-button color="primary" (click)="link.editing = false">
+                        <mat-icon>check</mat-icon>
+                      </button>
+                    </div>
+                    <div class="link-display" *ngIf="!link.editing">
+                      <mat-icon class="link-type-icon">
+                        {{ link.isYoutube ? 'play_circle' : 'link' }}
+                      </mat-icon>
+                      <div class="link-info">
+                        <span class="link-title">{{ link.title || link.url }}</span>
+                        <a class="link-url" [href]="link.url" target="_blank">{{ link.url }}</a>
+                      </div>
+                      <button mat-icon-button (click)="link.editing = true">
+                        <mat-icon>edit</mat-icon>
+                      </button>
+                      <button mat-icon-button color="warn" (click)="removeLink(i)">
+                        <mat-icon>close</mat-icon>
+                      </button>
+                    </div>
+                  </div>
+
+                  <mat-accordion *ngIf="link.isYoutube && link.youtubeVideoId && !link.editing">
+                    <mat-expansion-panel>
+                      <mat-expansion-panel-header>
+                        <mat-panel-title>
+                          <mat-icon>play_circle</mat-icon>
+                          Watch Video
+                        </mat-panel-title>
+                      </mat-expansion-panel-header>
+                      <div class="youtube-embed">
+                        <iframe
+                          [src]="getYoutubeEmbedUrl(link.youtubeVideoId)"
+                          frameborder="0"
+                          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                          allowfullscreen
+                        ></iframe>
+                      </div>
+                    </mat-expansion-panel>
+                  </mat-accordion>
+                </div>
+
+                <div *ngIf="links.length === 0" class="no-links">
+                  No links added yet
+                </div>
+              </div>
+            </div>
+
+            <mat-divider class="section-divider"></mat-divider>
+
+            <div class="form-section">
               <h3 class="section-title">Instructions</h3>
               <mat-form-field appearance="outline" class="full-width">
                 <mat-label>Preparation Instructions</mat-label>
@@ -228,6 +362,50 @@ interface IngredientRow {
     `
       .editor-layout {
         max-width: 900px;
+      }
+
+      .ai-card {
+        border-radius: 12px;
+        padding: 8px;
+        margin-bottom: 24px;
+        border: 1px dashed #8b4513;
+        background: #fdf8f0;
+      }
+
+      .ai-hint {
+        color: #5d4037;
+        font-size: 13px;
+        margin: 0 0 16px;
+      }
+
+      .ai-actions {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+
+      .ai-url-row {
+        display: flex;
+        gap: 12px;
+        align-items: flex-start;
+      }
+
+      .ai-image-row {
+        display: flex;
+        gap: 12px;
+        align-items: center;
+      }
+
+      .ai-btn {
+        color: #8b4513;
+        border-color: #8b4513;
+        white-space: nowrap;
+        height: 56px;
+      }
+
+      .ai-filename {
+        font-size: 13px;
+        color: #5d4037;
       }
 
       .editor-card {
@@ -278,7 +456,7 @@ interface IngredientRow {
         width: 100%;
       }
 
-      .add-ingredient-btn {
+      .add-btn {
         color: #8b4513;
         border-color: #8b4513;
       }
@@ -339,6 +517,110 @@ interface IngredientRow {
         color: #5d4037;
       }
 
+      /* Links section */
+      .links-list {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+
+      .link-item {
+        border: 1px solid #e0d6c8;
+        border-radius: 8px;
+        overflow: hidden;
+      }
+
+      .link-row {
+        padding: 12px 16px;
+      }
+
+      .link-fields {
+        display: flex;
+        gap: 12px;
+        align-items: flex-start;
+      }
+
+      .link-display {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+
+      .link-type-icon {
+        color: #8b4513;
+        flex-shrink: 0;
+      }
+
+      .link-info {
+        flex: 1;
+        min-width: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+      }
+
+      .link-title {
+        font-weight: 500;
+        color: #3e2723;
+      }
+
+      .link-url {
+        font-size: 12px;
+        color: #8b4513;
+        text-decoration: none;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .link-url:hover {
+        text-decoration: underline;
+      }
+
+      .no-links {
+        text-align: center;
+        color: #9e9e9e;
+        padding: 24px;
+        font-style: italic;
+      }
+
+      .youtube-embed {
+        position: relative;
+        padding-bottom: 56.25%;
+        height: 0;
+        overflow: hidden;
+      }
+
+      .youtube-embed iframe {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        border-radius: 8px;
+      }
+
+      ::ng-deep .link-item .mat-expansion-panel {
+        box-shadow: none !important;
+        border-top: 1px solid #e0d6c8;
+      }
+
+      ::ng-deep .link-item .mat-expansion-panel-header {
+        padding: 0 16px;
+      }
+
+      ::ng-deep .link-item .mat-expansion-panel-body {
+        padding: 0 16px 16px;
+      }
+
+      ::ng-deep .link-item .mat-panel-title {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        color: #8b4513;
+        font-size: 14px;
+      }
+
       .editor-actions {
         display: flex;
         justify-content: flex-end;
@@ -370,11 +652,19 @@ export class RecipeEditorComponent implements OnInit {
     { name: '', quantity: 0, unit: 'g', cost: 0, total: 0 },
   ];
 
+  links: LinkRow[] = [];
+
+  // AI generation
+  aiUrl = '';
+  aiImageName = '';
+  aiLoading = false;
+
   constructor(
     private route: ActivatedRoute,
     private router: Router,
     private toastService: BakeToastService,
     private apiClient: ApiClientService,
+    private sanitizer: DomSanitizer,
   ) {}
 
   ngOnInit(): void {
@@ -402,28 +692,43 @@ export class RecipeEditorComponent implements OnInit {
   private loadRecipe(): void {
     this.apiClient.get<Recipe>(`/v1/recipes/${this.recipeId}`).subscribe({
       next: (recipe) => {
-        this.recipeName = recipe.name;
-        this.recipeCategory = recipe.category || '';
-        this.yieldQuantity = recipe.yieldQuantity;
-        this.yieldUnit = recipe.yieldUnit;
-        this.instructions = recipe.instructions || '';
-        this.ingredients = recipe.ingredients.map((ing) => ({
-          ingredientId: ing.ingredientId,
-          name: ing.ingredientName || '',
-          quantity: ing.quantity,
-          unit: ing.unit,
-          cost: Number(ing.costPerUnit),
-          total: Math.round(ing.quantity * Number(ing.costPerUnit)),
-        }));
-        if (this.ingredients.length === 0) {
-          this.ingredients = [{ name: '', quantity: 0, unit: 'g', cost: 0, total: 0 }];
-        }
+        this.applyRecipeData(recipe);
       },
       error: () => {
         this.toastService.error('Failed to load recipe');
         this.router.navigate(['/recipes']);
       },
     });
+  }
+
+  private applyRecipeData(recipe: Partial<Recipe>): void {
+    if (recipe.name) this.recipeName = recipe.name;
+    if (recipe.category !== undefined) this.recipeCategory = recipe.category || '';
+    if (recipe.yieldQuantity !== undefined) this.yieldQuantity = recipe.yieldQuantity;
+    if (recipe.yieldUnit) this.yieldUnit = recipe.yieldUnit;
+    if (recipe.instructions !== undefined) this.instructions = recipe.instructions || '';
+    if (recipe.ingredients?.length) {
+      this.ingredients = recipe.ingredients.map((ing) => ({
+        ingredientId: ing.ingredientId,
+        name: ing.ingredientName || '',
+        quantity: ing.quantity,
+        unit: ing.unit,
+        cost: Number(ing.costPerUnit),
+        total: Math.round(ing.quantity * Number(ing.costPerUnit)),
+      }));
+    }
+    if (this.ingredients.length === 0 || (this.ingredients.length === 1 && !this.ingredients[0].name)) {
+      this.ingredients = [{ name: '', quantity: 0, unit: 'g', cost: 0, total: 0 }];
+    }
+    if (recipe.links?.length) {
+      this.links = recipe.links.map((l) => ({
+        url: l.url,
+        title: l.title || '',
+        isYoutube: l.isYoutube,
+        youtubeVideoId: l.youtubeVideoId || '',
+        editing: false,
+      }));
+    }
   }
 
   get totalCost(): number {
@@ -452,6 +757,83 @@ export class RecipeEditorComponent implements OnInit {
     this.ingredients = this.ingredients.filter((_, i) => i !== index);
   }
 
+  // Links management
+  addLink(): void {
+    this.links = [
+      ...this.links,
+      { url: '', title: '', isYoutube: false, youtubeVideoId: '', editing: true },
+    ];
+  }
+
+  removeLink(index: number): void {
+    this.links = this.links.filter((_, i) => i !== index);
+  }
+
+  onLinkUrlChange(link: LinkRow): void {
+    const match = link.url.match(
+      /(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/,
+    );
+    link.isYoutube = !!match;
+    link.youtubeVideoId = match ? match[1] : '';
+  }
+
+  getYoutubeEmbedUrl(videoId: string): SafeResourceUrl {
+    return this.sanitizer.bypassSecurityTrustResourceUrl(
+      `https://www.youtube.com/embed/${videoId}`,
+    );
+  }
+
+  // AI generation
+  generateFromUrl(): void {
+    if (!this.aiUrl.trim()) return;
+    this.aiLoading = true;
+    this.apiClient.post<Partial<Recipe>>('/v1/recipes/generate/from-url', { url: this.aiUrl }).subscribe({
+      next: (data) => {
+        this.applyRecipeData(data as Partial<Recipe>);
+        this.toastService.success('Recipe generated from URL');
+        this.aiLoading = false;
+      },
+      error: () => {
+        this.toastService.error('Failed to generate recipe from URL');
+        this.aiLoading = false;
+      },
+    });
+  }
+
+  onImageSelected(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    if (!file) return;
+
+    this.aiImageName = file.name;
+    this.aiLoading = true;
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = reader.result as string;
+      const base64 = result.split(',')[1];
+      const mimeType = file.type || 'image/jpeg';
+
+      this.apiClient
+        .post<Partial<Recipe>>('/v1/recipes/generate/from-image', {
+          imageBase64: base64,
+          mimeType,
+        })
+        .subscribe({
+          next: (data) => {
+            this.applyRecipeData(data as Partial<Recipe>);
+            this.toastService.success('Recipe generated from image');
+            this.aiLoading = false;
+          },
+          error: () => {
+            this.toastService.error('Failed to generate recipe from image');
+            this.aiLoading = false;
+          },
+        });
+    };
+    reader.readAsDataURL(file);
+  }
+
   onSave(): void {
     if (!this.recipeName.trim()) {
       this.toastService.warning('Please enter a recipe name');
@@ -472,6 +854,14 @@ export class RecipeEditorComponent implements OnInit {
           quantity: ing.quantity,
           unit: ing.unit,
           costPerUnit: ing.cost,
+        })),
+      links: this.links
+        .filter((l) => l.url.trim())
+        .map((l) => ({
+          url: l.url,
+          title: l.title,
+          isYoutube: l.isYoutube,
+          youtubeVideoId: l.youtubeVideoId,
         })),
     };
 
@@ -494,3 +884,5 @@ export class RecipeEditorComponent implements OnInit {
     this.router.navigate(['/recipes']);
   }
 }
+
+export default RecipeEditorComponent;

@@ -1,7 +1,7 @@
 import { Controller, Get, Post, Put, Delete, Body, Param, Query, UseGuards, Request } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { RecipesService } from './recipes.service';
-import { CreateRecipeDto, UpdateRecipeDto, ScaleRecipeDto } from './dto';
+import { CreateRecipeDto, UpdateRecipeDto, ScaleRecipeDto, GenerateFromUrlDto, GenerateFromImageDto } from './dto';
 import { PaginationDto } from '../../common/dto/pagination.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../../common/guards/permissions.guard';
@@ -19,15 +19,29 @@ export class RecipesController {
   @ApiOperation({ summary: 'Get all recipes' })
   findAll(@Query() query: PaginationDto) { return this.recipesService.findAll(query); }
 
-  @Get(':id')
-  @RequirePermissions('recipes:read')
-  @ApiOperation({ summary: 'Get recipe by ID' })
-  findOne(@Param('id') id: string) { return this.recipesService.findOne(id); }
-
   @Post()
   @RequirePermissions('recipes:create')
   @ApiOperation({ summary: 'Create recipe' })
   create(@Body() dto: CreateRecipeDto) { return this.recipesService.create(dto); }
+
+  @Post('generate/from-url')
+  @RequirePermissions('recipes:create')
+  @ApiOperation({ summary: 'AI-generate recipe data from a URL' })
+  generateFromUrl(@Body() dto: GenerateFromUrlDto) {
+    return this.recipesService.generateFromUrl(dto.url);
+  }
+
+  @Post('generate/from-image')
+  @RequirePermissions('recipes:create')
+  @ApiOperation({ summary: 'AI-generate recipe data from an uploaded image' })
+  generateFromImage(@Body() dto: GenerateFromImageDto) {
+    return this.recipesService.generateFromImage(dto.imageBase64, dto.mimeType);
+  }
+
+  @Get(':id')
+  @RequirePermissions('recipes:read')
+  @ApiOperation({ summary: 'Get recipe by ID' })
+  findOne(@Param('id') id: string) { return this.recipesService.findOne(id); }
 
   @Put(':id')
   @RequirePermissions('recipes:update')
