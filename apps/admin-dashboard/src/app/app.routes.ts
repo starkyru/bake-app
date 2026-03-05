@@ -7,7 +7,7 @@ const loginGuard = () => {
   const auth = inject(AuthService);
   const router = inject(Router);
   if (auth.isAuthenticated()) {
-    router.navigate(['/users']);
+    router.navigate(['/dashboard']);
     return false;
   }
   return true;
@@ -67,6 +67,41 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./pages/recipe-editor/recipe-editor.component').then(
             (m) => m.RecipeEditorComponent
+          ),
+      },
+      {
+        path: 'dashboard',
+        loadComponent: () =>
+          import('./pages/dashboard/dashboard.component').then(
+            (m) => m.DashboardComponent
+          ),
+      },
+      {
+        path: 'inventory',
+        loadComponent: () =>
+          import('./pages/inventory/inventory.component').then(
+            (m) => m.InventoryComponent
+          ),
+      },
+      {
+        path: 'finance',
+        loadComponent: () =>
+          import('./pages/finance/finance.component').then(
+            (m) => m.FinanceComponent
+          ),
+      },
+      {
+        path: 'sales',
+        loadComponent: () =>
+          import('./pages/sales/sales.component').then(
+            (m) => m.SalesComponent
+          ),
+      },
+      {
+        path: 'production',
+        loadComponent: () =>
+          import('./pages/production/production.component').then(
+            (m) => m.ProductionComponent
           ),
       },
       {

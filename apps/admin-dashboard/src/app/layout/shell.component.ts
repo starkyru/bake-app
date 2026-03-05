@@ -193,11 +193,16 @@ interface NavItem {
 })
 export class ShellComponent implements OnInit {
   navItems: NavItem[] = [
+    { label: 'Dashboard', icon: 'dashboard', route: '/dashboard' },
     { label: 'Users', icon: 'people', route: '/users' },
     { label: 'Products', icon: 'inventory_2', route: '/products' },
     { label: 'Categories', icon: 'category', route: '/categories' },
     { label: 'Ingredients', icon: 'grain', route: '/ingredients' },
     { label: 'Recipes', icon: 'menu_book', route: '/recipes' },
+    { label: 'Sales', icon: 'point_of_sale', route: '/sales' },
+    { label: 'Finance', icon: 'account_balance', route: '/finance' },
+    { label: 'Inventory', icon: 'warehouse', route: '/inventory' },
+    { label: 'Production', icon: 'precision_manufacturing', route: '/production' },
     { label: 'Settings', icon: 'settings', route: '/settings' },
   ];
 
