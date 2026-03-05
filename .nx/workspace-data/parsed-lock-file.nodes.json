@@ -333,6 +333,15 @@
         "hash": "sha512-dg7PHBSW9fmPKTVzwvHEeHZPZdpnUqW/U7kj8D29HTP9ur8zZnx9QcnbplwPeYb8yYa62JMnZSEel2X4PxdYBg=="
       }
     },
+    "npm:@anthropic-ai/sdk": {
+      "type": "npm",
+      "name": "npm:@anthropic-ai/sdk",
+      "data": {
+        "version": "0.78.0",
+        "packageName": "@anthropic-ai/sdk",
+        "hash": "sha512-PzQhR715td/m1UaaN5hHXjYB8Gl2lF9UVhrrGrZeysiF6Rb74Wc9GCB8hzLdzmQtBd1qe89F9OptgB9Za1Ib5w=="
+      }
+    },
     "npm:@babel/code-frame": {
       "type": "npm",
       "name": "npm:@babel/code-frame",
@@ -9999,6 +10008,15 @@
         "hash": "sha512-2RZdgEbXmp5+dVbRm0P7HQUImZpICccJy7rN7Tv+SFa55pH+lxnuw6/K1ZxxBfHoYpSkHLAO92oa8O4SwFXA2A=="
       }
     },
+    "npm:engine.io-client": {
+      "type": "npm",
+      "name": "npm:engine.io-client",
+      "data": {
+        "version": "6.6.4",
+        "packageName": "engine.io-client",
+        "hash": "sha512-+kjUJnZGwzewFDw951CDWcwj35vMNf2fcj7xQWOctq1F2i1jkDdVvdFG9kM/BEChymCH36KgjnW0NsL58JYRxw=="
+      }
+    },
     "npm:engine.io-parser": {
       "type": "npm",
       "name": "npm:engine.io-parser",
@@ -11905,6 +11923,15 @@
         "version": "1.5.0",
         "packageName": "json-cycle",
         "hash": "sha512-GOehvd5PO2FeZ5T4c+RxobeT5a1PiGpF4u9/3+UvrMU4bhnVqzJY7hm39wg8PDCqkU91fWGH8qjWR4bn+wgq9w=="
+      }
+    },
+    "npm:json-schema-to-ts": {
+      "type": "npm",
+      "name": "npm:json-schema-to-ts",
+      "data": {
+        "version": "3.1.1",
+        "packageName": "json-schema-to-ts",
+        "hash": "sha512-+DWg8jCJG2TEnpy7kOm/7/AxaYoaRbjVB4LFZLySZlWn8exGs3A4OLJR966cVvU26N7X9TWxl+Jsw7dzAqKT6g=="
       }
     },
     "npm:json-stable-stringify-without-jsonify": {
@@ -14823,6 +14850,15 @@
         "hash": "sha512-DkkO/dz7MGln0dHn5bmN3pPy+JmywNICWrJqVWiVOyvXjWQFIv9c2h24JrQLLFJ2aQVQf/Cvl1vblnd4r2apLQ=="
       }
     },
+    "npm:socket.io-client": {
+      "type": "npm",
+      "name": "npm:socket.io-client",
+      "data": {
+        "version": "4.8.3",
+        "packageName": "socket.io-client",
+        "hash": "sha512-uP0bpjWrjQmUt5DTHq9RuoCBdFJF10cdX9X+a368j/Ft0wmaVgxlrjvK3kjvgCODOMMOz9lcaRzxmso0bTWZ/g=="
+      }
+    },
     "npm:socket.io-parser": {
       "type": "npm",
       "name": "npm:socket.io-parser",
@@ -15498,6 +15534,15 @@
         "hash": "sha512-95Pu1QXQvruGEhv62XCMO3Mm90GscOCClvrIUwCM0PYOXK3kaF3l3sIHxx71ThJfcbM2O5Au6SO3AWCSEfW4mQ=="
       }
     },
+    "npm:ts-algebra": {
+      "type": "npm",
+      "name": "npm:ts-algebra",
+      "data": {
+        "version": "2.0.0",
+        "packageName": "ts-algebra",
+        "hash": "sha512-FPAhNPFMrkwz76P7cdjdmiShwMynZYN6SgOujD1urY4oNm80Ou9oMdmbR45LotcKOXoy7wSmHkRFE6Mxbrhefw=="
+      }
+    },
     "npm:ts-api-utils": {
       "type": "npm",
       "name": "npm:ts-api-utils",
@@ -16164,6 +16209,15 @@
         "hash": "sha512-JZnDKK8B0RCDw84FNdDAIpZK+JuJw+s7Lz8nksI7SIuU3UXJJslUthsi+uWBUYOwPFwW7W7PRLRfUKpxjtjFCw=="
       }
     },
+    "npm:xmlhttprequest-ssl": {
+      "type": "npm",
+      "name": "npm:xmlhttprequest-ssl",
+      "data": {
+        "version": "2.1.2",
+        "packageName": "xmlhttprequest-ssl",
+        "hash": "sha512-TEU+nJVUUnA4CYJFLvK5X9AOeH4KvDvhIfm0vV1GaQRtchnG0hgK5p8hw/xjv8cunWYCsiPCSDzObPyhEwq3KQ=="
+      }
+    },
     "npm:xtend": {
       "type": "npm",
       "name": "npm:xtend",
@@ -16261,6 +16315,7 @@
     "node_modules/@angular/platform-browser": "npm:@angular/platform-browser",
     "node_modules/@angular/platform-browser-dynamic": "npm:@angular/platform-browser-dynamic",
     "node_modules/@angular/router": "npm:@angular/router",
+    "node_modules/@anthropic-ai/sdk": "npm:@anthropic-ai/sdk",
     "node_modules/@babel/code-frame": "npm:@babel/code-frame",
     "node_modules/@babel/compat-data": "npm:@babel/compat-data",
     "node_modules/@babel/core": "npm:@babel/core",
@@ -17269,6 +17324,8 @@
     "node_modules/encoding/node_modules/iconv-lite": "npm:iconv-lite@0.6.3",
     "node_modules/end-of-stream": "npm:end-of-stream",
     "node_modules/engine.io": "npm:engine.io",
+    "node_modules/engine.io-client": "npm:engine.io-client",
+    "node_modules/engine.io-client/node_modules/ws": "npm:ws@8.18.3",
     "node_modules/engine.io-parser": "npm:engine.io-parser",
     "node_modules/engine.io/node_modules/ws": "npm:ws@8.18.3",
     "node_modules/enhanced-resolve": "npm:enhanced-resolve",
@@ -17561,6 +17618,7 @@
     "node_modules/json-buffer": "npm:json-buffer",
     "node_modules/json-cycle": "npm:json-cycle",
     "node_modules/json-parse-even-better-errors": "npm:json-parse-even-better-errors",
+    "node_modules/json-schema-to-ts": "npm:json-schema-to-ts",
     "node_modules/json-schema-traverse": "npm:json-schema-traverse",
     "node_modules/json-stable-stringify-without-jsonify": "npm:json-stable-stringify-without-jsonify",
     "node_modules/json5": "npm:json5",
@@ -17997,6 +18055,7 @@
     "node_modules/socket.io": "npm:socket.io",
     "node_modules/socket.io-adapter": "npm:socket.io-adapter",
     "node_modules/socket.io-adapter/node_modules/ws": "npm:ws@8.18.3",
+    "node_modules/socket.io-client": "npm:socket.io-client",
     "node_modules/socket.io-parser": "npm:socket.io-parser",
     "node_modules/sockjs": "npm:sockjs",
     "node_modules/sockjs/node_modules/uuid": "npm:uuid@8.3.2",
@@ -18098,6 +18157,7 @@
     "node_modules/tree-kill": "npm:tree-kill",
     "node_modules/triple-beam": "npm:triple-beam",
     "node_modules/truncate-utf8-bytes": "npm:truncate-utf8-bytes",
+    "node_modules/ts-algebra": "npm:ts-algebra",
     "node_modules/ts-api-utils": "npm:ts-api-utils",
     "node_modules/ts-jest": "npm:ts-jest",
     "node_modules/ts-jest/node_modules/semver": "npm:semver@7.7.4",
@@ -18268,6 +18328,7 @@
     "node_modules/ws": "npm:ws",
     "node_modules/xml-name-validator": "npm:xml-name-validator",
     "node_modules/xmlchars": "npm:xmlchars",
+    "node_modules/xmlhttprequest-ssl": "npm:xmlhttprequest-ssl",
     "node_modules/xtend": "npm:xtend",
     "node_modules/y18n": "npm:y18n",
     "node_modules/yallist": "npm:yallist",
