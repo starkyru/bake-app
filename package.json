@@ -15,7 +15,6 @@
     "serve:pos": "ng serve --project=pos-app",
     "serve:admin": "ng serve --project=admin-dashboard --port=4201",
     "serve:kitchen": "ng serve --project=kitchen-screen --port=4202",
-    "serve:manager": "ng serve --project=manager-dashboard --port=4203",
     "serve:hub": "ng serve --project=hub-app --port=4204",
     "serve:mobile": "cd apps/mobile-app && expo start"
   },

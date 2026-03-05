@@ -192,62 +192,6 @@
         }
       }
     },
-    "manager-dashboard": {
-      "projectType": "application",
-      "root": "apps/manager-dashboard",
-      "sourceRoot": "apps/manager-dashboard/src",
-      "prefix": "bake-app",
-      "architect": {
-        "build": {
-          "builder": "@angular-devkit/build-angular:browser",
-          "options": {
-            "outputPath": "dist/apps/manager-dashboard",
-            "index": "apps/manager-dashboard/src/index.html",
-            "main": "apps/manager-dashboard/src/main.ts",
-            "polyfills": ["zone.js"],
-            "tsConfig": "apps/manager-dashboard/tsconfig.app.json",
-            "inlineStyleLanguage": "css",
-            "assets": ["apps/manager-dashboard/src/favicon.ico", "apps/manager-dashboard/src/assets"],
-            "styles": ["apps/manager-dashboard/src/styles.css"],
-            "scripts": []
-          },
-          "configurations": {
-            "production": {
-              "budgets": [
-                {
-                  "type": "initial",
-                  "maximumWarning": "500kb",
-                  "maximumError": "1mb"
-                }
-              ],
-              "outputHashing": "all"
-            },
-            "development": {
-              "buildOptimizer": false,
-              "optimization": false,
-              "sourceMap": true
-            }
-          },
-          "defaultConfiguration": "production"
-        },
-        "serve": {
-          "builder": "@angular-devkit/build-angular:dev-server",
-          "configurations": {
-            "production": {
-              "buildTarget": "manager-dashboard:build:production"
-            },
-            "development": {
-              "buildTarget": "manager-dashboard:build:development"
-            }
-          },
-          "defaultConfiguration": "development",
-          "options": {
-            "port": 4203,
-            "proxyConfig": "apps/manager-dashboard/proxy.conf.json"
-          }
-        }
-      }
-    },
     "hub-app": {
       "projectType": "application",
       "root": "apps/hub-app",

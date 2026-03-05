@@ -36,13 +36,6 @@ const ROLE_APP_MAP: Record<string, AppLink[]> = {
       url: 'https://kitchen.bake.ilia.to',
       color: '#ff9800',
     },
-    {
-      name: 'Manager',
-      description: 'Manager dashboard',
-      icon: 'dashboard',
-      url: 'https://manager.bake.ilia.to',
-      color: '#9c27b0',
-    },
   ],
   [UserRole.MANAGER]: [
     {
@@ -66,13 +59,6 @@ const ROLE_APP_MAP: Record<string, AppLink[]> = {
       url: 'https://kitchen.bake.ilia.to',
       color: '#ff9800',
     },
-    {
-      name: 'Manager',
-      description: 'Manager dashboard',
-      icon: 'dashboard',
-      url: 'https://manager.bake.ilia.to',
-      color: '#9c27b0',
-    },
   ],
   [UserRole.ACCOUNTANT]: [
     {
@@ -81,13 +67,6 @@ const ROLE_APP_MAP: Record<string, AppLink[]> = {
       icon: 'admin_panel_settings',
       url: 'https://admin.bake.ilia.to',
       color: '#2196f3',
-    },
-    {
-      name: 'Manager',
-      description: 'Manager dashboard',
-      icon: 'dashboard',
-      url: 'https://manager.bake.ilia.to',
-      color: '#9c27b0',
     },
   ],
   [UserRole.CHEF]: [
