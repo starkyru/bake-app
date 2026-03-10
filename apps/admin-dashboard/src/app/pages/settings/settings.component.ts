@@ -1,6 +1,6 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
+import { FormsModule, NgForm } from '@angular/forms';
 import { MatExpansionModule } from '@angular/material/expansion';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
@@ -195,7 +195,7 @@ interface CategoryView {
               <div class="section-title">
                 {{ editingMenuCategory ? 'Edit Category' : 'Add Category' }}
               </div>
-              <form (ngSubmit)="onSaveMenuCategory()" class="settings-form">
+              <form #menuCategoryForm="ngForm" (ngSubmit)="onSaveMenuCategory()" class="settings-form">
                 <mat-form-field appearance="outline" class="full-width">
                   <mat-label>Category Name</mat-label>
                   <input
@@ -203,14 +203,13 @@ interface CategoryView {
                     [(ngModel)]="menuFormName"
                     name="menuName"
                     placeholder="e.g., Bread"
-                    required
                   />
                 </mat-form-field>
 
                 <mat-form-field appearance="outline" class="full-width">
                   <mat-label>Parent Category</mat-label>
                   <mat-select [(ngModel)]="menuFormParentId" name="menuParentId">
-                    <mat-option [value]="null">None (Top Level)</mat-option>
+                    <mat-option value="">None (Top Level)</mat-option>
                     <mat-option
                       *ngFor="let cat of menuTopLevelCategories"
                       [value]="cat.id"
@@ -303,7 +302,7 @@ interface CategoryView {
               <div class="section-title">
                 {{ editingIngCategory ? 'Edit Category' : 'Add Category' }}
               </div>
-              <form (ngSubmit)="onSaveIngCategory()" class="settings-form">
+              <form #ingCategoryForm="ngForm" (ngSubmit)="onSaveIngCategory()" class="settings-form">
                 <mat-form-field appearance="outline" class="full-width">
                   <mat-label>Category Name</mat-label>
                   <input
@@ -311,7 +310,6 @@ interface CategoryView {
                     [(ngModel)]="ingFormName"
                     name="ingName"
                     placeholder="e.g., Dairy"
-                    required
                   />
                 </mat-form-field>
 
@@ -534,12 +532,15 @@ export class SettingsComponent implements OnInit {
     autoPrint: true,
   };
 
+  @ViewChild('menuCategoryForm') menuCategoryForm!: NgForm;
+  @ViewChild('ingCategoryForm') ingCategoryForm!: NgForm;
+
   // Menu categories
   menuCategories: CategoryView[] = [];
   menuFormName = '';
-  menuFormParentId: string | null = null;
+  menuFormParentId = '';
   editingMenuCategory: CategoryView | null = null;
-  private menuLastUsedParentId: string | null = null;
+  private menuLastUsedParentId = '';
 
   // Ingredient categories
   ingCategories: CategoryView[] = [];
@@ -716,7 +717,6 @@ export class SettingsComponent implements OnInit {
           this.toastService.success('Category created');
           this.menuLastUsedParentId = this.menuFormParentId;
           this.menuFormName = '';
-          this.menuFormParentId = this.menuLastUsedParentId;
         },
         error: () => this.toastService.error('Failed to create category'),
       });
@@ -726,13 +726,15 @@ export class SettingsComponent implements OnInit {
   onEditMenuCategory(category: CategoryView): void {
     this.editingMenuCategory = category;
     this.menuFormName = category.name;
-    this.menuFormParentId = category.parentId;
+    this.menuFormParentId = category.parentId || '';
   }
 
   cancelMenuEdit(): void {
     this.editingMenuCategory = null;
     this.menuFormName = '';
     this.menuFormParentId = this.menuLastUsedParentId;
+    this.menuCategoryForm?.controls['menuName']?.markAsPristine();
+    this.menuCategoryForm?.controls['menuName']?.markAsUntouched();
   }
 
   onDeleteMenuCategory(category: CategoryView): void {
@@ -823,6 +825,8 @@ export class SettingsComponent implements OnInit {
   cancelIngEdit(): void {
     this.editingIngCategory = null;
     this.ingFormName = '';
+    this.ingCategoryForm?.controls['ingName']?.markAsPristine();
+    this.ingCategoryForm?.controls['ingName']?.markAsUntouched();
   }
 
   onDeleteIngCategory(category: CategoryView): void {
