@@ -3,6 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { Ingredient } from './entities/ingredient.entity';
+import { IngredientPackage } from './entities/ingredient-package.entity';
 import { InventoryItem } from './entities/inventory-item.entity';
 import { InventoryBatch } from './entities/inventory-batch.entity';
 import { InventoryMovement } from './entities/inventory-movement.entity';
@@ -16,6 +17,7 @@ import { DOMAIN_EVENTS } from '../websocket/ws-events.constants';
 export class InventoryService {
   constructor(
     @InjectRepository(Ingredient) private ingredientRepo: Repository<Ingredient>,
+    @InjectRepository(IngredientPackage) private packageRepo: Repository<IngredientPackage>,
     @InjectRepository(InventoryItem) private inventoryItemRepo: Repository<InventoryItem>,
     @InjectRepository(InventoryBatch) private batchRepo: Repository<InventoryBatch>,
     @InjectRepository(InventoryMovement) private movementRepo: Repository<InventoryMovement>,
@@ -26,9 +28,10 @@ export class InventoryService {
   // Ingredients
   async findAllIngredients(query: PaginationDto): Promise<PaginatedResponseDto<Ingredient>> {
     const { page, limit, search } = query;
-    const qb = this.ingredientRepo.createQueryBuilder('i');
+    const qb = this.ingredientRepo.createQueryBuilder('i')
+      .leftJoinAndSelect('i.packages', 'pkg');
     if (search) qb.where('i.name ILIKE :search', { search: `%${search}%` });
-    qb.orderBy('i.name', 'ASC');
+    qb.orderBy('i.name', 'ASC').addOrderBy('pkg.sortOrder', 'ASC');
     const [data, total] = await qb.skip((page - 1) * limit).take(limit).getManyAndCount();
     return new PaginatedResponseDto(data, total, page, limit);
   }
@@ -40,7 +43,14 @@ export class InventoryService {
   async updateIngredient(id: string, dto: UpdateIngredientDto): Promise<Ingredient> {
     const ingredient = await this.ingredientRepo.findOne({ where: { id } });
     if (!ingredient) throw new NotFoundException('Ingredient not found');
-    Object.assign(ingredient, dto);
+    const { packages, ...rest } = dto;
+    Object.assign(ingredient, rest);
+    if (packages !== undefined) {
+      await this.packageRepo.delete({ ingredientId: id });
+      ingredient.packages = packages.map((p) =>
+        this.packageRepo.create({ ...p, ingredientId: id }),
+      );
+    }
     return this.ingredientRepo.save(ingredient);
   }
 

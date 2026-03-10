@@ -84,14 +84,25 @@ export interface Category {
   children?: Category[];
 }
 
+export interface IngredientPackage {
+  id: string;
+  name: string;
+  size: number;
+  unit: string;
+  sortOrder: number;
+  ingredientId: string;
+}
+
 export interface Ingredient {
   id: string;
   name: string;
   unit: string;
+  description?: string;
   costPerUnit: number;
   minStockLevel: number;
   category?: string;
   isActive: boolean;
+  packages?: IngredientPackage[];
 }
 
 export interface InventoryItem {

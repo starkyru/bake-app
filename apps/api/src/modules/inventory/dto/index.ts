@@ -1,6 +1,28 @@
-import { IsString, IsNumber, IsOptional, IsUUID, Min } from 'class-validator';
+import { IsString, IsNumber, IsOptional, IsUUID, IsInt, IsArray, Min, ValidateNested } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional, PartialType } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
+
+export class CreateIngredientPackageDto {
+  @ApiProperty({ example: '25lb bag' })
+  @IsString()
+  name: string;
+
+  @ApiProperty({ example: 25 })
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0)
+  size: number;
+
+  @ApiProperty({ example: 'lb' })
+  @IsString()
+  unit: string;
+
+  @ApiPropertyOptional({ example: 0 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  sortOrder?: number;
+}
 
 export class CreateIngredientDto {
   @ApiProperty({ example: 'Flour' })
@@ -10,6 +32,11 @@ export class CreateIngredientDto {
   @ApiProperty({ example: 'kg' })
   @IsString()
   unit: string;
+
+  @ApiPropertyOptional({ example: 'All-purpose wheat flour, King Arthur brand' })
+  @IsOptional()
+  @IsString()
+  description?: string;
 
   @ApiPropertyOptional({ example: 500 })
   @IsOptional()
@@ -29,6 +56,13 @@ export class CreateIngredientDto {
   @IsOptional()
   @IsString()
   category?: string;
+
+  @ApiPropertyOptional({ type: [CreateIngredientPackageDto] })
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => CreateIngredientPackageDto)
+  packages?: CreateIngredientPackageDto[];
 }
 
 export class UpdateIngredientDto extends PartialType(CreateIngredientDto) {}

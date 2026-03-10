@@ -1,5 +1,6 @@
-import { Entity, Column } from 'typeorm';
+import { Entity, Column, OneToMany } from 'typeorm';
 import { BaseEntity } from '../../../common/entities/base.entity';
+import { IngredientPackage } from './ingredient-package.entity';
 
 @Entity('ingredients')
 export class Ingredient extends BaseEntity {
@@ -8,6 +9,9 @@ export class Ingredient extends BaseEntity {
 
   @Column()
   unit: string;
+
+  @Column({ nullable: true })
+  description: string;
 
   @Column({ name: 'cost_per_unit', type: 'decimal', precision: 10, scale: 2, default: 0 })
   costPerUnit: number;
@@ -20,4 +24,7 @@ export class Ingredient extends BaseEntity {
 
   @Column({ name: 'is_active', default: true })
   isActive: boolean;
+
+  @OneToMany(() => IngredientPackage, (pkg) => pkg.ingredient, { cascade: true, eager: true })
+  packages: IngredientPackage[];
 }

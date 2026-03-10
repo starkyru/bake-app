@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
+import { Injectable, NotFoundException, ConflictException, ForbiddenException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, Like } from 'typeorm';
 import * as bcrypt from 'bcryptjs';
@@ -80,6 +80,14 @@ export class UsersService {
 
   async remove(id: string): Promise<void> {
     const user = await this.findOne(id);
+    if (user.role?.name === 'owner') {
+      const ownerCount = await this.usersRepository.count({
+        where: { role: { name: 'owner' } },
+      });
+      if (ownerCount <= 1) {
+        throw new ForbiddenException('Cannot delete the last owner user');
+      }
+    }
     await this.usersRepository.remove(user);
   }
 }

@@ -16,7 +16,7 @@ import {
   BakeToastService,
 } from '@bake-app/ui-components';
 import { ApiClientService } from '@bake-app/api-client';
-import { Ingredient } from '@bake-app/shared-types';
+import { Ingredient, IngredientPackage } from '@bake-app/shared-types';
 
 interface PaginatedResponse<T> {
   data: T[];
@@ -58,25 +58,23 @@ interface PaginatedResponse<T> {
                 <input matInput [(ngModel)]="formName" name="name" placeholder="e.g., Flour" required />
               </mat-form-field>
 
-              <div class="form-row">
-                <mat-form-field appearance="outline" class="flex-1">
-                  <mat-label>Unit</mat-label>
-                  <mat-select [(ngModel)]="formUnit" name="unit">
-                    <mat-option value="g">g</mat-option>
-                    <mat-option value="kg">kg</mat-option>
-                    <mat-option value="ml">ml</mat-option>
-                    <mat-option value="l">l</mat-option>
-                    <mat-option value="pcs">pcs</mat-option>
-                    <mat-option value="tbsp">tbsp</mat-option>
-                    <mat-option value="tsp">tsp</mat-option>
-                  </mat-select>
-                </mat-form-field>
+              <mat-form-field appearance="outline" class="full-width">
+                <mat-label>Description</mat-label>
+                <input matInput [(ngModel)]="formDescription" name="description" placeholder="e.g., All-purpose wheat flour, King Arthur brand" />
+              </mat-form-field>
 
-                <mat-form-field appearance="outline" class="flex-1">
-                  <mat-label>Cost per Unit</mat-label>
-                  <input matInput type="number" [(ngModel)]="formCost" name="cost" placeholder="0" />
-                </mat-form-field>
-              </div>
+              <mat-form-field appearance="outline" class="full-width">
+                <mat-label>Unit</mat-label>
+                <mat-select [(ngModel)]="formUnit" name="unit">
+                  <mat-option value="g">g</mat-option>
+                  <mat-option value="kg">kg</mat-option>
+                  <mat-option value="ml">ml</mat-option>
+                  <mat-option value="l">l</mat-option>
+                  <mat-option value="pcs">pcs</mat-option>
+                  <mat-option value="tbsp">tbsp</mat-option>
+                  <mat-option value="tsp">tsp</mat-option>
+                </mat-select>
+              </mat-form-field>
 
               <mat-form-field appearance="outline" class="full-width">
                 <mat-label>Min Stock Level</mat-label>
@@ -90,6 +88,30 @@ interface PaginatedResponse<T> {
                   <mat-option *ngFor="let cat of ingredientCategories" [value]="cat">{{ cat }}</mat-option>
                 </mat-select>
               </mat-form-field>
+
+              <div class="packages-section">
+                <div class="section-label">Package Sizes</div>
+                <div *ngFor="let pkg of formPackages; let i = index" class="package-row">
+                  <mat-form-field appearance="outline" class="pkg-name">
+                    <mat-label>Name</mat-label>
+                    <input matInput [(ngModel)]="pkg.name" [name]="'pkgName' + i" placeholder="e.g., 25lb bag" />
+                  </mat-form-field>
+                  <mat-form-field appearance="outline" class="pkg-size">
+                    <mat-label>Size</mat-label>
+                    <input matInput type="number" [(ngModel)]="pkg.size" [name]="'pkgSize' + i" />
+                  </mat-form-field>
+                  <mat-form-field appearance="outline" class="pkg-unit">
+                    <mat-label>Unit</mat-label>
+                    <input matInput [(ngModel)]="pkg.unit" [name]="'pkgUnit' + i" placeholder="lb" />
+                  </mat-form-field>
+                  <button mat-icon-button type="button" color="warn" (click)="removePackage(i)">
+                    <mat-icon>close</mat-icon>
+                  </button>
+                </div>
+                <button mat-button type="button" class="add-pkg-btn" (click)="addPackage()">
+                  <mat-icon>add</mat-icon> Add Package
+                </button>
+              </div>
 
               <div class="form-actions">
                 <button mat-button type="button" *ngIf="editing" (click)="cancelEdit()">Cancel</button>
@@ -110,9 +132,15 @@ interface PaginatedResponse<T> {
               <mat-list-item *ngFor="let ing of ingredients" class="ingredient-item">
                 <mat-icon matListItemIcon class="ing-icon">grain</mat-icon>
                 <div matListItemTitle class="item-content">
-                  <span class="ing-name">{{ ing.name }}</span>
-                  <span class="ing-detail">{{ ing.unit }} | {{ ing.costPerUnit | currency:'USD':'symbol':'1.2-2' }}</span>
+                  <div class="ing-info">
+                    <span class="ing-name">{{ ing.name }}</span>
+                    <span class="ing-description" *ngIf="ing.description">{{ ing.description }}</span>
+                  </div>
+                  <span class="ing-detail">{{ ing.unit }}</span>
                   <span class="ing-category" *ngIf="ing.category">{{ ing.category }}</span>
+                  <mat-chip-set *ngIf="ing.packages?.length" class="pkg-chips">
+                    <mat-chip *ngFor="let pkg of ing.packages">{{ pkg.name }}</mat-chip>
+                  </mat-chip-set>
                 </div>
                 <div matListItemMeta class="item-actions">
                   <button mat-icon-button (click)="onEdit(ing)">
@@ -221,6 +249,59 @@ interface PaginatedResponse<T> {
         border-radius: 12px;
       }
 
+      .ing-info {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+      }
+
+      .ing-description {
+        font-size: 11px;
+        color: #8d6e63;
+        font-weight: 400;
+      }
+
+      .pkg-chips {
+        margin-left: 4px;
+      }
+
+      .pkg-chips mat-chip {
+        font-size: 11px;
+      }
+
+      .packages-section {
+        margin-bottom: 8px;
+      }
+
+      .section-label {
+        font-size: 13px;
+        font-weight: 500;
+        color: #5d4037;
+        margin-bottom: 8px;
+      }
+
+      .package-row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .pkg-name {
+        flex: 2;
+      }
+
+      .pkg-size {
+        flex: 1;
+      }
+
+      .pkg-unit {
+        flex: 1;
+      }
+
+      .add-pkg-btn {
+        color: #8b4513;
+      }
+
       .item-actions {
         display: flex;
         gap: 0;
@@ -246,10 +327,11 @@ export class IngredientsComponent implements OnInit {
   editing: Ingredient | null = null;
 
   formName = '';
+  formDescription = '';
   formUnit = 'kg';
-  formCost = 0;
   formMinStock = 0;
   formCategory = '';
+  formPackages: { name: string; size: number; unit: string }[] = [];
 
   ingredientCategories = ['Dry goods', 'Dairy', 'Fats & Oils', 'Sweeteners', 'Spices', 'Fruits', 'Nuts', 'Liquids', 'Other'];
 
@@ -280,9 +362,10 @@ export class IngredientsComponent implements OnInit {
     const dto = {
       name: this.formName,
       unit: this.formUnit,
-      costPerUnit: this.formCost,
+      description: this.formDescription || undefined,
       minStockLevel: this.formMinStock,
       category: this.formCategory || undefined,
+      packages: this.formPackages.map((p, i) => ({ ...p, sortOrder: i })),
     };
 
     if (this.editing) {
@@ -311,10 +394,15 @@ export class IngredientsComponent implements OnInit {
   onEdit(ing: Ingredient): void {
     this.editing = ing;
     this.formName = ing.name;
+    this.formDescription = ing.description || '';
     this.formUnit = ing.unit;
-    this.formCost = Number(ing.costPerUnit);
     this.formMinStock = Number(ing.minStockLevel);
     this.formCategory = ing.category || '';
+    this.formPackages = (ing.packages || []).map((p) => ({
+      name: p.name,
+      size: Number(p.size),
+      unit: p.unit,
+    }));
   }
 
   cancelEdit(): void {
@@ -322,12 +410,21 @@ export class IngredientsComponent implements OnInit {
     this.resetForm();
   }
 
+  addPackage(): void {
+    this.formPackages = [...this.formPackages, { name: '', size: 0, unit: '' }];
+  }
+
+  removePackage(index: number): void {
+    this.formPackages = this.formPackages.filter((_, i) => i !== index);
+  }
+
   private resetForm(): void {
     this.formName = '';
+    this.formDescription = '';
     this.formUnit = 'kg';
-    this.formCost = 0;
     this.formMinStock = 0;
     this.formCategory = '';
+    this.formPackages = [];
   }
 
   onDelete(ing: Ingredient): void {

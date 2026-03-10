@@ -1,6 +1,7 @@
 {
   "/api": {
-    "target": "http://localhost:3000",
-    "secure": false
+    "target": "https://api.bake.ilia.to",
+    "secure": true,
+    "changeOrigin": true
   }
 }
