@@ -20,7 +20,7 @@ import { ConfirmationDialogData } from '../models';
       <p>{{ data.message }}</p>
     </mat-dialog-content>
     <mat-dialog-actions align="end">
-      <button mat-button [mat-dialog-close]="false">
+      <button mat-button [mat-dialog-close]="false" *ngIf="!data.hideCancel">
         {{ data.cancelText || 'Cancel' }}
       </button>
       <button

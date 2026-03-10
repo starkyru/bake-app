@@ -26,11 +26,12 @@ export class InventoryService {
   ) {}
 
   // Ingredients
-  async findAllIngredients(query: PaginationDto): Promise<PaginatedResponseDto<Ingredient>> {
+  async findAllIngredients(query: PaginationDto, category?: string): Promise<PaginatedResponseDto<Ingredient>> {
     const { page, limit, search } = query;
     const qb = this.ingredientRepo.createQueryBuilder('i')
       .leftJoinAndSelect('i.packages', 'pkg');
     if (search) qb.where('i.name ILIKE :search', { search: `%${search}%` });
+    if (category) qb.andWhere('i.category = :category', { category });
     qb.orderBy('i.name', 'ASC').addOrderBy('pkg.sortOrder', 'ASC');
     const [data, total] = await qb.skip((page - 1) * limit).take(limit).getManyAndCount();
     return new PaginatedResponseDto(data, total, page, limit);

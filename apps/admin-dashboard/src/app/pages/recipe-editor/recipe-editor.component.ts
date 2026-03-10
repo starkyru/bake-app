@@ -24,6 +24,7 @@ import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { BakePageContainerComponent, BakeConfirmationService, BakeToastService } from '@bake-app/ui-components';
 import { ApiClientService } from '@bake-app/api-client';
 import { Recipe, Category as SharedCategory, Ingredient } from '@bake-app/shared-types';
+import { CreateIngredientDialogComponent } from '../../shared/ingredient-form/create-ingredient-dialog.component';
 
 interface PaginatedResponse<T> {
   data: T[];
@@ -40,6 +41,7 @@ interface IngredientRow {
   cost: number;
   total: number;
   filteredOptions?: Ingredient[];
+  hasError?: boolean;
 }
 
 interface LinkRow {
@@ -296,15 +298,29 @@ export class EstimateCostDialogComponent {
                   <ng-container matColumnDef="name">
                     <th mat-header-cell *matHeaderCellDef>Ingredient</th>
                     <td mat-cell *matCellDef="let row; let i = index">
-                      <mat-form-field appearance="outline" class="table-field">
+                      <mat-form-field
+                        appearance="outline"
+                        class="table-field"
+                        [class.ingredient-error]="row.hasError"
+                      >
                         <input
                           matInput
                           [(ngModel)]="row.name"
                           [matAutocomplete]="autoIng"
-                          (ngModelChange)="filterIngredients(row)"
+                          (ngModelChange)="filterIngredients(row); row.hasError = false"
                           (focus)="filterIngredients(row)"
                           placeholder="Type to search..."
                         />
+                        <button
+                          *ngIf="row.name"
+                          matSuffix
+                          mat-icon-button
+                          type="button"
+                          class="clear-ingredient-btn"
+                          (click)="clearIngredient(row); $event.stopPropagation()"
+                        >
+                          <mat-icon>close</mat-icon>
+                        </button>
                         <mat-autocomplete
                           #autoIng="matAutocomplete"
                           (optionSelected)="onIngredientPicked($event, row)"
@@ -315,6 +331,14 @@ export class EstimateCostDialogComponent {
                             [value]="ing"
                           >
                             {{ ing.name }} ({{ ing.unit }})
+                          </mat-option>
+                          <mat-option
+                            *ngIf="!row.ingredientId"
+                            class="create-new-option"
+                            [value]="{ __createNew: true, name: row.name }"
+                          >
+                            <mat-icon>add_circle</mat-icon>
+                            Create "{{ row.name || 'New Ingredient' }}"
                           </mat-option>
                         </mat-autocomplete>
                       </mat-form-field>
@@ -722,6 +746,55 @@ export class EstimateCostDialogComponent {
         background-color: #8b4513 !important;
         color: #ffffff !important;
       }
+
+      ::ng-deep .table-field .mat-mdc-form-field-icon-suffix {
+        display: flex;
+        align-items: center;
+        padding: 0 4px 0 0;
+      }
+
+      .clear-ingredient-btn {
+        width: 24px;
+        height: 24px;
+        padding: 0;
+      }
+
+      .clear-ingredient-btn mat-icon {
+        font-size: 16px;
+        width: 16px;
+        height: 16px;
+        color: #9e9e9e;
+      }
+
+      ::ng-deep .ingredients-table .mat-column-remove {
+        width: 40px;
+        padding-right: 4px !important;
+      }
+
+      ::ng-deep .ingredient-error .mdc-notched-outline__leading,
+      ::ng-deep .ingredient-error .mdc-notched-outline__notch,
+      ::ng-deep .ingredient-error .mdc-notched-outline__trailing {
+        border-color: #c62828 !important;
+      }
+
+      ::ng-deep .ingredient-error .mdc-text-field--outlined:not(.mdc-text-field--disabled)
+        .mdc-floating-label {
+        color: #c62828 !important;
+      }
+
+      ::ng-deep .create-new-option {
+        border-top: 1px solid #e0d6c8;
+        color: #8b4513 !important;
+        font-weight: 500;
+      }
+
+      ::ng-deep .create-new-option mat-icon {
+        vertical-align: middle;
+        margin-right: 8px;
+        font-size: 20px;
+        height: 20px;
+        width: 20px;
+      }
     `,
   ],
 })
@@ -794,23 +867,74 @@ export class RecipeEditorComponent implements OnInit {
     });
   }
 
+  clearIngredient(row: IngredientRow): void {
+    row.name = '';
+    row.ingredientId = undefined;
+    row.unit = '';
+    row.hasError = false;
+    this.ingredients = [...this.ingredients];
+  }
+
   filterIngredients(row: IngredientRow): void {
     const query = (row.name || '').toLowerCase();
+    // If user edits a linked ingredient's name, unlink it
+    if (row.ingredientId) {
+      const linked = this.availableIngredients.find((a) => a.id === row.ingredientId);
+      if (linked && linked.name !== row.name) {
+        row.ingredientId = undefined;
+        row.unit = '';
+      }
+    }
     row.filteredOptions = query
       ? this.availableIngredients.filter((i) => i.name.toLowerCase().includes(query))
       : this.availableIngredients;
   }
 
   onIngredientPicked(event: any, row: IngredientRow): void {
-    const ing: Ingredient = event.option.value;
+    const value = event.option.value;
+    if (value?.__createNew) {
+      // Reset the row name to what was typed before opening the dialog
+      const typedName = value.name || '';
+      row.name = typedName;
+      this.openCreateIngredientDialog(row, typedName);
+      return;
+    }
+    const ing: Ingredient = value;
     row.ingredientId = ing.id;
     row.name = ing.name;
     row.unit = ing.unit;
+    row.hasError = false;
     this.ingredients = [...this.ingredients];
+  }
+
+  private openCreateIngredientDialog(row: IngredientRow, prefillName: string): void {
+    const dialogRef = this.dialog.open(CreateIngredientDialogComponent, {
+      width: '480px',
+    });
+
+    // Pre-fill the name after the dialog opens
+    dialogRef.afterOpened().subscribe(() => {
+      const formComp = dialogRef.componentInstance.form;
+      if (formComp) {
+        formComp.formData.name = prefillName;
+      }
+    });
+
+    dialogRef.afterClosed().subscribe((created: Ingredient | null) => {
+      if (created) {
+        this.availableIngredients = [...this.availableIngredients, created];
+        row.ingredientId = created.id;
+        row.name = created.name;
+        row.unit = created.unit;
+        row.hasError = false;
+        this.ingredients = [...this.ingredients];
+      }
+    });
   }
 
   displayIngredient = (value: any): string => {
     if (typeof value === 'string') return value;
+    if (value?.__createNew) return value.name || '';
     return value?.name || '';
   };
 
@@ -999,6 +1123,26 @@ export class RecipeEditorComponent implements OnInit {
       return;
     }
 
+    // Check for ingredients that have a name typed but are not linked to an existing ingredient
+    const unlinked = this.ingredients.filter(
+      (ing) => ing.name.trim() && !ing.ingredientId,
+    );
+    if (unlinked.length > 0) {
+      unlinked.forEach((ing) => (ing.hasError = true));
+      this.ingredients = [...this.ingredients];
+      const names = unlinked.map((ing) => `"${ing.name}"`).join(', ');
+      this.confirmService
+        .confirm({
+          title: 'Unlinked Ingredients',
+          message: `The following ingredients haven't been selected from the list or created yet: ${names}. Please select an existing ingredient or use "Create New" for each one.`,
+          confirmText: 'OK',
+          confirmColor: 'primary',
+          hideCancel: true,
+        })
+        .subscribe();
+      return;
+    }
+
     const dto = {
       name: this.recipeName,
       category: this.recipeCategory,
@@ -1006,11 +1150,11 @@ export class RecipeEditorComponent implements OnInit {
       yieldUnit: this.yieldUnit,
       instructions: this.instructions,
       ingredients: this.ingredients
-        .filter((ing) => ing.name.trim())
+        .filter((ing) => ing.name.trim() && ing.ingredientId)
         .map((ing) => {
           const linked = this.availableIngredients.find((a) => a.id === ing.ingredientId);
           return {
-            ingredientId: ing.ingredientId || ing.name,
+            ingredientId: ing.ingredientId,
             ingredientName: ing.name,
             quantity: ing.quantity,
             unit: ing.unit,

@@ -1,13 +1,10 @@
 import { Component, OnInit, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormsModule, NgForm } from '@angular/forms';
+import { FormsModule } from '@angular/forms';
 import { MatIconModule } from '@angular/material/icon';
-import { MatButtonModule } from '@angular/material/button';
-import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatInputModule } from '@angular/material/input';
-import { MatSelectModule } from '@angular/material/select';
 import { MatCardModule } from '@angular/material/card';
-import { MatChipsModule } from '@angular/material/chips';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatSelectModule } from '@angular/material/select';
 import {
   BakePageContainerComponent,
   BakeDataTableComponent,
@@ -17,6 +14,10 @@ import {
 } from '@bake-app/ui-components';
 import { ApiClientService } from '@bake-app/api-client';
 import { Category, Ingredient } from '@bake-app/shared-types';
+import {
+  IngredientFormComponent,
+  IngredientFormData,
+} from '../../shared/ingredient-form/ingredient-form.component';
 
 interface PaginatedResponse<T> {
   data: T[];
@@ -32,17 +33,18 @@ interface PaginatedResponse<T> {
     CommonModule,
     FormsModule,
     MatIconModule,
-    MatButtonModule,
-    MatFormFieldModule,
-    MatInputModule,
-    MatSelectModule,
     MatCardModule,
-    MatChipsModule,
+    MatFormFieldModule,
+    MatSelectModule,
     BakePageContainerComponent,
     BakeDataTableComponent,
+    IngredientFormComponent,
   ],
   template: `
-    <bake-page-container title="Ingredients" subtitle="Manage ingredients used in recipes and inventory">
+    <bake-page-container
+      title="Ingredients"
+      subtitle="Manage ingredients used in recipes and inventory"
+    >
       <div class="ingredients-layout">
         <mat-card class="form-card">
           <mat-card-header>
@@ -51,78 +53,29 @@ interface PaginatedResponse<T> {
             </mat-card-title>
           </mat-card-header>
           <mat-card-content>
-            <form #ingredientForm="ngForm" (ngSubmit)="onSave()" class="ingredient-form">
-              <mat-form-field appearance="outline" class="full-width">
-                <mat-label>Name</mat-label>
-                <input matInput [(ngModel)]="formName" name="name" placeholder="e.g., Flour" required />
-              </mat-form-field>
-
-              <mat-form-field appearance="outline" class="full-width">
-                <mat-label>Description</mat-label>
-                <input matInput [(ngModel)]="formDescription" name="description" placeholder="e.g., All-purpose wheat flour, King Arthur brand" />
-              </mat-form-field>
-
-              <mat-form-field appearance="outline" class="full-width">
-                <mat-label>Unit</mat-label>
-                <mat-select [(ngModel)]="formUnit" name="unit">
-                  <mat-option value="g">g</mat-option>
-                  <mat-option value="ml">ml</mat-option>
-                  <mat-option value="pcs">pcs</mat-option>
-                  <mat-option value="tbsp">tbsp</mat-option>
-                  <mat-option value="tsp">tsp</mat-option>
-                </mat-select>
-              </mat-form-field>
-
-              <mat-form-field appearance="outline" class="full-width">
-                <mat-label>Calories (per 100g)</mat-label>
-                <input matInput type="number" [(ngModel)]="formCalories" name="calories" placeholder="e.g., 364" />
-              </mat-form-field>
-
-              <mat-form-field appearance="outline" class="full-width">
-                <mat-label>Category</mat-label>
-                <mat-select [(ngModel)]="formCategory" name="category">
-                  <mat-option [value]="''">None</mat-option>
-                  <mat-option *ngFor="let cat of ingredientCategories" [value]="cat.name">{{ cat.name }}</mat-option>
-                </mat-select>
-              </mat-form-field>
-
-              <div class="packages-section">
-                <div class="section-label">Package Sizes</div>
-                <div *ngFor="let pkg of formPackages; let i = index" class="package-row">
-                  <mat-form-field appearance="outline" class="pkg-name">
-                    <mat-label>Name</mat-label>
-                    <input matInput [(ngModel)]="pkg.name" [name]="'pkgName' + i" placeholder="e.g., 25lb bag" />
-                  </mat-form-field>
-                  <mat-form-field appearance="outline" class="pkg-size">
-                    <mat-label>Size</mat-label>
-                    <input matInput type="number" [(ngModel)]="pkg.size" [name]="'pkgSize' + i" />
-                  </mat-form-field>
-                  <mat-form-field appearance="outline" class="pkg-unit">
-                    <mat-label>Unit</mat-label>
-                    <input matInput [(ngModel)]="pkg.unit" [name]="'pkgUnit' + i" placeholder="lb" />
-                  </mat-form-field>
-                  <button mat-icon-button type="button" color="warn" (click)="removePackage(i)">
-                    <mat-icon>close</mat-icon>
-                  </button>
-                </div>
-                <button mat-button type="button" class="add-pkg-btn" (click)="addPackage()">
-                  <mat-icon>add</mat-icon> Add Package
-                </button>
-              </div>
-
-              <div class="form-actions">
-                <button mat-button type="button" *ngIf="editing" (click)="cancelEdit()">Cancel</button>
-                <button mat-flat-button type="submit" class="save-btn">
-                  {{ editing ? 'Update' : 'Add Ingredient' }}
-                </button>
-              </div>
-            </form>
+            <bake-ingredient-form
+              [submitLabel]="editing ? 'Update' : 'Add Ingredient'"
+              [showCancel]="!!editing"
+              [showPackages]="true"
+              [initialData]="editFormData"
+              (save)="onSave($event)"
+              (cancel)="cancelEdit()"
+            ></bake-ingredient-form>
           </mat-card-content>
         </mat-card>
 
         <mat-card class="list-card">
-          <mat-card-header>
+          <mat-card-header class="list-header">
             <mat-card-title class="list-title">All Ingredients</mat-card-title>
+            <mat-form-field appearance="outline" class="filter-field">
+              <mat-label>Category</mat-label>
+              <mat-select [(ngModel)]="filterCategory" (selectionChange)="onFilterChange()">
+                <mat-option value="">All</mat-option>
+                <mat-option *ngFor="let cat of ingredientCategories" [value]="cat.name">
+                  {{ cat.name }}
+                </mat-option>
+              </mat-select>
+            </mat-form-field>
           </mat-card-header>
           <mat-card-content>
             <bake-data-table
@@ -149,95 +102,28 @@ interface PaginatedResponse<T> {
         gap: 24px;
         align-items: start;
       }
-
       .form-card,
       .list-card {
         border-radius: 12px;
       }
-
       .form-title,
       .list-title {
         font-size: 16px;
         font-weight: 600;
         color: #3e2723;
       }
-
-      .ingredient-form {
-        display: flex;
-        flex-direction: column;
-        gap: 4px;
-        padding-top: 12px;
-      }
-
-      .form-row {
-        display: flex;
-        gap: 12px;
-      }
-
-      .flex-1 {
-        flex: 1;
-      }
-
-      .full-width {
-        width: 100%;
-      }
-
-      .form-actions {
-        display: flex;
-        justify-content: flex-end;
-        gap: 8px;
-      }
-
-      .save-btn {
-        background-color: #8b4513 !important;
-        color: #ffffff !important;
-      }
-
-      .packages-section {
-        margin-bottom: 8px;
-      }
-
-      .section-label {
-        font-size: 13px;
-        font-weight: 500;
-        color: #5d4037;
-        margin-bottom: 8px;
-      }
-
-      .package-row {
+      .list-header {
         display: flex;
         align-items: center;
-        gap: 8px;
+        justify-content: space-between;
       }
-
-      .pkg-name {
-        flex: 2;
+      .filter-field {
+        width: 180px;
+        margin-bottom: -1.25em;
       }
-
-      .pkg-size {
-        flex: 1;
+      mat-card-content {
+        padding-top: 12px;
       }
-
-      .pkg-unit {
-        flex: 1;
-      }
-
-      .add-pkg-btn {
-        color: #8b4513;
-      }
-
-      .item-actions {
-        display: flex;
-        gap: 0;
-      }
-
-      .empty-state {
-        text-align: center;
-        color: #9e9e9e;
-        padding: 32px;
-        font-style: italic;
-      }
-
       @media (max-width: 768px) {
         .ingredients-layout {
           grid-template-columns: 1fr;
@@ -247,31 +133,31 @@ interface PaginatedResponse<T> {
   ],
 })
 export class IngredientsComponent implements OnInit {
-  @ViewChild('ingredientForm') ingredientForm!: NgForm;
+  @ViewChild(IngredientFormComponent) formComponent!: IngredientFormComponent;
   ingredients: Ingredient[] = [];
   totalIngredients = 0;
   loading = false;
   currentPage = 1;
   pageSize = 50;
   editing: Ingredient | null = null;
-
-  formName = '';
-  formDescription = '';
-  formUnit = 'g';
-  formCalories: number | null = null;
-  formCategory = '';
-  formPackages: { name: string; size: number; unit: string }[] = [];
+  editFormData: Partial<IngredientFormData> | null = null;
+  filterCategory = '';
+  ingredientCategories: Category[] = [];
 
   tableColumns: TableColumn[] = [
     { key: 'name', label: 'Name', sortable: true },
     { key: 'description', label: 'Description', sortable: false },
     { key: 'unit', label: 'Unit', sortable: true, width: '80px' },
-    { key: 'calories', label: 'Calories', type: 'number', sortable: true, width: '90px' },
+    {
+      key: 'calories',
+      label: 'Calories',
+      type: 'number',
+      sortable: true,
+      width: '90px',
+    },
     { key: 'category', label: 'Category', sortable: true, width: '120px' },
     { key: 'actions', label: '', type: 'actions', width: '100px' },
   ];
-
-  ingredientCategories: Category[] = [];
 
   constructor(
     private confirmService: BakeConfirmationService,
@@ -291,12 +177,19 @@ export class IngredientsComponent implements OnInit {
     });
   }
 
+  onFilterChange(): void {
+    this.currentPage = 1;
+    this.loadIngredients();
+  }
+
   private loadIngredients(): void {
     this.loading = true;
+    let url = `/v1/ingredients?page=${this.currentPage}&limit=${this.pageSize}`;
+    if (this.filterCategory) {
+      url += `&category=${encodeURIComponent(this.filterCategory)}`;
+    }
     this.apiClient
-      .get<PaginatedResponse<Ingredient>>(
-        `/v1/ingredients?page=${this.currentPage}&limit=${this.pageSize}`,
-      )
+      .get<PaginatedResponse<Ingredient>>(url)
       .subscribe({
         next: (res) => {
           this.ingredients = res.data;
@@ -324,32 +217,32 @@ export class IngredientsComponent implements OnInit {
     }
   }
 
-  onSave(): void {
-    if (!this.formName.trim()) return;
-
+  onSave(data: IngredientFormData): void {
     const dto = {
-      name: this.formName,
-      unit: this.formUnit,
-      description: this.formDescription || undefined,
-      calories: this.formCalories ?? undefined,
-      category: this.formCategory || undefined,
-      packages: this.formPackages.map((p, i) => ({ ...p, sortOrder: i })),
+      name: data.name,
+      unit: data.unit,
+      description: data.description || undefined,
+      calories: data.calories ?? undefined,
+      category: data.category || undefined,
+      packages: data.packages.map((p, i) => ({ ...p, sortOrder: i })),
     };
 
     if (this.editing) {
-      this.apiClient.put<Ingredient>(`/v1/ingredients/${this.editing.id}`, dto).subscribe({
-        next: () => {
-          this.toastService.success('Ingredient updated');
-          this.cancelEdit();
-          this.loadIngredients();
-        },
-        error: () => this.toastService.error('Failed to update ingredient'),
-      });
+      this.apiClient
+        .put<Ingredient>(`/v1/ingredients/${this.editing.id}`, dto)
+        .subscribe({
+          next: () => {
+            this.toastService.success('Ingredient updated');
+            this.cancelEdit();
+            this.loadIngredients();
+          },
+          error: () => this.toastService.error('Failed to update ingredient'),
+        });
     } else {
       this.apiClient.post<Ingredient>('/v1/ingredients', dto).subscribe({
         next: () => {
           this.toastService.success('Ingredient created');
-          this.resetForm();
+          this.formComponent?.resetForm();
           this.loadIngredients();
         },
         error: () => this.toastService.error('Failed to create ingredient'),
@@ -359,45 +252,24 @@ export class IngredientsComponent implements OnInit {
 
   onEdit(ing: Ingredient): void {
     this.editing = ing;
-    this.formName = ing.name;
-    this.formDescription = ing.description || '';
-    this.formUnit = ing.unit;
-    this.formCalories = ing.calories != null ? Number(ing.calories) : null;
-    this.formCategory = ing.category || '';
-    this.formPackages = (ing.packages || []).map((p) => ({
-      name: p.name,
-      size: Number(p.size),
-      unit: p.unit,
-    }));
+    this.editFormData = {
+      name: ing.name,
+      unit: ing.unit,
+      description: ing.description || '',
+      calories: ing.calories != null ? Number(ing.calories) : null,
+      category: ing.category || '',
+      packages: (ing.packages || []).map((p) => ({
+        name: p.name,
+        size: Number(p.size),
+        unit: p.unit,
+      })),
+    };
   }
 
   cancelEdit(): void {
     this.editing = null;
-    this.resetForm();
-  }
-
-  addPackage(): void {
-    this.formPackages = [...this.formPackages, { name: '', size: 0, unit: '' }];
-  }
-
-  removePackage(index: number): void {
-    this.formPackages = this.formPackages.filter((_, i) => i !== index);
-  }
-
-  private resetForm(): void {
-    this.formName = '';
-    this.formDescription = '';
-    this.formUnit = 'g';
-    this.formCalories = null;
-    this.formCategory = '';
-    this.formPackages = [];
-    this.ingredientForm?.resetForm({
-      name: '',
-      description: '',
-      unit: 'g',
-      calories: null,
-      category: '',
-    });
+    this.editFormData = null;
+    this.formComponent?.resetForm();
   }
 
   onDelete(ing: Ingredient): void {

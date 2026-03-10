@@ -52,4 +52,5 @@ export interface ConfirmationDialogData {
   confirmText?: string;
   cancelText?: string;
   confirmColor?: 'primary' | 'accent' | 'warn';
+  hideCancel?: boolean;
 }

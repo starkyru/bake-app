@@ -17,8 +17,8 @@ export class InventoryController {
   @Get('ingredients')
   @RequirePermissions('ingredients:read')
   @ApiOperation({ summary: 'Get all ingredients' })
-  findAllIngredients(@Query() query: PaginationDto) {
-    return this.inventoryService.findAllIngredients(query);
+  findAllIngredients(@Query() query: PaginationDto, @Query('category') category?: string) {
+    return this.inventoryService.findAllIngredients(query, category);
   }
 
   @Post('ingredients')
