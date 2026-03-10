@@ -49,7 +49,7 @@ import { ConfirmationDialogData } from '../models';
       }
 
       mat-dialog-actions {
-        padding: 8px 24px;
+        padding: 8px 24px 16px;
       }
     `,
   ],

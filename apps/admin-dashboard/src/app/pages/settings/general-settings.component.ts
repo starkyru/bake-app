@@ -23,7 +23,7 @@ import { ApiClientService } from '@bake-app/api-client';
   ],
   template: `
     <mat-progress-bar *ngIf="loading" mode="indeterminate" class="settings-loading"></mat-progress-bar>
-    <div class="settings-form">
+    <div class="settings-form" *ngIf="!loading">
       <mat-form-field appearance="outline" class="full-width">
         <mat-label>Bakery Name</mat-label>
         <input matInput [(ngModel)]="general.bakeryName" placeholder="My Bakery" />
