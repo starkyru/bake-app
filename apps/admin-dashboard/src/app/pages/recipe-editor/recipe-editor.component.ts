@@ -813,7 +813,7 @@ export class RecipeEditorComponent implements OnInit {
   ingredientColumns = ['name', 'quantity', 'unit', 'remove'];
 
   ingredients: IngredientRow[] = [
-    { name: '', quantity: 0, unit: 'g', cost: 0, total: 0, filteredOptions: [] },
+    { name: '', quantity: 0, unit: '-', cost: 0, total: 0, filteredOptions: [] },
   ];
 
   links: LinkRow[] = [];
