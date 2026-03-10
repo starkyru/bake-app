@@ -7,6 +7,7 @@ import { TaxSettingsComponent } from './tax-settings.component';
 import { PosSettingsComponent } from './pos-settings.component';
 import { MenuCategoriesComponent } from './menu-categories.component';
 import { IngredientCategoriesComponent } from './ingredient-categories.component';
+import { LocationsSettingsComponent } from './locations-settings.component';
 
 @Component({
   selector: 'bake-app-settings',
@@ -20,6 +21,7 @@ import { IngredientCategoriesComponent } from './ingredient-categories.component
     PosSettingsComponent,
     MenuCategoriesComponent,
     IngredientCategoriesComponent,
+    LocationsSettingsComponent,
   ],
   template: `
     <bake-page-container title="Settings" subtitle="Configure your bakery system">
@@ -63,6 +65,14 @@ import { IngredientCategoriesComponent } from './ingredient-categories.component
           description="Categories for inventory and ingredients"
         >
           <bake-ingredient-categories></bake-ingredient-categories>
+        </bake-settings-panel>
+
+        <bake-settings-panel
+          icon="location_on"
+          title="Locations"
+          description="Bakery, store, and warehouse locations"
+        >
+          <bake-locations-settings></bake-locations-settings>
         </bake-settings-panel>
       </mat-accordion>
     </bake-page-container>

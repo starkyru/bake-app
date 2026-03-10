@@ -76,6 +76,16 @@ export class InventoryService {
     return this.locationRepo.save(location);
   }
 
+  async deleteLocation(id: string): Promise<void> {
+    const location = await this.locationRepo.findOne({ where: { id } });
+    if (!location) throw new NotFoundException('Location not found');
+    const itemCount = await this.inventoryItemRepo.count({ where: { locationId: id } });
+    if (itemCount > 0) {
+      throw new BadRequestException('Cannot delete location with inventory items');
+    }
+    await this.locationRepo.remove(location);
+  }
+
   // Stock levels
   async getStockLevels(locationId?: string): Promise<InventoryItem[]> {
     const qb = this.inventoryItemRepo.createQueryBuilder('item')

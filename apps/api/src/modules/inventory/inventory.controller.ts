@@ -63,6 +63,13 @@ export class InventoryController {
     return this.inventoryService.updateLocation(id, dto);
   }
 
+  @Delete('locations/:id')
+  @RequirePermissions('locations:delete')
+  @ApiOperation({ summary: 'Delete location' })
+  deleteLocation(@Param('id') id: string) {
+    return this.inventoryService.deleteLocation(id);
+  }
+
   @Get('inventory')
   @RequirePermissions('inventory:read')
   @ApiOperation({ summary: 'Get stock levels' })
