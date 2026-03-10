@@ -32,6 +32,7 @@ interface IngredientRow {
   unit: string;
   cost: number;
   total: number;
+  filteredOptions?: Ingredient[];
 }
 
 interface LinkRow {
@@ -176,7 +177,8 @@ interface LinkRow {
                           [(ngModel)]="row.name"
                           [matAutocomplete]="autoIng"
                           (ngModelChange)="filterIngredients(row)"
-                          placeholder="Type or select"
+                          (focus)="filterIngredients(row)"
+                          placeholder="Type to search..."
                         />
                         <mat-autocomplete
                           #autoIng="matAutocomplete"
@@ -184,7 +186,7 @@ interface LinkRow {
                           [displayWith]="displayIngredient"
                         >
                           <mat-option
-                            *ngFor="let ing of filteredIngredients"
+                            *ngFor="let ing of row.filteredOptions"
                             [value]="ing"
                           >
                             {{ ing.name }} ({{ ing.unit }})
@@ -669,12 +671,11 @@ export class RecipeEditorComponent implements OnInit {
 
   categories: string[] = [];
   availableIngredients: Ingredient[] = [];
-  filteredIngredients: Ingredient[] = [];
 
   ingredientColumns = ['name', 'quantity', 'unit', 'cost', 'total', 'remove'];
 
   ingredients: IngredientRow[] = [
-    { name: '', quantity: 0, unit: 'g', cost: 0, total: 0 },
+    { name: '', quantity: 0, unit: 'g', cost: 0, total: 0, filteredOptions: [] },
   ];
 
   links: LinkRow[] = [];
@@ -719,7 +720,6 @@ export class RecipeEditorComponent implements OnInit {
     this.apiClient.get<PaginatedResponse<Ingredient>>('/v1/ingredients?limit=200').subscribe({
       next: (res) => {
         this.availableIngredients = res.data;
-        this.filteredIngredients = res.data;
       },
       error: () => {
         this.availableIngredients = [];
@@ -729,7 +729,7 @@ export class RecipeEditorComponent implements OnInit {
 
   filterIngredients(row: IngredientRow): void {
     const query = (row.name || '').toLowerCase();
-    this.filteredIngredients = query
+    row.filteredOptions = query
       ? this.availableIngredients.filter((i) => i.name.toLowerCase().includes(query))
       : this.availableIngredients;
   }
@@ -775,10 +775,11 @@ export class RecipeEditorComponent implements OnInit {
         unit: ing.unit,
         cost: Number(ing.costPerUnit),
         total: Math.round(ing.quantity * Number(ing.costPerUnit)),
+        filteredOptions: [],
       }));
     }
     if (this.ingredients.length === 0 || (this.ingredients.length === 1 && !this.ingredients[0].name)) {
-      this.ingredients = [{ name: '', quantity: 0, unit: 'g', cost: 0, total: 0 }];
+      this.ingredients = [{ name: '', quantity: 0, unit: 'g', cost: 0, total: 0, filteredOptions: [] }];
     }
     if (recipe.links?.length) {
       this.links = recipe.links.map((l) => ({
@@ -809,7 +810,7 @@ export class RecipeEditorComponent implements OnInit {
   addIngredient(): void {
     this.ingredients = [
       ...this.ingredients,
-      { name: '', quantity: 0, unit: 'g', cost: 0, total: 0 },
+      { name: '', quantity: 0, unit: 'g', cost: 0, total: 0, filteredOptions: [] },
     ];
   }
 

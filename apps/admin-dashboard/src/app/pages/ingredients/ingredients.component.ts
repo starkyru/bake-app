@@ -1,22 +1,22 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { MatListModule } from '@angular/material/list';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
 import { MatCardModule } from '@angular/material/card';
-import { MatDividerModule } from '@angular/material/divider';
 import { MatChipsModule } from '@angular/material/chips';
 import {
   BakePageContainerComponent,
+  BakeDataTableComponent,
   BakeConfirmationService,
   BakeToastService,
+  TableColumn,
 } from '@bake-app/ui-components';
 import { ApiClientService } from '@bake-app/api-client';
-import { Ingredient, IngredientPackage } from '@bake-app/shared-types';
+import { Ingredient } from '@bake-app/shared-types';
 
 interface PaginatedResponse<T> {
   data: T[];
@@ -31,16 +31,15 @@ interface PaginatedResponse<T> {
   imports: [
     CommonModule,
     FormsModule,
-    MatListModule,
     MatIconModule,
     MatButtonModule,
     MatFormFieldModule,
     MatInputModule,
     MatSelectModule,
     MatCardModule,
-    MatDividerModule,
     MatChipsModule,
     BakePageContainerComponent,
+    BakeDataTableComponent,
   ],
   template: `
     <bake-page-container title="Ingredients" subtitle="Manage ingredients used in recipes and inventory">
@@ -67,9 +66,7 @@ interface PaginatedResponse<T> {
                 <mat-label>Unit</mat-label>
                 <mat-select [(ngModel)]="formUnit" name="unit">
                   <mat-option value="g">g</mat-option>
-                  <mat-option value="kg">kg</mat-option>
                   <mat-option value="ml">ml</mat-option>
-                  <mat-option value="l">l</mat-option>
                   <mat-option value="pcs">pcs</mat-option>
                   <mat-option value="tbsp">tbsp</mat-option>
                   <mat-option value="tsp">tsp</mat-option>
@@ -128,33 +125,16 @@ interface PaginatedResponse<T> {
             <mat-card-title class="list-title">All Ingredients</mat-card-title>
           </mat-card-header>
           <mat-card-content>
-            <mat-nav-list class="ingredient-list">
-              <mat-list-item *ngFor="let ing of ingredients" class="ingredient-item">
-                <mat-icon matListItemIcon class="ing-icon">grain</mat-icon>
-                <div matListItemTitle class="item-content">
-                  <div class="ing-info">
-                    <span class="ing-name">{{ ing.name }}</span>
-                    <span class="ing-description" *ngIf="ing.description">{{ ing.description }}</span>
-                  </div>
-                  <span class="ing-detail">{{ ing.unit }}</span>
-                  <span class="ing-category" *ngIf="ing.category">{{ ing.category }}</span>
-                  <mat-chip-set *ngIf="ing.packages?.length" class="pkg-chips">
-                    <mat-chip *ngFor="let pkg of ing.packages">{{ pkg.name }}</mat-chip>
-                  </mat-chip-set>
-                </div>
-                <div matListItemMeta class="item-actions">
-                  <button mat-icon-button (click)="onEdit(ing)">
-                    <mat-icon>edit</mat-icon>
-                  </button>
-                  <button mat-icon-button color="warn" (click)="onDelete(ing)">
-                    <mat-icon>delete</mat-icon>
-                  </button>
-                </div>
-              </mat-list-item>
-              <div *ngIf="ingredients.length === 0" class="empty-state">
-                No ingredients yet. Add your first ingredient above.
-              </div>
-            </mat-nav-list>
+            <bake-data-table
+              [columns]="tableColumns"
+              [data]="ingredients"
+              [serverSide]="true"
+              [totalItems]="totalIngredients"
+              [pageSize]="pageSize"
+              (pageChange)="onPageChange($event)"
+              (rowAction)="onTableAction($event)"
+              (rowClick)="onEdit($event)"
+            ></bake-data-table>
           </mat-card-content>
         </mat-card>
       </div>
@@ -212,63 +192,6 @@ interface PaginatedResponse<T> {
         color: #ffffff !important;
       }
 
-      .ingredient-list {
-        padding: 0;
-      }
-
-      .ingredient-item {
-        border-bottom: 1px solid #f0e8dc;
-      }
-
-      .ing-icon {
-        color: #8b4513;
-      }
-
-      .item-content {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        flex: 1;
-      }
-
-      .ing-name {
-        font-weight: 500;
-        color: #3e2723;
-      }
-
-      .ing-detail {
-        font-size: 12px;
-        color: #8d6e63;
-      }
-
-      .ing-category {
-        font-size: 11px;
-        color: #5d4037;
-        background-color: #faf3e8;
-        padding: 2px 8px;
-        border-radius: 12px;
-      }
-
-      .ing-info {
-        display: flex;
-        flex-direction: column;
-        gap: 2px;
-      }
-
-      .ing-description {
-        font-size: 11px;
-        color: #8d6e63;
-        font-weight: 400;
-      }
-
-      .pkg-chips {
-        margin-left: 4px;
-      }
-
-      .pkg-chips mat-chip {
-        font-size: 11px;
-      }
-
       .packages-section {
         margin-bottom: 8px;
       }
@@ -324,14 +247,26 @@ interface PaginatedResponse<T> {
 })
 export class IngredientsComponent implements OnInit {
   ingredients: Ingredient[] = [];
+  totalIngredients = 0;
+  currentPage = 1;
+  pageSize = 50;
   editing: Ingredient | null = null;
 
   formName = '';
   formDescription = '';
-  formUnit = 'kg';
+  formUnit = 'g';
   formMinStock = 0;
   formCategory = '';
   formPackages: { name: string; size: number; unit: string }[] = [];
+
+  tableColumns: TableColumn[] = [
+    { key: 'name', label: 'Name', sortable: true },
+    { key: 'description', label: 'Description', sortable: false },
+    { key: 'unit', label: 'Unit', sortable: true, width: '80px' },
+    { key: 'category', label: 'Category', sortable: true, width: '120px' },
+    { key: 'minStockLevel', label: 'Min Stock', type: 'number', sortable: true, width: '100px' },
+    { key: 'actions', label: '', type: 'actions', width: '100px' },
+  ];
 
   ingredientCategories = ['Dry goods', 'Dairy', 'Fats & Oils', 'Sweeteners', 'Spices', 'Fruits', 'Nuts', 'Liquids', 'Other'];
 
@@ -346,14 +281,33 @@ export class IngredientsComponent implements OnInit {
   }
 
   private loadIngredients(): void {
-    this.apiClient.get<PaginatedResponse<Ingredient>>('/v1/ingredients?limit=200').subscribe({
-      next: (res) => {
-        this.ingredients = res.data;
-      },
-      error: () => {
-        this.toastService.error('Failed to load ingredients');
-      },
-    });
+    this.apiClient
+      .get<PaginatedResponse<Ingredient>>(
+        `/v1/ingredients?page=${this.currentPage}&limit=${this.pageSize}`,
+      )
+      .subscribe({
+        next: (res) => {
+          this.ingredients = res.data;
+          this.totalIngredients = res.total;
+        },
+        error: () => {
+          this.toastService.error('Failed to load ingredients');
+        },
+      });
+  }
+
+  onPageChange(event: { page: number; pageSize: number }): void {
+    this.currentPage = event.page;
+    this.pageSize = event.pageSize;
+    this.loadIngredients();
+  }
+
+  onTableAction(event: { action: string; row: Ingredient }): void {
+    if (event.action === 'edit') {
+      this.onEdit(event.row);
+    } else if (event.action === 'delete') {
+      this.onDelete(event.row);
+    }
   }
 
   onSave(): void {
@@ -370,21 +324,19 @@ export class IngredientsComponent implements OnInit {
 
     if (this.editing) {
       this.apiClient.put<Ingredient>(`/v1/ingredients/${this.editing.id}`, dto).subscribe({
-        next: (updated) => {
-          this.ingredients = this.ingredients.map((i) =>
-            i.id === this.editing!.id ? updated : i,
-          );
+        next: () => {
           this.toastService.success('Ingredient updated');
           this.cancelEdit();
+          this.loadIngredients();
         },
         error: () => this.toastService.error('Failed to update ingredient'),
       });
     } else {
       this.apiClient.post<Ingredient>('/v1/ingredients', dto).subscribe({
-        next: (created) => {
-          this.ingredients = [...this.ingredients, created];
+        next: () => {
           this.toastService.success('Ingredient created');
           this.resetForm();
+          this.loadIngredients();
         },
         error: () => this.toastService.error('Failed to create ingredient'),
       });
@@ -421,7 +373,7 @@ export class IngredientsComponent implements OnInit {
   private resetForm(): void {
     this.formName = '';
     this.formDescription = '';
-    this.formUnit = 'kg';
+    this.formUnit = 'g';
     this.formMinStock = 0;
     this.formCategory = '';
     this.formPackages = [];
@@ -439,9 +391,9 @@ export class IngredientsComponent implements OnInit {
         if (confirmed) {
           this.apiClient.delete(`/v1/ingredients/${ing.id}`).subscribe({
             next: () => {
-              this.ingredients = this.ingredients.filter((i) => i.id !== ing.id);
               this.toastService.success('Ingredient deleted');
               if (this.editing?.id === ing.id) this.cancelEdit();
+              this.loadIngredients();
             },
             error: () => this.toastService.error('Failed to delete ingredient'),
           });

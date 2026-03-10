@@ -250,6 +250,7 @@ export class CategoriesComponent implements OnInit {
   formName = '';
   formParentId: string | null = null;
   editingCategory: CategoryView | null = null;
+  private lastUsedParentId: string | null = null;
 
   constructor(
     private confirmService: BakeConfirmationService,
@@ -333,8 +334,9 @@ export class CategoriesComponent implements OnInit {
             },
           ];
           this.toastService.success('Category created successfully');
+          this.lastUsedParentId = this.formParentId;
           this.formName = '';
-          this.formParentId = null;
+          this.formParentId = this.lastUsedParentId;
         },
         error: () => {
           this.toastService.error('Failed to create category');
@@ -352,7 +354,7 @@ export class CategoriesComponent implements OnInit {
   cancelEdit(): void {
     this.editingCategory = null;
     this.formName = '';
-    this.formParentId = null;
+    this.formParentId = this.lastUsedParentId;
   }
 
   onDelete(category: CategoryView): void {

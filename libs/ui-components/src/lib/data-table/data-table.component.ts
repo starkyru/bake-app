@@ -135,6 +135,7 @@ import { TableColumn } from '../models';
         </table>
         <mat-paginator
           [pageSizeOptions]="[10, 25, 50]"
+          [pageSize]="pageSize"
           showFirstLastButtons
         ></mat-paginator>
       </div>
@@ -198,8 +199,12 @@ export class BakeDataTableComponent implements OnInit, OnChanges, AfterViewInit 
   @Input() columns: TableColumn[] = [];
   @Input() data: any[] = [];
   @Input() searchable = true;
+  @Input() serverSide = false;
+  @Input() totalItems = 0;
+  @Input() pageSize = 50;
   @Output() rowClick = new EventEmitter<any>();
   @Output() rowAction = new EventEmitter<{ action: string; row: any }>();
+  @Output() pageChange = new EventEmitter<{ page: number; pageSize: number }>();
 
   @ViewChild(MatPaginator) paginator!: MatPaginator;
   @ViewChild(MatSort) sort!: MatSort;
@@ -218,10 +223,21 @@ export class BakeDataTableComponent implements OnInit, OnChanges, AfterViewInit 
     if (changes['columns']) {
       this.displayedColumns = this.columns.map((c) => c.key);
     }
+    if (changes['totalItems'] && this.paginator && this.serverSide) {
+      this.paginator.length = this.totalItems;
+    }
   }
 
   ngAfterViewInit() {
-    this.dataSource.paginator = this.paginator;
+    if (this.serverSide) {
+      this.paginator.length = this.totalItems;
+      this.paginator.pageSize = this.pageSize;
+      this.paginator.page.subscribe((event) => {
+        this.pageChange.emit({ page: event.pageIndex + 1, pageSize: event.pageSize });
+      });
+    } else {
+      this.dataSource.paginator = this.paginator;
+    }
     this.dataSource.sort = this.sort;
   }
 
