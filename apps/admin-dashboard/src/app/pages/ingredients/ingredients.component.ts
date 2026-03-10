@@ -1,6 +1,6 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
+import { FormsModule, NgForm } from '@angular/forms';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -51,7 +51,7 @@ interface PaginatedResponse<T> {
             </mat-card-title>
           </mat-card-header>
           <mat-card-content>
-            <form (ngSubmit)="onSave()" class="ingredient-form">
+            <form #ingredientForm="ngForm" (ngSubmit)="onSave()" class="ingredient-form">
               <mat-form-field appearance="outline" class="full-width">
                 <mat-label>Name</mat-label>
                 <input matInput [(ngModel)]="formName" name="name" placeholder="e.g., Flour" required />
@@ -76,11 +76,6 @@ interface PaginatedResponse<T> {
               <mat-form-field appearance="outline" class="full-width">
                 <mat-label>Calories (per 100g)</mat-label>
                 <input matInput type="number" [(ngModel)]="formCalories" name="calories" placeholder="e.g., 364" />
-              </mat-form-field>
-
-              <mat-form-field appearance="outline" class="full-width">
-                <mat-label>Min Stock Level</mat-label>
-                <input matInput type="number" [(ngModel)]="formMinStock" name="minStock" placeholder="0" />
               </mat-form-field>
 
               <mat-form-field appearance="outline" class="full-width">
@@ -252,6 +247,7 @@ interface PaginatedResponse<T> {
   ],
 })
 export class IngredientsComponent implements OnInit {
+  @ViewChild('ingredientForm') ingredientForm!: NgForm;
   ingredients: Ingredient[] = [];
   totalIngredients = 0;
   loading = false;
@@ -262,7 +258,6 @@ export class IngredientsComponent implements OnInit {
   formName = '';
   formDescription = '';
   formUnit = 'g';
-  formMinStock = 0;
   formCalories: number | null = null;
   formCategory = '';
   formPackages: { name: string; size: number; unit: string }[] = [];
@@ -273,7 +268,6 @@ export class IngredientsComponent implements OnInit {
     { key: 'unit', label: 'Unit', sortable: true, width: '80px' },
     { key: 'calories', label: 'Calories', type: 'number', sortable: true, width: '90px' },
     { key: 'category', label: 'Category', sortable: true, width: '120px' },
-    { key: 'minStockLevel', label: 'Min Stock', type: 'number', sortable: true, width: '100px' },
     { key: 'actions', label: '', type: 'actions', width: '100px' },
   ];
 
@@ -338,7 +332,6 @@ export class IngredientsComponent implements OnInit {
       unit: this.formUnit,
       description: this.formDescription || undefined,
       calories: this.formCalories ?? undefined,
-      minStockLevel: this.formMinStock,
       category: this.formCategory || undefined,
       packages: this.formPackages.map((p, i) => ({ ...p, sortOrder: i })),
     };
@@ -370,7 +363,6 @@ export class IngredientsComponent implements OnInit {
     this.formDescription = ing.description || '';
     this.formUnit = ing.unit;
     this.formCalories = ing.calories != null ? Number(ing.calories) : null;
-    this.formMinStock = Number(ing.minStockLevel);
     this.formCategory = ing.category || '';
     this.formPackages = (ing.packages || []).map((p) => ({
       name: p.name,
@@ -397,9 +389,15 @@ export class IngredientsComponent implements OnInit {
     this.formDescription = '';
     this.formUnit = 'g';
     this.formCalories = null;
-    this.formMinStock = 0;
     this.formCategory = '';
     this.formPackages = [];
+    this.ingredientForm?.resetForm({
+      name: '',
+      description: '',
+      unit: 'g',
+      calories: null,
+      category: '',
+    });
   }
 
   onDelete(ing: Ingredient): void {

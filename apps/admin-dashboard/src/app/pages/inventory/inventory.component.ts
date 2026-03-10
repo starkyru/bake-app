@@ -3,12 +3,19 @@ import { CommonModule } from '@angular/common';
 import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
+import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import {
   BakeDataTableComponent,
   BakePageContainerComponent,
+  BakeToastService,
   TableColumn,
 } from '@bake-app/ui-components';
 import { ApiClientService } from '@bake-app/api-client';
+import { Ingredient, Location } from '@bake-app/shared-types';
+import {
+  AddInventoryDialogComponent,
+  AddInventoryDialogResult,
+} from './add-inventory-dialog.component';
 
 interface InventoryItem {
   ingredient: string;
@@ -28,11 +35,19 @@ interface InventoryItem {
     MatCardModule,
     MatIconModule,
     MatButtonModule,
+    MatDialogModule,
     BakeDataTableComponent,
     BakePageContainerComponent,
   ],
   template: `
     <bake-page-container title="Inventory" subtitle="Stock levels and ingredient management">
+      <div class="page-actions">
+        <button mat-flat-button class="add-btn" (click)="openAddDialog()">
+          <mat-icon>add</mat-icon>
+          Add Inventory
+        </button>
+      </div>
+
       <!-- Low Stock Alert Banner -->
       <div class="alert-banner" *ngIf="lowStockCount > 0">
         <mat-icon class="alert-banner-icon">warning</mat-icon>
@@ -215,6 +230,18 @@ interface InventoryItem {
         font-weight: 500;
       }
 
+      .page-actions {
+        display: flex;
+        justify-content: flex-end;
+        margin-bottom: 16px;
+      }
+
+      .add-btn {
+        background-color: #8b4513 !important;
+        color: #ffffff !important;
+        border-radius: 8px;
+      }
+
       .table-card {
         border-radius: 12px;
       }
@@ -252,10 +279,35 @@ export class InventoryComponent implements OnInit {
   inventoryData: InventoryItem[] = [];
   loading = false;
 
-  constructor(private apiClient: ApiClientService) {}
+  private ingredients: Ingredient[] = [];
+  private locations: Location[] = [];
+
+  constructor(
+    private apiClient: ApiClientService,
+    private dialog: MatDialog,
+    private toastService: BakeToastService,
+  ) {}
 
   ngOnInit(): void {
     this.loadInventory();
+    this.loadIngredients();
+    this.loadLocations();
+  }
+
+  private loadIngredients(): void {
+    this.apiClient
+      .get<{ data: Ingredient[] }>('/v1/ingredients?limit=100')
+      .subscribe({
+        next: (res) => (this.ingredients = res.data),
+        error: () => {},
+      });
+  }
+
+  private loadLocations(): void {
+    this.apiClient.get<Location[]>('/v1/locations').subscribe({
+      next: (locs) => (this.locations = locs),
+      error: () => {},
+    });
   }
 
   private loadInventory(): void {
@@ -303,6 +355,24 @@ export class InventoryComponent implements OnInit {
 
   get inStockCount(): number {
     return this.inventoryData.filter((i) => i.status === 'In Stock').length;
+  }
+
+  openAddDialog(): void {
+    const ref = this.dialog.open(AddInventoryDialogComponent, {
+      data: { ingredients: this.ingredients, locations: this.locations },
+      width: '500px',
+    });
+    ref.afterClosed().subscribe((result: AddInventoryDialogResult | undefined) => {
+      if (result) {
+        this.apiClient.post('/v1/inventory/delivery', result).subscribe({
+          next: () => {
+            this.toastService.success('Inventory added successfully');
+            this.loadInventory();
+          },
+          error: () => this.toastService.error('Failed to add inventory'),
+        });
+      }
+    });
   }
 
   onRowAction(event: { action: string; row: unknown }): void {
