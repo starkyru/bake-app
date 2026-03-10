@@ -15,6 +15,7 @@ interface InventoryItem {
   category: string;
   quantity: number;
   unit: string;
+  calories: number | null;
   minLevel: number;
   status: string;
 }
@@ -242,6 +243,7 @@ export class InventoryComponent implements OnInit {
     { key: 'category', label: 'Category', type: 'text' },
     { key: 'quantity', label: 'Qty', type: 'number', width: '80px' },
     { key: 'unit', label: 'Unit', type: 'text', width: '80px' },
+    { key: 'calories', label: 'Calories', type: 'number', width: '90px' },
     { key: 'minLevel', label: 'Min Level', type: 'number', width: '100px' },
     { key: 'status', label: 'Status', type: 'badge', width: '120px' },
     { key: 'actions', label: 'Actions', type: 'actions', width: '100px', sortable: false },
@@ -278,6 +280,7 @@ export class InventoryComponent implements OnInit {
               category: String(item['locationName'] || ''),
               quantity: qty,
               unit: String(item['unit'] || ''),
+              calories: item['calories'] != null ? Number(item['calories']) : null,
               minLevel,
               status,
             };

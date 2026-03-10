@@ -19,6 +19,9 @@ export class Ingredient extends BaseEntity {
   @Column({ name: 'min_stock_level', type: 'decimal', precision: 10, scale: 2, default: 0 })
   minStockLevel: number;
 
+  @Column({ type: 'decimal', precision: 10, scale: 2, nullable: true })
+  calories: number;
+
   @Column({ nullable: true })
   category: string;
 

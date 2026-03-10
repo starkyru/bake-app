@@ -74,6 +74,11 @@ interface PaginatedResponse<T> {
               </mat-form-field>
 
               <mat-form-field appearance="outline" class="full-width">
+                <mat-label>Calories (per 100g)</mat-label>
+                <input matInput type="number" [(ngModel)]="formCalories" name="calories" placeholder="e.g., 364" />
+              </mat-form-field>
+
+              <mat-form-field appearance="outline" class="full-width">
                 <mat-label>Min Stock Level</mat-label>
                 <input matInput type="number" [(ngModel)]="formMinStock" name="minStock" placeholder="0" />
               </mat-form-field>
@@ -258,6 +263,7 @@ export class IngredientsComponent implements OnInit {
   formDescription = '';
   formUnit = 'g';
   formMinStock = 0;
+  formCalories: number | null = null;
   formCategory = '';
   formPackages: { name: string; size: number; unit: string }[] = [];
 
@@ -265,6 +271,7 @@ export class IngredientsComponent implements OnInit {
     { key: 'name', label: 'Name', sortable: true },
     { key: 'description', label: 'Description', sortable: false },
     { key: 'unit', label: 'Unit', sortable: true, width: '80px' },
+    { key: 'calories', label: 'Calories', type: 'number', sortable: true, width: '90px' },
     { key: 'category', label: 'Category', sortable: true, width: '120px' },
     { key: 'minStockLevel', label: 'Min Stock', type: 'number', sortable: true, width: '100px' },
     { key: 'actions', label: '', type: 'actions', width: '100px' },
@@ -330,6 +337,7 @@ export class IngredientsComponent implements OnInit {
       name: this.formName,
       unit: this.formUnit,
       description: this.formDescription || undefined,
+      calories: this.formCalories ?? undefined,
       minStockLevel: this.formMinStock,
       category: this.formCategory || undefined,
       packages: this.formPackages.map((p, i) => ({ ...p, sortOrder: i })),
@@ -361,6 +369,7 @@ export class IngredientsComponent implements OnInit {
     this.formName = ing.name;
     this.formDescription = ing.description || '';
     this.formUnit = ing.unit;
+    this.formCalories = ing.calories != null ? Number(ing.calories) : null;
     this.formMinStock = Number(ing.minStockLevel);
     this.formCategory = ing.category || '';
     this.formPackages = (ing.packages || []).map((p) => ({
@@ -387,6 +396,7 @@ export class IngredientsComponent implements OnInit {
     this.formName = '';
     this.formDescription = '';
     this.formUnit = 'g';
+    this.formCalories = null;
     this.formMinStock = 0;
     this.formCategory = '';
     this.formPackages = [];

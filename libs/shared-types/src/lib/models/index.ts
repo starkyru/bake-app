@@ -105,6 +105,7 @@ export interface Ingredient {
   description?: string;
   costPerUnit: number;
   minStockLevel: number;
+  calories?: number;
   category?: string;
   isActive: boolean;
   packages?: IngredientPackage[];

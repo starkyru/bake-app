@@ -229,6 +229,7 @@ export class ReportingService {
       .addSelect('ing.name', 'ingredientName')
       .addSelect('ing.unit', 'unit')
       .addSelect('ing.minStockLevel', 'minStockLevel')
+      .addSelect('ing.calories', 'calories')
       .addSelect('item.quantity', 'quantity')
       .addSelect('item.status', 'status')
       .addSelect('loc.name', 'locationName');
