@@ -10,7 +10,7 @@ import { MatDividerModule } from '@angular/material/divider';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { BakeConfirmationService, BakeToastService } from '@bake-app/ui-components';
 import { ApiClientService } from '@bake-app/api-client';
-import { Category } from '@bake-app/shared-types';
+import { IngredientCategory } from '@bake-app/shared-types';
 
 interface CategoryView {
   id: string;
@@ -187,7 +187,7 @@ export class IngredientCategoriesComponent implements OnInit {
 
   private load(): void {
     this.loading = true;
-    this.apiClient.get<Category[]>('/v1/categories?type=ingredient').subscribe({
+    this.apiClient.get<IngredientCategory[]>('/v1/ingredient-categories').subscribe({
       next: (cats) => {
         this.loading = false;
         this.categories = cats.map((c) => ({ id: c.id, name: c.name }));
@@ -202,11 +202,11 @@ export class IngredientCategoriesComponent implements OnInit {
   onSave(): void {
     if (!this.formName.trim()) return;
 
-    const dto = { name: this.formName, type: 'ingredient' };
+    const dto = { name: this.formName };
 
     if (this.editing) {
       this.apiClient
-        .put<Category>(`/v1/categories/${this.editing.id}`, dto)
+        .put<IngredientCategory>(`/v1/ingredient-categories/${this.editing.id}`, dto)
         .subscribe({
           next: (updated) => {
             this.categories = this.categories.map((c) =>
@@ -218,7 +218,7 @@ export class IngredientCategoriesComponent implements OnInit {
           error: () => this.toastService.error('Failed to update category'),
         });
     } else {
-      this.apiClient.post<Category>('/v1/categories', dto).subscribe({
+      this.apiClient.post<IngredientCategory>('/v1/ingredient-categories', dto).subscribe({
         next: (created) => {
           this.categories = [
             ...this.categories,
@@ -252,7 +252,7 @@ export class IngredientCategoriesComponent implements OnInit {
       })
       .subscribe((confirmed) => {
         if (confirmed) {
-          this.apiClient.delete(`/v1/categories/${category.id}`).subscribe({
+          this.apiClient.delete(`/v1/ingredient-categories/${category.id}`).subscribe({
             next: () => {
               this.categories = this.categories.filter((c) => c.id !== category.id);
               this.toastService.success('Category deleted');

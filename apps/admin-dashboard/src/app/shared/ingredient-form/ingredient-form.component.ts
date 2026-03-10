@@ -16,7 +16,7 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { ApiClientService } from '@bake-app/api-client';
-import { Category } from '@bake-app/shared-types';
+import { IngredientCategory } from '@bake-app/shared-types';
 
 export interface IngredientFormData {
   name: string;
@@ -230,7 +230,7 @@ export class IngredientFormComponent implements OnInit, OnChanges {
     packages: [],
   };
 
-  ingredientCategories: Category[] = [];
+  ingredientCategories: IngredientCategory[] = [];
 
   constructor(private apiClient: ApiClientService) {}
 
@@ -259,7 +259,7 @@ export class IngredientFormComponent implements OnInit, OnChanges {
   }
 
   private loadCategories(): void {
-    this.apiClient.get<Category[]>('/v1/categories?type=ingredient').subscribe({
+    this.apiClient.get<IngredientCategory[]>('/v1/ingredient-categories').subscribe({
       next: (cats) => (this.ingredientCategories = cats),
       error: () => {},
     });

@@ -13,7 +13,7 @@ import {
   TableColumn,
 } from '@bake-app/ui-components';
 import { ApiClientService } from '@bake-app/api-client';
-import { Category, Ingredient } from '@bake-app/shared-types';
+import { IngredientCategory, Ingredient } from '@bake-app/shared-types';
 import {
   IngredientFormComponent,
   IngredientFormData,
@@ -142,7 +142,7 @@ export class IngredientsComponent implements OnInit {
   editing: Ingredient | null = null;
   editFormData: Partial<IngredientFormData> | null = null;
   filterCategory = '';
-  ingredientCategories: Category[] = [];
+  ingredientCategories: IngredientCategory[] = [];
 
   tableColumns: TableColumn[] = [
     { key: 'name', label: 'Name', sortable: true },
@@ -171,7 +171,7 @@ export class IngredientsComponent implements OnInit {
   }
 
   private loadCategories(): void {
-    this.apiClient.get<Category[]>('/v1/categories?type=ingredient').subscribe({
+    this.apiClient.get<IngredientCategory[]>('/v1/ingredient-categories').subscribe({
       next: (cats) => (this.ingredientCategories = cats),
       error: () => {},
     });
