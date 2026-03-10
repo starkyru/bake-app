@@ -6,6 +6,7 @@ import { MatInputModule } from '@angular/material/input';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
+import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { BakeToastService } from '@bake-app/ui-components';
 import { ApiClientService } from '@bake-app/api-client';
 
@@ -20,8 +21,10 @@ import { ApiClientService } from '@bake-app/api-client';
     MatSlideToggleModule,
     MatButtonModule,
     MatIconModule,
+    MatProgressBarModule,
   ],
   template: `
+    <mat-progress-bar *ngIf="loading" mode="indeterminate" class="settings-loading"></mat-progress-bar>
     <div class="settings-form">
       <mat-form-field appearance="outline" class="full-width">
         <mat-label>Tax Name</mat-label>
@@ -75,10 +78,14 @@ import { ApiClientService } from '@bake-app/api-client';
         background-color: #8b4513 !important;
         color: #ffffff !important;
       }
+      .settings-loading {
+        margin-bottom: 8px;
+      }
     `,
   ],
 })
 export class TaxSettingsComponent implements OnInit {
+  loading = false;
   tax = {
     name: 'VAT',
     rate: 12,
@@ -91,8 +98,10 @@ export class TaxSettingsComponent implements OnInit {
   ) {}
 
   ngOnInit(): void {
+    this.loading = true;
     this.apiClient.get<Record<string, unknown>>('/v1/settings/tax').subscribe({
       next: (settings) => {
+        this.loading = false;
         if (settings && Object.keys(settings).length) {
           this.tax = {
             name: (settings['taxName'] as string) || this.tax.name,
@@ -104,7 +113,10 @@ export class TaxSettingsComponent implements OnInit {
           };
         }
       },
-      error: () => this.toastService.error('Failed to load tax settings'),
+      error: () => {
+        this.loading = false;
+        this.toastService.error('Failed to load tax settings');
+      },
     });
   }
 

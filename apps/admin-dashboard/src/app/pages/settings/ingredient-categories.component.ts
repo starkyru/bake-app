@@ -7,6 +7,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatListModule } from '@angular/material/list';
 import { MatDividerModule } from '@angular/material/divider';
+import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { BakeConfirmationService, BakeToastService } from '@bake-app/ui-components';
 import { ApiClientService } from '@bake-app/api-client';
 import { Category } from '@bake-app/shared-types';
@@ -28,8 +29,10 @@ interface CategoryView {
     MatIconModule,
     MatListModule,
     MatDividerModule,
+    MatProgressBarModule,
   ],
   template: `
+    <mat-progress-bar *ngIf="loading" mode="indeterminate" class="settings-loading"></mat-progress-bar>
     <div class="category-layout">
       <div class="category-form-section">
         <div class="section-title">
@@ -160,10 +163,14 @@ interface CategoryView {
           padding-left: 0;
         }
       }
+      .settings-loading {
+        margin-bottom: 8px;
+      }
     `,
   ],
 })
 export class IngredientCategoriesComponent implements OnInit {
+  loading = false;
   categories: CategoryView[] = [];
   formName = '';
   editing: CategoryView | null = null;
@@ -179,11 +186,16 @@ export class IngredientCategoriesComponent implements OnInit {
   }
 
   private load(): void {
+    this.loading = true;
     this.apiClient.get<Category[]>('/v1/categories?type=ingredient').subscribe({
       next: (cats) => {
+        this.loading = false;
         this.categories = cats.map((c) => ({ id: c.id, name: c.name }));
       },
-      error: () => this.toastService.error('Failed to load ingredient categories'),
+      error: () => {
+        this.loading = false;
+        this.toastService.error('Failed to load ingredient categories');
+      },
     });
   }
 

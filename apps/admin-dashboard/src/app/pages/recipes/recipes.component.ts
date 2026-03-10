@@ -53,6 +53,7 @@ interface RecipeData {
       <bake-data-table
         [columns]="columns"
         [data]="recipes"
+        [loading]="loading"
         (rowClick)="onRowClick($event)"
         (rowAction)="onRowAction($event)"
       ></bake-data-table>
@@ -83,6 +84,7 @@ export class RecipesComponent implements OnInit {
   ];
 
   recipes: RecipeData[] = [];
+  loading = false;
 
   constructor(
     private router: Router,
@@ -96,6 +98,7 @@ export class RecipesComponent implements OnInit {
   }
 
   private loadRecipes(): void {
+    this.loading = true;
     this.apiClient
       .get<PaginatedResponse<Recipe>>('/v1/recipes?limit=100')
       .subscribe({
@@ -109,9 +112,11 @@ export class RecipesComponent implements OnInit {
             version: `v${r.currentVersion}.0`,
             actions: '',
           }));
+          this.loading = false;
         },
         error: () => {
           this.toastService.error('Failed to load recipes');
+          this.loading = false;
         },
       });
   }

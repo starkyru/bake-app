@@ -66,6 +66,7 @@ interface PaginatedResponse<T> {
       <bake-data-table
         [columns]="columns"
         [data]="orders"
+        [loading]="loading"
         [searchable]="true"
         (rowClick)="onRowClick($event)"
         (rowAction)="onRowAction($event)"

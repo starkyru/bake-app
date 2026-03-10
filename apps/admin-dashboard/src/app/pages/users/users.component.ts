@@ -261,6 +261,7 @@ export class UserDialogComponent {
       <bake-data-table
         [columns]="columns"
         [data]="users"
+        [loading]="loading"
         (rowAction)="onRowAction($event)"
       ></bake-data-table>
     </bake-page-container>
@@ -301,6 +302,7 @@ export class UsersComponent implements OnInit {
   ];
 
   users: UserData[] = [];
+  loading = false;
   ownerCount = 0;
 
   constructor(
@@ -315,6 +317,7 @@ export class UsersComponent implements OnInit {
   }
 
   private loadUsers(): void {
+    this.loading = true;
     this.apiClient
       .get<PaginatedResponse<User>>('/v1/users?limit=100')
       .subscribe({
@@ -323,9 +326,11 @@ export class UsersComponent implements OnInit {
           this.ownerCount = this.users.filter(
             (u) => u.role.toLowerCase() === 'owner',
           ).length;
+          this.loading = false;
         },
         error: () => {
           this.toastService.error('Failed to load users');
+          this.loading = false;
         },
       });
   }

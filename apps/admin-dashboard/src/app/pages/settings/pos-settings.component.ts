@@ -6,6 +6,7 @@ import { MatInputModule } from '@angular/material/input';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
+import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { BakeToastService } from '@bake-app/ui-components';
 import { ApiClientService } from '@bake-app/api-client';
 import { forkJoin } from 'rxjs';
@@ -21,8 +22,10 @@ import { forkJoin } from 'rxjs';
     MatSlideToggleModule,
     MatButtonModule,
     MatIconModule,
+    MatProgressBarModule,
   ],
   template: `
+    <mat-progress-bar *ngIf="loading" mode="indeterminate" class="settings-loading"></mat-progress-bar>
     <div class="settings-form">
       <mat-form-field appearance="outline" class="full-width">
         <mat-label>Receipt Header</mat-label>
@@ -69,10 +72,14 @@ import { forkJoin } from 'rxjs';
         background-color: #8b4513 !important;
         color: #ffffff !important;
       }
+      .settings-loading {
+        margin-bottom: 8px;
+      }
     `,
   ],
 })
 export class PosSettingsComponent implements OnInit {
+  loading = false;
   pos = {
     receiptHeader: '',
     autoPrint: true,
@@ -84,11 +91,13 @@ export class PosSettingsComponent implements OnInit {
   ) {}
 
   ngOnInit(): void {
+    this.loading = true;
     forkJoin({
       general: this.apiClient.get<Record<string, unknown>>('/v1/settings/general'),
       pos: this.apiClient.get<Record<string, unknown>>('/v1/settings/pos'),
     }).subscribe({
       next: ({ general, pos }) => {
+        this.loading = false;
         const name = (general?.['bakeryName'] as string) || '';
         const address = (general?.['address'] as string) || '';
         const phone = (general?.['phone'] as string) || '';
@@ -101,7 +110,10 @@ export class PosSettingsComponent implements OnInit {
           this.pos.autoPrint = pos['autoPrint'] as boolean;
         }
       },
-      error: () => this.toastService.error('Failed to load POS settings'),
+      error: () => {
+        this.loading = false;
+        this.toastService.error('Failed to load POS settings');
+      },
     });
   }
 

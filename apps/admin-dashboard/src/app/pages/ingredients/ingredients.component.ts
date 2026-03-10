@@ -128,6 +128,7 @@ interface PaginatedResponse<T> {
             <bake-data-table
               [columns]="tableColumns"
               [data]="ingredients"
+              [loading]="loading"
               [serverSide]="true"
               [totalItems]="totalIngredients"
               [pageSize]="pageSize"
@@ -248,6 +249,7 @@ interface PaginatedResponse<T> {
 export class IngredientsComponent implements OnInit {
   ingredients: Ingredient[] = [];
   totalIngredients = 0;
+  loading = false;
   currentPage = 1;
   pageSize = 50;
   editing: Ingredient | null = null;
@@ -289,6 +291,7 @@ export class IngredientsComponent implements OnInit {
   }
 
   private loadIngredients(): void {
+    this.loading = true;
     this.apiClient
       .get<PaginatedResponse<Ingredient>>(
         `/v1/ingredients?page=${this.currentPage}&limit=${this.pageSize}`,
@@ -297,9 +300,11 @@ export class IngredientsComponent implements OnInit {
         next: (res) => {
           this.ingredients = res.data;
           this.totalIngredients = res.total;
+          this.loading = false;
         },
         error: () => {
           this.toastService.error('Failed to load ingredients');
+          this.loading = false;
         },
       });
   }

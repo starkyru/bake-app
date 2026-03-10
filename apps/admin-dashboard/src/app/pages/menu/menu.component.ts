@@ -410,6 +410,7 @@ export class MenuDialogComponent {
       <bake-data-table
         [columns]="columns"
         [data]="items"
+        [loading]="loading"
         (rowAction)="onRowAction($event)"
       ></bake-data-table>
     </bake-page-container>
@@ -429,6 +430,8 @@ export class MenuDialogComponent {
   ],
 })
 export class MenuComponent implements OnInit {
+  loading = false;
+
   columns: TableColumn[] = [
     { key: 'name', label: 'Name', sortable: true },
     { key: 'sku', label: 'SKU', sortable: true },
@@ -507,14 +510,17 @@ export class MenuComponent implements OnInit {
   }
 
   private loadItems(): void {
+    this.loading = true;
     this.apiClient
       .get<PaginatedResponse<SharedProduct>>('/v1/products?limit=100')
       .subscribe({
         next: (response) => {
           this.items = response.data.map((p) => this.mapItem(p));
+          this.loading = false;
         },
         error: () => {
           this.toastService.error('Failed to load menu items');
+          this.loading = false;
         },
       });
   }

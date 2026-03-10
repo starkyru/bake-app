@@ -63,6 +63,10 @@ All imports use `@bake-app/` prefix: `@bake-app/shared-types`, `@bake-app/api-cl
 
 ESLint enforces Nx module boundaries: each app scope (`scope:api`, `scope:pos-app`, `scope:admin`, `scope:kitchen`, `scope:manager`) can only depend on `scope:shared` libraries. Apps cannot import from each other.
 
+## UI Conventions
+
+- **Loading states**: All data tables and settings panels must show a `MatProgressBar` (indeterminate) while data is loading. For `BakeDataTableComponent`, pass `[loading]="loading"`. For settings sub-components, add `<mat-progress-bar *ngIf="loading" mode="indeterminate">` above the form. Set `loading = true` before API calls, `loading = false` in both `next` and `error` callbacks.
+
 ## Code Style
 
 - Prettier: semicolons, single quotes, 2-space indent, 100 char line width, ES5 trailing commas

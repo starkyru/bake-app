@@ -5,6 +5,7 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
+import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { BakeToastService } from '@bake-app/ui-components';
 import { ApiClientService } from '@bake-app/api-client';
 
@@ -18,8 +19,10 @@ import { ApiClientService } from '@bake-app/api-client';
     MatInputModule,
     MatButtonModule,
     MatIconModule,
+    MatProgressBarModule,
   ],
   template: `
+    <mat-progress-bar *ngIf="loading" mode="indeterminate" class="settings-loading"></mat-progress-bar>
     <div class="settings-form">
       <mat-form-field appearance="outline" class="full-width">
         <mat-label>Bakery Name</mat-label>
@@ -72,10 +75,14 @@ import { ApiClientService } from '@bake-app/api-client';
         background-color: #8b4513 !important;
         color: #ffffff !important;
       }
+      .settings-loading {
+        margin-bottom: 8px;
+      }
     `,
   ],
 })
 export class GeneralSettingsComponent implements OnInit {
+  loading = false;
   general = {
     bakeryName: '',
     address: '',
@@ -88,8 +95,10 @@ export class GeneralSettingsComponent implements OnInit {
   ) {}
 
   ngOnInit(): void {
+    this.loading = true;
     this.apiClient.get<Record<string, unknown>>('/v1/settings/general').subscribe({
       next: (settings) => {
+        this.loading = false;
         if (settings && Object.keys(settings).length) {
           this.general = {
             bakeryName: (settings['bakeryName'] as string) || this.general.bakeryName,
@@ -98,7 +107,10 @@ export class GeneralSettingsComponent implements OnInit {
           };
         }
       },
-      error: () => this.toastService.error('Failed to load general settings'),
+      error: () => {
+        this.loading = false;
+        this.toastService.error('Failed to load general settings');
+      },
     });
   }
 

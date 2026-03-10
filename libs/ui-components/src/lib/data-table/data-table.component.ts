@@ -19,6 +19,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { TableColumn } from '../models';
 
 @Component({
@@ -35,6 +36,7 @@ import { TableColumn } from '../models';
     MatButtonModule,
     MatChipsModule,
     MatTooltipModule,
+    MatProgressBarModule,
   ],
   template: `
     <div class="table-container">
@@ -54,6 +56,7 @@ import { TableColumn } from '../models';
         </div>
       </div>
       <div class="mat-elevation-z2 table-wrapper">
+        <mat-progress-bar *ngIf="loading" mode="indeterminate" class="table-loading-bar"></mat-progress-bar>
         <table mat-table [dataSource]="dataSource" matSort>
           <ng-container *ngFor="let col of columns" [matColumnDef]="col.key">
             <th
@@ -188,6 +191,16 @@ import { TableColumn } from '../models';
         background-color: #ffebee !important;
         color: #c62828 !important;
       }
+      .table-loading-bar {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        z-index: 1;
+      }
+      .table-wrapper {
+        position: relative;
+      }
       tr.mat-mdc-row:hover {
         background-color: #faf3e8;
         cursor: pointer;
@@ -202,6 +215,7 @@ export class BakeDataTableComponent implements OnInit, OnChanges, AfterViewInit 
   @Input() serverSide = false;
   @Input() totalItems = 0;
   @Input() pageSize = 50;
+  @Input() loading = false;
   @Output() rowClick = new EventEmitter<any>();
   @Output() rowAction = new EventEmitter<{ action: string; row: any }>();
   @Output() pageChange = new EventEmitter<{ page: number; pageSize: number }>();

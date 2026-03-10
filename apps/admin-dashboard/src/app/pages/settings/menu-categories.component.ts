@@ -8,6 +8,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatListModule } from '@angular/material/list';
 import { MatDividerModule } from '@angular/material/divider';
+import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { BakeConfirmationService, BakeToastService } from '@bake-app/ui-components';
 import { ApiClientService } from '@bake-app/api-client';
 import { Category, Product } from '@bake-app/shared-types';
@@ -34,8 +35,10 @@ interface CategoryView {
     MatIconModule,
     MatListModule,
     MatDividerModule,
+    MatProgressBarModule,
   ],
   template: `
+    <mat-progress-bar *ngIf="loading" mode="indeterminate" class="settings-loading"></mat-progress-bar>
     <div class="category-layout">
       <div class="category-form-section">
         <div class="section-title">
@@ -225,10 +228,14 @@ interface CategoryView {
           padding-left: 0;
         }
       }
+      .settings-loading {
+        margin-bottom: 8px;
+      }
     `,
   ],
 })
 export class MenuCategoriesComponent implements OnInit {
+  loading = false;
   categories: CategoryView[] = [];
   formName = '';
   formParentId = '';
@@ -246,11 +253,13 @@ export class MenuCategoriesComponent implements OnInit {
   }
 
   private load(): void {
+    this.loading = true;
     forkJoin({
       categories: this.apiClient.get<Category[]>('/v1/categories?type=menu'),
       products: this.apiClient.get<{ data: Product[] }>('/v1/products?limit=100'),
     }).subscribe({
       next: ({ categories: cats, products: productsRes }) => {
+        this.loading = false;
         const countMap: Record<string, number> = {};
         for (const product of productsRes.data) {
           if (product.categoryId) {
@@ -264,7 +273,10 @@ export class MenuCategoriesComponent implements OnInit {
           productCount: countMap[c.id] || 0,
         }));
       },
-      error: () => this.toastService.error('Failed to load menu categories'),
+      error: () => {
+        this.loading = false;
+        this.toastService.error('Failed to load menu categories');
+      },
     });
   }
 

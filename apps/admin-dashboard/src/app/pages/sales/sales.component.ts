@@ -83,6 +83,7 @@ interface SalesItem {
           <bake-data-table
             [columns]="topColumns"
             [data]="topProducts"
+            [loading]="loading"
             [searchable]="true"
           ></bake-data-table>
         </mat-card-content>
@@ -159,6 +160,8 @@ interface SalesItem {
   ],
 })
 export class SalesComponent implements OnInit {
+  loading = false;
+
   kpis = {
     totalSales: '$0',
     itemsSold: '0',
@@ -215,6 +218,7 @@ export class SalesComponent implements OnInit {
   }
 
   private loadTopProducts(): void {
+    this.loading = true;
     this.apiClient
       .get<Array<Record<string, unknown>>>('/v1/reports/sales/top-products')
       .subscribe({
@@ -231,6 +235,10 @@ export class SalesComponent implements OnInit {
           this.bottomProducts = items.length > 10
             ? items.slice(-5).map((item, i) => ({ ...item, rank: i + 1, trend: 'Pending' }))
             : [];
+          this.loading = false;
+        },
+        error: () => {
+          this.loading = false;
         },
       });
   }

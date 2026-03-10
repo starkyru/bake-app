@@ -89,6 +89,7 @@ interface IngredientRequirement {
           <bake-data-table
             [columns]="productionColumns"
             [data]="productionData"
+            [loading]="loading"
             [searchable]="true"
           ></bake-data-table>
         </mat-card-content>
@@ -161,6 +162,8 @@ interface IngredientRequirement {
   ],
 })
 export class ProductionComponent implements OnInit {
+  loading = false;
+
   kpis = {
     planned: '0',
     completed: '0',
@@ -199,6 +202,7 @@ export class ProductionComponent implements OnInit {
   }
 
   private loadProductionPlans(): void {
+    this.loading = true;
     const todayStr = new Date().toISOString().split('T')[0];
     this.apiClient
       .get<ProductionPlan[]>(`/v1/production/plans?date=${todayStr}`)
@@ -212,6 +216,10 @@ export class ProductionComponent implements OnInit {
           }
           this.productionData = items;
           this.updateKpis(items);
+          this.loading = false;
+        },
+        error: () => {
+          this.loading = false;
         },
       });
   }

@@ -158,6 +158,7 @@ interface FoodCostItem {
           <bake-data-table
             [columns]="foodCostColumns"
             [data]="foodCostData"
+            [loading]="loading"
             [searchable]="false"
           ></bake-data-table>
         </mat-card-content>
@@ -368,6 +369,8 @@ interface FoodCostItem {
   ],
 })
 export class FinanceComponent implements OnInit {
+  loading = false;
+
   kpis = {
     revenue: '$0',
     revenueTrend: 0,
@@ -490,6 +493,7 @@ export class FinanceComponent implements OnInit {
   }
 
   private loadSalesByCategory(): void {
+    this.loading = true;
     forkJoin({
       sales: this.apiClient.get<Array<Record<string, unknown>>>('/v1/reports/sales/by-category'),
       products: this.apiClient.get<Record<string, unknown>>('/v1/products?limit=200'),
@@ -527,6 +531,10 @@ export class FinanceComponent implements OnInit {
             margin: 100 - foodCostPct,
           };
         });
+        this.loading = false;
+      },
+      error: () => {
+        this.loading = false;
       },
     });
   }

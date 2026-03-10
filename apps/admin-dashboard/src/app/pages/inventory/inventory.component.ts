@@ -103,6 +103,7 @@ interface InventoryItem {
           <bake-data-table
             [columns]="columns"
             [data]="inventoryData"
+            [loading]="loading"
             [searchable]="true"
             (rowAction)="onRowAction($event)"
           ></bake-data-table>
@@ -247,6 +248,7 @@ export class InventoryComponent implements OnInit {
   ];
 
   inventoryData: InventoryItem[] = [];
+  loading = false;
 
   constructor(private apiClient: ApiClientService) {}
 
@@ -255,6 +257,7 @@ export class InventoryComponent implements OnInit {
   }
 
   private loadInventory(): void {
+    this.loading = true;
     this.apiClient
       .get<Record<string, unknown>>('/v1/reports/inventory/status')
       .subscribe({
@@ -279,6 +282,10 @@ export class InventoryComponent implements OnInit {
               status,
             };
           });
+          this.loading = false;
+        },
+        error: () => {
+          this.loading = false;
         },
       });
   }
