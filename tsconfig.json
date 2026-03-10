@@ -27,5 +27,8 @@
       "@bake-app/state": ["libs/state/src/index.ts"]
     }
   },
+  "angularCompilerOptions": {
+    "strictTemplates": true
+  },
   "exclude": ["node_modules", "tmp"]
 }

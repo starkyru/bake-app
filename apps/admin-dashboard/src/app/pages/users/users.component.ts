@@ -290,12 +290,18 @@ export class UsersComponent implements OnInit {
       actions: [
         { action: 'password', icon: 'key', tooltip: 'Change password' },
         { action: 'edit', icon: 'edit', tooltip: 'Edit user' },
-        { action: 'delete', icon: 'delete', color: 'warn', tooltip: 'Delete user' },
+        {
+          action: 'delete', icon: 'delete', color: 'warn', tooltip: 'Delete user',
+          disabledWhen: (row: UserData) =>
+            row.role.toLowerCase() === 'owner' && this.ownerCount <= 1,
+          disabledTooltip: 'You can\'t remove the only owner',
+        },
       ],
     },
   ];
 
   users: UserData[] = [];
+  ownerCount = 0;
 
   constructor(
     private dialog: MatDialog,
@@ -314,6 +320,9 @@ export class UsersComponent implements OnInit {
       .subscribe({
         next: (response) => {
           this.users = response.data.map((u) => this.mapUser(u));
+          this.ownerCount = this.users.filter(
+            (u) => u.role.toLowerCase() === 'owner',
+          ).length;
         },
         error: () => {
           this.toastService.error('Failed to load users');
@@ -430,6 +439,9 @@ export class UsersComponent implements OnInit {
             this.apiClient.delete(`/v1/users/${event.row.id}`).subscribe({
               next: () => {
                 this.users = this.users.filter((u) => u.id !== event.row.id);
+                this.ownerCount = this.users.filter(
+                  (u) => u.role.toLowerCase() === 'owner',
+                ).length;
                 this.toastService.success('User deleted successfully');
               },
               error: () => {

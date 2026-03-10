@@ -12,6 +12,8 @@ export interface TableAction {
   icon: string;
   color?: string;
   tooltip?: string;
+  disabledWhen?: (row: any) => boolean;
+  disabledTooltip?: string;
 }
 
 export interface TableColumn {

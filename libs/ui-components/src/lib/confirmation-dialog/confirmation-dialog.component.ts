@@ -34,6 +34,14 @@ import { ConfirmationDialogData } from '../models';
   `,
   styles: [
     `
+      :host {
+        display: block;
+      }
+
+      mat-dialog-content {
+        padding: 0 24px;
+      }
+
       mat-dialog-content p {
         font-size: 14px;
         color: #607d8b;
@@ -41,7 +49,7 @@ import { ConfirmationDialogData } from '../models';
       }
 
       mat-dialog-actions {
-        padding: 8px 0;
+        padding: 8px 24px;
       }
     `,
   ],

@@ -18,6 +18,7 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatChipsModule } from '@angular/material/chips';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { TableColumn } from '../models';
 
 @Component({
@@ -33,6 +34,7 @@ import { TableColumn } from '../models';
     MatIconModule,
     MatButtonModule,
     MatChipsModule,
+    MatTooltipModule,
   ],
   template: `
     <div class="table-container">
@@ -88,7 +90,8 @@ import { TableColumn } from '../models';
                       *ngFor="let act of col.actions"
                       mat-icon-button
                       [color]="act.color || ''"
-                      [title]="act.tooltip || act.action"
+                      [matTooltip]="(act.disabledWhen && act.disabledWhen(row) && act.disabledTooltip) ? act.disabledTooltip : (act.tooltip || act.action)"
+                      [disabled]="act.disabledWhen ? act.disabledWhen(row) : false"
                       (click)="
                         rowAction.emit({ action: act.action, row: row });
                         $event.stopPropagation()
