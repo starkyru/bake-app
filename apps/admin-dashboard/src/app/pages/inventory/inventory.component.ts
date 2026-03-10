@@ -269,7 +269,7 @@ export class InventoryComponent implements OnInit {
   columns: TableColumn[] = [
     { key: 'title', label: 'Title', type: 'text' },
     { key: 'ingredient', label: 'Ingredient', type: 'text' },
-    { key: 'category', label: 'Category', type: 'text' },
+    { key: 'category', label: 'Category', type: 'badge', sortable: true},
     { key: 'quantity', label: 'Qty', type: 'number', width: '80px' },
     { key: 'unit', label: 'Unit', type: 'text', width: '80px' },
     { key: 'calories', label: 'Calories', type: 'number', width: '90px' },

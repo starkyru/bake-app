@@ -175,7 +175,7 @@ export class ProductionComponent implements OnInit {
   productionColumns: TableColumn[] = [
     { key: 'time', label: 'Time', type: 'text', width: '90px' },
     { key: 'recipe', label: 'Recipe', type: 'text' },
-    { key: 'category', label: 'Category', type: 'text', width: '110px' },
+    { key: 'category', label: 'Category', type: 'badge', sortable: true, width: '110px' },
     { key: 'planned', label: 'Planned Qty', type: 'number', width: '110px' },
     { key: 'completed', label: 'Completed', type: 'number', width: '100px' },
     { key: 'status', label: 'Status', type: 'badge', width: '130px' },

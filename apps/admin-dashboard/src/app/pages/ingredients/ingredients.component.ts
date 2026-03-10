@@ -155,7 +155,7 @@ export class IngredientsComponent implements OnInit {
       sortable: true,
       width: '90px',
     },
-    { key: 'category', label: 'Category', sortable: true, width: '120px' },
+    { key: 'category', label: 'Category', type: 'badge',  sortable: true, width: '120px' },
     { key: 'actions', label: '', type: 'actions', width: '100px' },
   ];
 

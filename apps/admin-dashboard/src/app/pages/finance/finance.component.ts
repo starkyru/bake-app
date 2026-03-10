@@ -387,7 +387,7 @@ export class FinanceComponent implements OnInit {
   revenuePeriods: Array<{ label: string; revenue: number; change: number; icon: string }> = [];
 
   foodCostColumns: TableColumn[] = [
-    { key: 'category', label: 'Category', type: 'text' },
+    { key: 'category', label: 'Category', type: 'badge', sortable: true },
     { key: 'revenue', label: 'Revenue', type: 'currency' },
     { key: 'cost', label: 'Cost', type: 'currency' },
     { key: 'foodCost', label: 'Food Cost %', type: 'text' },

@@ -172,7 +172,7 @@ export class SalesComponent implements OnInit {
   topColumns: TableColumn[] = [
     { key: 'rank', label: '#', type: 'number', width: '60px' },
     { key: 'product', label: 'Product', type: 'text' },
-    { key: 'category', label: 'Category', type: 'text' },
+    { key: 'category', label: 'Category', type: 'badge', sortable: true },
     { key: 'qtySold', label: 'Qty Sold', type: 'number', width: '100px' },
     { key: 'revenue', label: 'Revenue', type: 'currency' },
     { key: 'trend', label: 'Trend', type: 'badge', width: '100px' },
@@ -181,7 +181,7 @@ export class SalesComponent implements OnInit {
   bottomColumns: TableColumn[] = [
     { key: 'rank', label: '#', type: 'number', width: '60px' },
     { key: 'product', label: 'Product', type: 'text' },
-    { key: 'category', label: 'Category', type: 'text' },
+    { key: 'category', label: 'Category', type: 'badge', sortable: true },
     { key: 'qtySold', label: 'Qty Sold', type: 'number', width: '100px' },
     { key: 'revenue', label: 'Revenue', type: 'currency' },
     { key: 'trend', label: 'Trend', type: 'badge', width: '100px' },
