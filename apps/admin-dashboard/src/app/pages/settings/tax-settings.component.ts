@@ -30,7 +30,14 @@ import { ApiClientService } from '@bake-app/api-client';
 
       <mat-form-field appearance="outline" class="full-width">
         <mat-label>Tax Rate, %</mat-label>
-        <input matInput type="number" [(ngModel)]="tax.rate" placeholder="Tax percentage" />
+        <input
+              matInput
+              type="text"
+              inputmode="decimal"
+              [(ngModel)]="tax.rate"
+              placeholder="Tax percentage"
+              (keydown)="filterKey($event)"
+            />
       </mat-form-field>
 
       <mat-slide-toggle [(ngModel)]="tax.included" color="primary" class="toggle-field">
@@ -99,6 +106,14 @@ export class TaxSettingsComponent implements OnInit {
       },
       error: () => this.toastService.error('Failed to load tax settings'),
     });
+  }
+
+  filterKey(event: KeyboardEvent): void {
+    const allowed = ['Backspace', 'Tab', 'ArrowLeft', 'ArrowRight', 'Delete', 'Home', 'End'];
+    if (allowed.includes(event.key)) return;
+    if (event.key === '.' && !String(this.tax.rate).includes('.')) return;
+    if (event.key >= '0' && event.key <= '9') return;
+    event.preventDefault();
   }
 
   onSave(): void {
