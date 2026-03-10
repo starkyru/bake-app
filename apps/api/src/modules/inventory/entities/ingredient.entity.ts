@@ -1,6 +1,7 @@
-import { Entity, Column, OneToMany } from 'typeorm';
+import { Entity, Column, OneToMany, ManyToOne, JoinColumn } from 'typeorm';
 import { BaseEntity } from '../../../common/entities/base.entity';
 import { IngredientPackage } from './ingredient-package.entity';
+import { IngredientCategory } from './ingredient-category.entity';
 
 @Entity('ingredients')
 export class Ingredient extends BaseEntity {
@@ -24,6 +25,13 @@ export class Ingredient extends BaseEntity {
 
   @Column({ nullable: true })
   category: string;
+
+  @ManyToOne(() => IngredientCategory, (cat) => cat.ingredients, { nullable: true })
+  @JoinColumn({ name: 'category_id' })
+  ingredientCategory: IngredientCategory;
+
+  @Column({ name: 'category_id', nullable: true })
+  categoryId: string;
 
   @Column({ name: 'is_active', default: true })
   isActive: boolean;

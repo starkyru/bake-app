@@ -1122,25 +1122,25 @@
             <div class="form-grid" style="margin-top:4px">
               <div class="form-group">
                 <label class="form-label">Bakery Name</label>
-                <input class="form-input" type="text" value="Sweet Bake Almaty">
+                <input class="form-input" type="text" value="Sweet Bake">
               </div>
               <div class="form-group">
                 <label class="form-label">Phone</label>
-                <input class="form-input" type="text" value="+7 (727) 312-45-67">
+                <input class="form-input" type="text" value="">
               </div>
               <div class="form-group full">
                 <label class="form-label">Address</label>
-                <input class="form-input" type="text" value="ul. Abay 52, Almaty, Kazakhstan">
+                <input class="form-input" type="text" value="">
               </div>
               <div class="form-group">
                 <label class="form-label">Email</label>
-                <input class="form-input" type="email" value="info@sweetbake.kz">
+                <input class="form-input" type="email" value="">
               </div>
               <div class="form-group">
                 <label class="form-label">Timezone</label>
                 <select class="form-select">
-                  <option>Asia/Almaty (UTC+6)</option>
-                  <option>Asia/Aqtau (UTC+5)</option>
+                  <option>America/Los_Angeles (UTC-8)</option>
+                  <option>America/Denver (UTC-7)</option>
                 </select>
               </div>
               <div class="form-group full">
@@ -1194,8 +1194,7 @@
             <div class="form-grid" style="margin-top:4px">
               <div class="form-group full">
                 <label class="form-label">Receipt Header Text</label>
-                <textarea class="form-textarea" style="min-height:70px">Sweet Bake Almaty
-ul. Abay 52 | +7 (727) 312-45-67
+                <textarea class="form-textarea" style="min-height:70px"> 
 Thank you for your purchase!</textarea>
               </div>
               <div class="form-group" style="flex-direction:row;align-items:center;gap:12px;">
@@ -1541,14 +1540,14 @@ Thank you for your purchase!</textarea>
   // ==================== DATA ====================
 
   const users = [
-    { name: 'Aidar Kozhanov', email: 'aidar@sweetbake.kz', role: 'Owner', location: 'Main Bakery - Abay', active: true },
-    { name: 'Marat Suleimenov', email: 'marat@sweetbake.kz', role: 'Manager', location: 'Main Bakery - Abay', active: true },
-    { name: 'Dana Ospanova', email: 'dana@sweetbake.kz', role: 'Chef', location: 'Production Facility', active: true },
-    { name: 'Nurlan Temirov', email: 'nurlan@sweetbake.kz', role: 'Baker', location: 'Production Facility', active: true },
-    { name: 'Asel Muratova', email: 'asel@sweetbake.kz', role: 'Cashier', location: 'Branch - Dostyk Plaza', active: true },
-    { name: 'Timur Kairatov', email: 'timur@sweetbake.kz', role: 'Barista', location: 'Branch - Mega Center', active: true },
-    { name: 'Zhanna Serikova', email: 'zhanna@sweetbake.kz', role: 'Accountant', location: 'Main Bakery - Abay', active: true },
-    { name: 'Bekzat Aliev', email: 'bekzat@sweetbake.kz', role: 'Warehouse', location: 'Central Warehouse', active: false },
+    { name: 'James Mitchell', email: 'james@sweetbake.com', role: 'Owner', location: 'Main Bakery - Pearl District', active: true },
+    { name: 'Sarah Collins', email: 'sarah@sweetbake.com', role: 'Manager', location: 'Main Bakery - Pearl District', active: true },
+    { name: 'Maria Santos', email: 'maria@sweetbake.com', role: 'Chef', location: 'Production Facility', active: true },
+    { name: 'David Park', email: 'david@sweetbake.com', role: 'Baker', location: 'Production Facility', active: true },
+    { name: 'Emily Chen', email: 'emily@sweetbake.com', role: 'Cashier', location: 'Branch - Riverside Mall', active: true },
+    { name: 'Tyler Brooks', email: 'tyler@sweetbake.com', role: 'Barista', location: 'Branch - Oak Street', active: true },
+    { name: 'Rachel Kim', email: 'rachel@sweetbake.com', role: 'Accountant', location: 'Main Bakery - Pearl District', active: true },
+    { name: 'Marcus Johnson', email: 'marcus@sweetbake.com', role: 'Warehouse', location: 'Central Warehouse', active: false },
   ];
 
   const products = [
@@ -1575,11 +1574,11 @@ Thank you for your purchase!</textarea>
   ];
 
   const locations = [
-    { name: 'Main Bakery - Abay', address: 'ul. Abay 52, Almaty', type: 'Retail', phone: '+7 (727) 312-45-67', manager: 'Marat Suleimenov', active: true },
-    { name: 'Branch - Dostyk Plaza', address: 'Dostyk Ave 240, Almaty', type: 'Retail', phone: '+7 (727) 315-78-90', manager: 'Asel Muratova', active: true },
-    { name: 'Branch - Mega Center', address: 'Rozybakiev St 247A, Almaty', type: 'Retail', phone: '+7 (727) 318-12-34', manager: 'Timur Kairatov', active: true },
-    { name: 'Production Facility', address: 'ul. Zhandosov 98, Almaty', type: 'Production', phone: '+7 (727) 320-55-00', manager: 'Dana Ospanova', active: true },
-    { name: 'Central Warehouse', address: 'ul. Seifullin 412, Almaty', type: 'Warehouse', phone: '+7 (727) 322-00-11', manager: 'Bekzat Aliev', active: false },
+    { name: 'Main Bakery - Pearl District', address: '215 NW Davis St, Portland, OR 97209', type: 'Retail', phone: '(503) 555-0147', manager: 'Sarah Collins', active: true },
+    { name: 'Branch - Riverside Mall', address: '1430 SE Water Ave, Portland, OR 97214', type: 'Retail', phone: '(503) 555-0238', manager: 'Emily Chen', active: true },
+    { name: 'Branch - Oak Street', address: '782 Oak St, Eugene, OR 97401', type: 'Retail', phone: '(541) 555-0319', manager: 'Tyler Brooks', active: true },
+    { name: 'Production Facility', address: '5500 NE Columbia Blvd, Portland, OR 97218', type: 'Production', phone: '(503) 555-0455', manager: 'Maria Santos', active: true },
+    { name: 'Central Warehouse', address: '9200 SW Nimbus Ave, Beaverton, OR 97008', type: 'Warehouse', phone: '(503) 555-0561', manager: 'Marcus Johnson', active: false },
   ];
 
   const categoryTree = [

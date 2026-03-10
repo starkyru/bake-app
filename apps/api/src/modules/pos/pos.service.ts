@@ -7,7 +7,6 @@ import { Product } from './entities/product.entity';
 import { Order } from './entities/order.entity';
 import { OrderItem } from './entities/order-item.entity';
 import { Payment } from './entities/payment.entity';
-import { Ingredient } from '../inventory/entities/ingredient.entity';
 import { CreateCategoryDto, UpdateCategoryDto, CreateProductDto, UpdateProductDto, CreateOrderDto, CreatePaymentDto, UpdateOrderStatusDto } from './dto';
 import { PaginationDto } from '../../common/dto/pagination.dto';
 import { PaginatedResponseDto } from '../../common/dto/paginated-response.dto';
@@ -21,7 +20,6 @@ export class PosService {
     @InjectRepository(Order) private orderRepo: Repository<Order>,
     @InjectRepository(OrderItem) private orderItemRepo: Repository<OrderItem>,
     @InjectRepository(Payment) private paymentRepo: Repository<Payment>,
-    @InjectRepository(Ingredient) private ingredientRepo: Repository<Ingredient>,
     private eventEmitter: EventEmitter2,
   ) {}
 
@@ -59,15 +57,6 @@ export class PosService {
     if (productCount > 0) {
       throw new ConflictException(
         `Cannot delete category "${cat.name}": it has ${productCount} product(s)`,
-      );
-    }
-
-    const ingredientCount = await this.ingredientRepo.count({
-      where: { category: cat.name, isActive: true },
-    });
-    if (ingredientCount > 0) {
-      throw new ConflictException(
-        `Cannot delete category "${cat.name}": it has ${ingredientCount} ingredient(s)`,
       );
     }
 

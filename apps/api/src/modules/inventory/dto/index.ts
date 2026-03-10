@@ -64,6 +64,11 @@ export class CreateIngredientDto {
   @IsString()
   category?: string;
 
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsUUID()
+  categoryId?: string;
+
   @ApiPropertyOptional({ type: [CreateIngredientPackageDto] })
   @IsOptional()
   @IsArray()
@@ -98,6 +103,11 @@ export class CreateLocationDto {
 export class UpdateLocationDto extends PartialType(CreateLocationDto) {}
 
 export class DeliveryDto {
+  @ApiPropertyOptional({ example: 'Morning flour delivery' })
+  @IsOptional()
+  @IsString()
+  title?: string;
+
   @ApiProperty()
   @IsUUID()
   ingredientId: string;
@@ -173,3 +183,17 @@ export class TransferDto {
   @IsString()
   notes?: string;
 }
+
+export class CreateIngredientCategoryDto {
+  @ApiProperty({ example: 'Dairy' })
+  @IsString()
+  name: string;
+
+  @ApiPropertyOptional({ example: 0 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  sortOrder?: number;
+}
+
+export class UpdateIngredientCategoryDto extends PartialType(CreateIngredientCategoryDto) {}

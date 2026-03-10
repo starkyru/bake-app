@@ -18,6 +18,7 @@ import {
 } from './add-inventory-dialog.component';
 
 interface InventoryItem {
+  title: string;
   ingredient: string;
   category: string;
   quantity: number;
@@ -266,6 +267,7 @@ interface InventoryItem {
 })
 export class InventoryComponent implements OnInit {
   columns: TableColumn[] = [
+    { key: 'title', label: 'Title', type: 'text' },
     { key: 'ingredient', label: 'Ingredient', type: 'text' },
     { key: 'category', label: 'Category', type: 'text' },
     { key: 'quantity', label: 'Qty', type: 'number', width: '80px' },
@@ -328,6 +330,7 @@ export class InventoryComponent implements OnInit {
               status = 'Low Stock';
             }
             return {
+              title: String(item['title'] || ''),
               ingredient: String(item['ingredientName'] || ''),
               category: String(item['locationName'] || ''),
               quantity: qty,

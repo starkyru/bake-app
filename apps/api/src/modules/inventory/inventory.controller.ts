@@ -1,7 +1,7 @@
 import { Controller, Get, Post, Put, Delete, Body, Param, Query, UseGuards, Request } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { InventoryService } from './inventory.service';
-import { CreateIngredientDto, UpdateIngredientDto, CreateLocationDto, UpdateLocationDto, DeliveryDto, WriteOffDto, TransferDto } from './dto';
+import { CreateIngredientDto, UpdateIngredientDto, CreateLocationDto, UpdateLocationDto, DeliveryDto, WriteOffDto, TransferDto, CreateIngredientCategoryDto, UpdateIngredientCategoryDto } from './dto';
 import { PaginationDto } from '../../common/dto/pagination.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../../common/guards/permissions.guard';
@@ -40,6 +40,35 @@ export class InventoryController {
   @ApiOperation({ summary: 'Delete ingredient' })
   deleteIngredient(@Param('id') id: string) {
     return this.inventoryService.deleteIngredient(id);
+  }
+
+  // Ingredient Categories
+  @Get('ingredient-categories')
+  @RequirePermissions('ingredients:read')
+  @ApiOperation({ summary: 'Get all ingredient categories' })
+  findAllIngredientCategories() {
+    return this.inventoryService.findAllIngredientCategories();
+  }
+
+  @Post('ingredient-categories')
+  @RequirePermissions('ingredients:create')
+  @ApiOperation({ summary: 'Create ingredient category' })
+  createIngredientCategory(@Body() dto: CreateIngredientCategoryDto) {
+    return this.inventoryService.createIngredientCategory(dto);
+  }
+
+  @Put('ingredient-categories/:id')
+  @RequirePermissions('ingredients:update')
+  @ApiOperation({ summary: 'Update ingredient category' })
+  updateIngredientCategory(@Param('id') id: string, @Body() dto: UpdateIngredientCategoryDto) {
+    return this.inventoryService.updateIngredientCategory(id, dto);
+  }
+
+  @Delete('ingredient-categories/:id')
+  @RequirePermissions('ingredients:delete')
+  @ApiOperation({ summary: 'Delete ingredient category' })
+  deleteIngredientCategory(@Param('id') id: string) {
+    return this.inventoryService.deleteIngredientCategory(id);
   }
 
   @Get('locations')

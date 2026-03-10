@@ -19,6 +19,7 @@ export interface AddInventoryDialogData {
 }
 
 export interface AddInventoryDialogResult {
+  title?: string;
   ingredientId: string;
   locationId: string;
   quantity: number;
@@ -44,6 +45,11 @@ export interface AddInventoryDialogResult {
     <h2 mat-dialog-title>Add Inventory</h2>
     <mat-dialog-content>
       <div class="dialog-form">
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Title</mat-label>
+          <input matInput [(ngModel)]="title" placeholder="e.g., Morning flour delivery" />
+        </mat-form-field>
+
         <mat-form-field appearance="outline" class="full-width">
           <mat-label>Ingredient</mat-label>
           <mat-select [(ngModel)]="ingredientId" (selectionChange)="onIngredientChange()">
@@ -144,6 +150,7 @@ export interface AddInventoryDialogResult {
   ],
 })
 export class AddInventoryDialogComponent implements OnInit {
+  title = '';
   ingredientId = '';
   locationId = '';
   quantity: number | null = null;
@@ -183,6 +190,7 @@ export class AddInventoryDialogComponent implements OnInit {
   onSubmit(): void {
     if (!this.isValid()) return;
     const result: AddInventoryDialogResult = {
+      title: this.title || undefined,
       ingredientId: this.ingredientId,
       locationId: this.locationId,
       quantity: this.quantity!,

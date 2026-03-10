@@ -5,6 +5,9 @@ import { Location } from './location.entity';
 
 @Entity('inventory_items')
 export class InventoryItem extends BaseEntity {
+  @Column({ nullable: true })
+  title: string;
+
   @Column({ type: 'decimal', precision: 10, scale: 2, default: 0 })
   quantity: number;
 

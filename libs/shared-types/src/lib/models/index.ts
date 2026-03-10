@@ -98,6 +98,13 @@ export interface IngredientPackage {
   ingredientId: string;
 }
 
+export interface IngredientCategory {
+  id: string;
+  name: string;
+  sortOrder: number;
+  isActive: boolean;
+}
+
 export interface Ingredient {
   id: string;
   name: string;
@@ -107,12 +114,15 @@ export interface Ingredient {
   minStockLevel: number;
   calories?: number;
   category?: string;
+  categoryId?: string;
+  ingredientCategory?: IngredientCategory;
   isActive: boolean;
   packages?: IngredientPackage[];
 }
 
 export interface InventoryItem {
   id: string;
+  title?: string;
   quantity: number;
   status: string;
   ingredient: Ingredient;

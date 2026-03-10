@@ -226,6 +226,7 @@ export class ReportingService {
       .leftJoin('item.ingredient', 'ing')
       .leftJoin('item.location', 'loc')
       .select('item.id', 'id')
+      .addSelect('item.title', 'title')
       .addSelect('ing.name', 'ingredientName')
       .addSelect('ing.unit', 'unit')
       .addSelect('ing.minStockLevel', 'minStockLevel')

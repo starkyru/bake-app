@@ -1,14 +1,15 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, ConflictException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { Ingredient } from './entities/ingredient.entity';
+import { IngredientCategory } from './entities/ingredient-category.entity';
 import { IngredientPackage } from './entities/ingredient-package.entity';
 import { InventoryItem } from './entities/inventory-item.entity';
 import { InventoryBatch } from './entities/inventory-batch.entity';
 import { InventoryMovement } from './entities/inventory-movement.entity';
 import { Location } from './entities/location.entity';
-import { CreateIngredientDto, UpdateIngredientDto, CreateLocationDto, UpdateLocationDto, DeliveryDto, WriteOffDto, TransferDto } from './dto';
+import { CreateIngredientDto, UpdateIngredientDto, CreateLocationDto, UpdateLocationDto, DeliveryDto, WriteOffDto, TransferDto, CreateIngredientCategoryDto, UpdateIngredientCategoryDto } from './dto';
 import { PaginationDto } from '../../common/dto/pagination.dto';
 import { PaginatedResponseDto } from '../../common/dto/paginated-response.dto';
 import { DOMAIN_EVENTS } from '../websocket/ws-events.constants';
@@ -17,6 +18,7 @@ import { DOMAIN_EVENTS } from '../websocket/ws-events.constants';
 export class InventoryService {
   constructor(
     @InjectRepository(Ingredient) private ingredientRepo: Repository<Ingredient>,
+    @InjectRepository(IngredientCategory) private ingredientCategoryRepo: Repository<IngredientCategory>,
     @InjectRepository(IngredientPackage) private packageRepo: Repository<IngredientPackage>,
     @InjectRepository(InventoryItem) private inventoryItemRepo: Repository<InventoryItem>,
     @InjectRepository(InventoryBatch) private batchRepo: Repository<InventoryBatch>,
@@ -103,8 +105,10 @@ export class InventoryService {
     });
     if (item) {
       item.quantity = Number(item.quantity) + dto.quantity;
+      if (dto.title) item.title = dto.title;
     } else {
       item = this.inventoryItemRepo.create({
+        title: dto.title,
         ingredientId: dto.ingredientId,
         locationId: dto.locationId,
         quantity: dto.quantity,
@@ -220,6 +224,42 @@ export class InventoryService {
       locationId: dto.fromLocationId,
     });
     return movement;
+  }
+
+  // Ingredient Categories
+  async findAllIngredientCategories(): Promise<IngredientCategory[]> {
+    return this.ingredientCategoryRepo.find({
+      where: { isActive: true },
+      order: { sortOrder: 'ASC', name: 'ASC' },
+    });
+  }
+
+  async createIngredientCategory(dto: CreateIngredientCategoryDto): Promise<IngredientCategory> {
+    return this.ingredientCategoryRepo.save(this.ingredientCategoryRepo.create(dto));
+  }
+
+  async updateIngredientCategory(id: string, dto: UpdateIngredientCategoryDto): Promise<IngredientCategory> {
+    const cat = await this.ingredientCategoryRepo.findOne({ where: { id } });
+    if (!cat) throw new NotFoundException('Ingredient category not found');
+    Object.assign(cat, dto);
+    return this.ingredientCategoryRepo.save(cat);
+  }
+
+  async deleteIngredientCategory(id: string): Promise<void> {
+    const cat = await this.ingredientCategoryRepo.findOne({ where: { id } });
+    if (!cat) throw new NotFoundException('Ingredient category not found');
+
+    const ingredientCount = await this.ingredientRepo.count({
+      where: { categoryId: id, isActive: true },
+    });
+    if (ingredientCount > 0) {
+      throw new ConflictException(
+        `Cannot delete category "${cat.name}": it has ${ingredientCount} ingredient(s)`,
+      );
+    }
+
+    cat.isActive = false;
+    await this.ingredientCategoryRepo.save(cat);
   }
 
   private async updateItemStatus(item: InventoryItem): Promise<void> {
