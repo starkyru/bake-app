@@ -66,6 +66,7 @@ export interface Product {
   id: string;
   name: string;
   sku?: string;
+  type: string;
   price: number;
   costPrice: number;
   description?: string;
@@ -73,11 +74,15 @@ export interface Product {
   categoryId?: string;
   category?: Category;
   recipeId?: string;
+  recipe?: Recipe;
+  ingredientId?: string;
+  ingredient?: Ingredient;
 }
 
 export interface Category {
   id: string;
   name: string;
+  type?: string;
   parentId?: string;
   sortOrder: number;
   isActive: boolean;

@@ -16,7 +16,7 @@ import {
   TableColumn,
 } from '@bake-app/ui-components';
 import { ApiClientService } from '@bake-app/api-client';
-import { Ingredient } from '@bake-app/shared-types';
+import { Category, Ingredient } from '@bake-app/shared-types';
 
 interface PaginatedResponse<T> {
   data: T[];
@@ -82,7 +82,7 @@ interface PaginatedResponse<T> {
                 <mat-label>Category</mat-label>
                 <mat-select [(ngModel)]="formCategory" name="category">
                   <mat-option [value]="''">None</mat-option>
-                  <mat-option *ngFor="let cat of ingredientCategories" [value]="cat">{{ cat }}</mat-option>
+                  <mat-option *ngFor="let cat of ingredientCategories" [value]="cat.name">{{ cat.name }}</mat-option>
                 </mat-select>
               </mat-form-field>
 
@@ -268,7 +268,7 @@ export class IngredientsComponent implements OnInit {
     { key: 'actions', label: '', type: 'actions', width: '100px' },
   ];
 
-  ingredientCategories = ['Dry goods', 'Dairy', 'Fats & Oils', 'Sweeteners', 'Spices', 'Fruits', 'Nuts', 'Liquids', 'Other'];
+  ingredientCategories: Category[] = [];
 
   constructor(
     private confirmService: BakeConfirmationService,
@@ -278,6 +278,14 @@ export class IngredientsComponent implements OnInit {
 
   ngOnInit(): void {
     this.loadIngredients();
+    this.loadCategories();
+  }
+
+  private loadCategories(): void {
+    this.apiClient.get<Category[]>('/v1/categories?type=ingredient').subscribe({
+      next: (cats) => (this.ingredientCategories = cats),
+      error: () => {},
+    });
   }
 
   private loadIngredients(): void {

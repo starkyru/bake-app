@@ -24,9 +24,13 @@ export class PosService {
   ) {}
 
   // Categories
-  async findAllCategories(): Promise<Category[]> {
+  async findAllCategories(type?: string): Promise<Category[]> {
+    const where: Record<string, unknown> = { isActive: true };
+    if (type) {
+      where.type = type;
+    }
     return this.categoryRepo.find({
-      where: { isActive: true },
+      where,
       relations: ['children'],
       order: { sortOrder: 'ASC', name: 'ASC' },
     });
@@ -54,7 +58,9 @@ export class PosService {
   async findAllProducts(query: PaginationDto): Promise<PaginatedResponseDto<Product>> {
     const { page, limit, search } = query;
     const qb = this.productRepo.createQueryBuilder('p')
-      .leftJoinAndSelect('p.category', 'category');
+      .leftJoinAndSelect('p.category', 'category')
+      .leftJoinAndSelect('p.recipe', 'recipe')
+      .leftJoinAndSelect('p.ingredient', 'ingredient');
     if (search) qb.where('p.name ILIKE :search', { search: `%${search}%` });
     qb.andWhere('p.isActive = true');
     qb.orderBy('p.name', 'ASC');
@@ -63,7 +69,7 @@ export class PosService {
   }
 
   async findOneProduct(id: string): Promise<Product> {
-    const product = await this.productRepo.findOne({ where: { id }, relations: ['category'] });
+    const product = await this.productRepo.findOne({ where: { id }, relations: ['category', 'recipe', 'ingredient'] });
     if (!product) throw new NotFoundException('Product not found');
     return product;
   }

@@ -94,3 +94,8 @@ export enum LocationType {
   RETAIL = 'retail',
   WAREHOUSE = 'warehouse',
 }
+
+export enum MenuItemType {
+  PRODUCED = 'produced',
+  BOUGHT_FOR_RESALE = 'bought_for_resale',
+}

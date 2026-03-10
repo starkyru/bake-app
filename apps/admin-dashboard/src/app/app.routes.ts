@@ -35,18 +35,16 @@ export const routes: Routes = [
           ),
       },
       {
-        path: 'products',
+        path: 'menu',
         loadComponent: () =>
-          import('./pages/products/products.component').then(
-            (m) => m.ProductsComponent
+          import('./pages/menu/menu.component').then(
+            (m) => m.MenuComponent
           ),
       },
       {
         path: 'categories',
-        loadComponent: () =>
-          import('./pages/categories/categories.component').then(
-            (m) => m.CategoriesComponent
-          ),
+        redirectTo: 'settings',
+        pathMatch: 'full',
       },
       {
         path: 'ingredients',

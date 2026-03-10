@@ -6,6 +6,9 @@ export class Category extends BaseEntity {
   @Column()
   name: string;
 
+  @Column({ nullable: true })
+  type: string;
+
   @Column({ name: 'sort_order', default: 0 })
   sortOrder: number;
 

@@ -17,7 +17,7 @@ export class PosController {
   @Get('categories')
   @RequirePermissions('categories:read')
   @ApiOperation({ summary: 'Get all categories' })
-  findAllCategories() { return this.posService.findAllCategories(); }
+  findAllCategories(@Query('type') type?: string) { return this.posService.findAllCategories(type); }
 
   @Post('categories')
   @RequirePermissions('categories:create')

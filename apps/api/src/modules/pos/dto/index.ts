@@ -7,6 +7,11 @@ export class CreateCategoryDto {
   @IsString()
   name: string;
 
+  @ApiPropertyOptional({ example: 'menu', enum: ['menu', 'ingredient'] })
+  @IsOptional()
+  @IsString()
+  type?: string;
+
   @ApiPropertyOptional()
   @IsOptional()
   @IsString()
@@ -30,6 +35,11 @@ export class CreateProductDto {
   @IsOptional()
   @IsString()
   sku?: string;
+
+  @ApiPropertyOptional({ example: 'produced', enum: ['produced', 'bought_for_resale'] })
+  @IsOptional()
+  @IsString()
+  type?: string;
 
   @ApiProperty({ example: 1500 })
   @Type(() => Number)
@@ -57,6 +67,11 @@ export class CreateProductDto {
   @IsOptional()
   @IsUUID()
   recipeId?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsUUID()
+  ingredientId?: string;
 }
 
 export class UpdateProductDto extends PartialType(CreateProductDto) {}

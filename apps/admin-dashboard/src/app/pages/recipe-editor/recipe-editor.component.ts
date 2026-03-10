@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, Inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -13,8 +13,15 @@ import { MatDividerModule } from '@angular/material/divider';
 import { MatExpansionModule } from '@angular/material/expansion';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatAutocompleteModule } from '@angular/material/autocomplete';
+import { MatTooltipModule } from '@angular/material/tooltip';
+import {
+  MAT_DIALOG_DATA,
+  MatDialog,
+  MatDialogModule,
+  MatDialogRef,
+} from '@angular/material/dialog';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
-import { BakePageContainerComponent, BakeToastService } from '@bake-app/ui-components';
+import { BakePageContainerComponent, BakeConfirmationService, BakeToastService } from '@bake-app/ui-components';
 import { ApiClientService } from '@bake-app/api-client';
 import { Recipe, Category as SharedCategory, Ingredient } from '@bake-app/shared-types';
 
@@ -43,6 +50,110 @@ interface LinkRow {
   editing: boolean;
 }
 
+interface EstimateCostRow {
+  name: string;
+  quantity: number;
+  unit: string;
+  costPerUnit: number;
+  total: number;
+}
+
+interface EstimateCostData {
+  rows: EstimateCostRow[];
+  totalCost: number;
+  costPerYield: number;
+  yieldQuantity: number;
+  yieldUnit: string;
+}
+
+@Component({
+  selector: 'bake-app-estimate-cost-dialog',
+  standalone: true,
+  imports: [CommonModule, MatDialogModule, MatButtonModule, MatTableModule, MatIconModule],
+  template: `
+    <h2 mat-dialog-title>
+      <mat-icon class="title-icon">calculate</mat-icon>
+      Estimated Cost
+    </h2>
+    <mat-dialog-content>
+      <table mat-table [dataSource]="data.rows" class="cost-table">
+        <ng-container matColumnDef="name">
+          <th mat-header-cell *matHeaderCellDef>Ingredient</th>
+          <td mat-cell *matCellDef="let row">{{ row.name }}</td>
+        </ng-container>
+        <ng-container matColumnDef="qty">
+          <th mat-header-cell *matHeaderCellDef>Qty</th>
+          <td mat-cell *matCellDef="let row">{{ row.quantity }} {{ row.unit }}</td>
+        </ng-container>
+        <ng-container matColumnDef="costPerUnit">
+          <th mat-header-cell *matHeaderCellDef>Price/Unit</th>
+          <td mat-cell *matCellDef="let row" class="mono">
+            {{ row.costPerUnit | currency:'USD':'symbol':'1.2-2' }}
+          </td>
+        </ng-container>
+        <ng-container matColumnDef="total">
+          <th mat-header-cell *matHeaderCellDef>Total</th>
+          <td mat-cell *matCellDef="let row" class="mono">
+            {{ row.total | currency:'USD':'symbol':'1.2-2' }}
+          </td>
+        </ng-container>
+        <tr mat-header-row *matHeaderRowDef="['name', 'qty', 'costPerUnit', 'total']"></tr>
+        <tr mat-row *matRowDef="let row; columns: ['name', 'qty', 'costPerUnit', 'total']"></tr>
+      </table>
+
+      <div class="cost-summary">
+        <div class="cost-line">
+          <span>Total Recipe Cost</span>
+          <span class="cost-value">{{ data.totalCost | currency:'USD':'symbol':'1.2-2' }}</span>
+        </div>
+        <div class="cost-line" *ngIf="data.yieldQuantity > 0">
+          <span>Cost per {{ data.yieldUnit }}</span>
+          <span class="cost-value accent">{{ data.costPerYield | currency:'USD':'symbol':'1.2-2' }}</span>
+        </div>
+      </div>
+
+      <p class="cost-note">Prices taken from ingredient inventory data.</p>
+    </mat-dialog-content>
+    <mat-dialog-actions align="end">
+      <button mat-flat-button class="close-btn" [mat-dialog-close]="true">Close</button>
+    </mat-dialog-actions>
+  `,
+  styles: [`
+    .title-icon { vertical-align: middle; margin-right: 8px; color: #8b4513; }
+    .cost-table { width: 100%; margin-bottom: 16px; }
+    .mono { font-family: 'JetBrains Mono', monospace; }
+    .cost-summary {
+      background: #faf3e8;
+      border-radius: 8px;
+      padding: 12px 16px;
+      margin-bottom: 12px;
+    }
+    .cost-line {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 4px 0;
+      font-weight: 500;
+      color: #3e2723;
+    }
+    .cost-value {
+      font-family: 'JetBrains Mono', monospace;
+      font-weight: 700;
+      font-size: 16px;
+      color: #8b4513;
+    }
+    .cost-value.accent { font-size: 18px; }
+    .cost-note { font-size: 12px; color: #8d6e63; margin: 0; }
+    .close-btn { background-color: #8b4513 !important; color: #fff !important; }
+  `],
+})
+export class EstimateCostDialogComponent {
+  constructor(
+    public dialogRef: MatDialogRef<EstimateCostDialogComponent>,
+    @Inject(MAT_DIALOG_DATA) public data: EstimateCostData,
+  ) {}
+}
+
 @Component({
   selector: 'bake-app-recipe-editor',
   standalone: true,
@@ -60,6 +171,7 @@ interface LinkRow {
     MatExpansionModule,
     MatProgressSpinnerModule,
     MatAutocompleteModule,
+    MatTooltipModule,
     BakePageContainerComponent,
   ],
   template: `
@@ -160,10 +272,23 @@ interface LinkRow {
             <div class="form-section">
               <div class="section-header">
                 <h3 class="section-title">Ingredients</h3>
-                <button mat-stroked-button class="add-btn" (click)="addIngredient()">
-                  <mat-icon>add</mat-icon>
-                  Add Ingredient
-                </button>
+                <div class="section-header-actions">
+                  <span [matTooltip]="estimateDisabledReason" [matTooltipDisabled]="!estimateDisabledReason">
+                    <button
+                      mat-stroked-button
+                      class="estimate-btn"
+                      (click)="openEstimateCost()"
+                      [disabled]="!!estimateDisabledReason"
+                    >
+                      <mat-icon>calculate</mat-icon>
+                      Estimate Cost
+                    </button>
+                  </span>
+                  <button mat-stroked-button class="add-btn" (click)="addIngredient()">
+                    <mat-icon>add</mat-icon>
+                    Add Ingredient
+                  </button>
+                </div>
               </div>
 
               <div class="ingredients-table-wrapper">
@@ -204,7 +329,6 @@ interface LinkRow {
                           matInput
                           type="number"
                           [(ngModel)]="row.quantity"
-                          (ngModelChange)="recalculate(row)"
                           placeholder="0"
                         />
                       </mat-form-field>
@@ -214,39 +338,7 @@ interface LinkRow {
                   <ng-container matColumnDef="unit">
                     <th mat-header-cell *matHeaderCellDef>Unit</th>
                     <td mat-cell *matCellDef="let row">
-                      <mat-form-field appearance="outline" class="table-field narrow">
-                        <mat-select [(ngModel)]="row.unit">
-                          <mat-option value="g">g</mat-option>
-                          <mat-option value="kg">kg</mat-option>
-                          <mat-option value="ml">ml</mat-option>
-                          <mat-option value="l">l</mat-option>
-                          <mat-option value="pcs">pcs</mat-option>
-                          <mat-option value="tbsp">tbsp</mat-option>
-                          <mat-option value="tsp">tsp</mat-option>
-                        </mat-select>
-                      </mat-form-field>
-                    </td>
-                  </ng-container>
-
-                  <ng-container matColumnDef="cost">
-                    <th mat-header-cell *matHeaderCellDef>Cost/Unit ($)</th>
-                    <td mat-cell *matCellDef="let row">
-                      <mat-form-field appearance="outline" class="table-field narrow">
-                        <input
-                          matInput
-                          type="number"
-                          [(ngModel)]="row.cost"
-                          (ngModelChange)="recalculate(row)"
-                          placeholder="0"
-                        />
-                      </mat-form-field>
-                    </td>
-                  </ng-container>
-
-                  <ng-container matColumnDef="total">
-                    <th mat-header-cell *matHeaderCellDef>Total ($)</th>
-                    <td mat-cell *matCellDef="let row">
-                      <span class="total-value">{{ row.total | currency:'USD':'symbol':'1.0-0' }}</span>
+                      <span class="unit-label">{{ row.unit || '-' }}</span>
                     </td>
                   </ng-container>
 
@@ -256,7 +348,7 @@ interface LinkRow {
                       <button
                         mat-icon-button
                         color="warn"
-                        (click)="removeIngredient(i)"
+                        (click)="confirmRemoveIngredient(i, row)"
                         [disabled]="ingredients.length <= 1"
                       >
                         <mat-icon>close</mat-icon>
@@ -267,17 +359,6 @@ interface LinkRow {
                   <tr mat-header-row *matHeaderRowDef="ingredientColumns"></tr>
                   <tr mat-row *matRowDef="let row; columns: ingredientColumns"></tr>
                 </table>
-              </div>
-
-              <div class="total-cost">
-                <span class="total-label">Total Recipe Cost:</span>
-                <span class="total-amount">{{ totalCost | currency:'USD':'symbol':'1.0-0' }}</span>
-              </div>
-              <div class="cost-per-unit" *ngIf="yieldQuantity > 0">
-                <span class="total-label">Cost per Unit:</span>
-                <span class="total-amount">
-                  {{ costPerUnit | currency:'USD':'symbol':'1.0-0' }}
-                </span>
               </div>
             </div>
 
@@ -486,6 +567,22 @@ interface LinkRow {
         border-color: #8b4513;
       }
 
+      .section-header-actions {
+        display: flex;
+        gap: 8px;
+      }
+
+      .estimate-btn {
+        color: #8b4513;
+        border-color: #8b4513;
+      }
+
+      .unit-label {
+        font-size: 13px;
+        color: #5d4037;
+        font-weight: 500;
+      }
+
       .ingredients-table-wrapper {
         overflow-x: auto;
         border: 1px solid #e0d6c8;
@@ -508,38 +605,6 @@ interface LinkRow {
 
       ::ng-deep .table-field .mat-mdc-form-field-subscript-wrapper {
         display: none;
-      }
-
-      .total-value {
-        font-family: 'JetBrains Mono', monospace;
-        font-weight: 600;
-        color: #3e2723;
-      }
-
-      .total-cost,
-      .cost-per-unit {
-        display: flex;
-        justify-content: flex-end;
-        align-items: center;
-        gap: 16px;
-        padding: 8px 0;
-      }
-
-      .total-label {
-        font-weight: 500;
-        color: #5d4037;
-      }
-
-      .total-amount {
-        font-family: 'JetBrains Mono', monospace;
-        font-size: 18px;
-        font-weight: 700;
-        color: #8b4513;
-      }
-
-      .cost-per-unit .total-amount {
-        font-size: 14px;
-        color: #5d4037;
       }
 
       /* Links section */
@@ -672,7 +737,7 @@ export class RecipeEditorComponent implements OnInit {
   categories: string[] = [];
   availableIngredients: Ingredient[] = [];
 
-  ingredientColumns = ['name', 'quantity', 'unit', 'cost', 'total', 'remove'];
+  ingredientColumns = ['name', 'quantity', 'unit', 'remove'];
 
   ingredients: IngredientRow[] = [
     { name: '', quantity: 0, unit: 'g', cost: 0, total: 0, filteredOptions: [] },
@@ -688,6 +753,8 @@ export class RecipeEditorComponent implements OnInit {
   constructor(
     private route: ActivatedRoute,
     private router: Router,
+    private dialog: MatDialog,
+    private confirmService: BakeConfirmationService,
     private toastService: BakeToastService,
     private apiClient: ApiClientService,
     private sanitizer: DomSanitizer,
@@ -739,8 +806,6 @@ export class RecipeEditorComponent implements OnInit {
     row.ingredientId = ing.id;
     row.name = ing.name;
     row.unit = ing.unit;
-    row.cost = Number(ing.costPerUnit);
-    row.total = Math.round(row.quantity * row.cost);
     this.ingredients = [...this.ingredients];
   }
 
@@ -792,19 +857,40 @@ export class RecipeEditorComponent implements OnInit {
     }
   }
 
-  get totalCost(): number {
-    return this.ingredients.reduce((sum, ing) => sum + (ing.total || 0), 0);
+  get estimateDisabledReason(): string {
+    const linked = this.ingredients.filter((i) => !!i.ingredientId);
+    if (linked.length === 0) {
+      return 'Select at least one ingredient from the dropdown';
+    }
+    if (linked.some((i) => !i.quantity || i.quantity <= 0)) {
+      return 'All ingredients must have a quantity greater than 0';
+    }
+    return '';
   }
 
-  get costPerUnit(): number {
-    return this.yieldQuantity > 0
-      ? Math.round(this.totalCost / this.yieldQuantity)
+  openEstimateCost(): void {
+    const linked = this.ingredients.filter((i) => i.ingredientId);
+    const costRows = linked.map((row) => {
+      const ing = this.availableIngredients.find((a) => a.id === row.ingredientId);
+      const costPerUnit = ing ? Number(ing.costPerUnit) : 0;
+      const total = Math.round(row.quantity * costPerUnit * 100) / 100;
+      return {
+        name: row.name,
+        quantity: row.quantity,
+        unit: row.unit,
+        costPerUnit,
+        total,
+      };
+    });
+    const totalCost = costRows.reduce((sum, r) => sum + r.total, 0);
+    const costPerYield = this.yieldQuantity > 0
+      ? Math.round((totalCost / this.yieldQuantity) * 100) / 100
       : 0;
-  }
 
-  recalculate(row: IngredientRow): void {
-    row.total = Math.round(row.quantity * row.cost);
-    this.ingredients = [...this.ingredients];
+    this.dialog.open(EstimateCostDialogComponent, {
+      width: '560px',
+      data: { rows: costRows, totalCost, costPerYield, yieldQuantity: this.yieldQuantity, yieldUnit: this.yieldUnit },
+    });
   }
 
   addIngredient(): void {
@@ -814,8 +900,20 @@ export class RecipeEditorComponent implements OnInit {
     ];
   }
 
-  removeIngredient(index: number): void {
-    this.ingredients = this.ingredients.filter((_, i) => i !== index);
+  confirmRemoveIngredient(index: number, row: IngredientRow): void {
+    const name = row.name || `Ingredient #${index + 1}`;
+    this.confirmService
+      .confirm({
+        title: 'Remove Ingredient',
+        message: `Are you sure you want to remove "${name}" from this recipe?`,
+        confirmText: 'Remove',
+        confirmColor: 'warn',
+      })
+      .subscribe((confirmed) => {
+        if (confirmed) {
+          this.ingredients = this.ingredients.filter((_, i) => i !== index);
+        }
+      });
   }
 
   // Links management
@@ -909,13 +1007,16 @@ export class RecipeEditorComponent implements OnInit {
       instructions: this.instructions,
       ingredients: this.ingredients
         .filter((ing) => ing.name.trim())
-        .map((ing) => ({
-          ingredientId: ing.ingredientId || ing.name,
-          ingredientName: ing.name,
-          quantity: ing.quantity,
-          unit: ing.unit,
-          costPerUnit: ing.cost,
-        })),
+        .map((ing) => {
+          const linked = this.availableIngredients.find((a) => a.id === ing.ingredientId);
+          return {
+            ingredientId: ing.ingredientId || ing.name,
+            ingredientName: ing.name,
+            quantity: ing.quantity,
+            unit: ing.unit,
+            costPerUnit: linked ? Number(linked.costPerUnit) : 0,
+          };
+        }),
       links: this.links
         .filter((l) => l.url.trim())
         .map((l) => ({

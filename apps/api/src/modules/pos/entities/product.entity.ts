@@ -1,6 +1,8 @@
 import { Entity, Column, ManyToOne, JoinColumn } from 'typeorm';
 import { BaseEntity } from '../../../common/entities/base.entity';
 import { Category } from './category.entity';
+import { Recipe } from '../../recipes/entities/recipe.entity';
+import { Ingredient } from '../../inventory/entities/ingredient.entity';
 
 @Entity('products')
 export class Product extends BaseEntity {
@@ -9,6 +11,9 @@ export class Product extends BaseEntity {
 
   @Column({ unique: true, nullable: true })
   sku: string;
+
+  @Column({ default: 'produced' })
+  type: string;
 
   @Column({ type: 'decimal', precision: 10, scale: 2 })
   price: number;
@@ -29,6 +34,17 @@ export class Product extends BaseEntity {
   @Column({ name: 'category_id', nullable: true })
   categoryId: string;
 
+  @ManyToOne(() => Recipe, { nullable: true, eager: false })
+  @JoinColumn({ name: 'recipe_id' })
+  recipe: Recipe;
+
   @Column({ name: 'recipe_id', nullable: true })
   recipeId: string;
+
+  @ManyToOne(() => Ingredient, { nullable: true, eager: false })
+  @JoinColumn({ name: 'ingredient_id' })
+  ingredient: Ingredient;
+
+  @Column({ name: 'ingredient_id', nullable: true })
+  ingredientId: string;
 }
