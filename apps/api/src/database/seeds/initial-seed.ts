@@ -13,9 +13,9 @@ const roles = [
 ];
 
 const locations = [
-  { name: 'Main Bakery', address: 'Almaty, Abay Ave 10', type: 'production', phone: '+7 727 123 4567' },
-  { name: 'City Center Store', address: 'Almaty, Dostyk Ave 85', type: 'retail', phone: '+7 727 234 5678' },
-  { name: 'Central Warehouse', address: 'Almaty, Industrial Zone 5', type: 'warehouse', phone: '+7 727 345 6789' },
+  { name: 'Main Bakery', address: '742 Elmwood Dr, Charlotte, NC 28205', type: 'production', phone: '+1 (555) 555-5555' },
+  { name: 'City Center Store', address: '1503 Maple Crossing Blvd, Charlotte, NC 28202', type: 'retail', phone: '+1 (555) 555-5556' },
+  { name: 'Central Warehouse', address: '8910 Pinehurst Commerce Park, Charlotte, NC 28217', type: 'warehouse', phone: '+1 (555) 555-5557' },
 ];
 
 const categories = [
@@ -161,8 +161,8 @@ const ingredients = [
 // --- Default settings ---
 const defaultSettings = [
   { key: 'bakery_name', value: 'Bake App Bakery', group: 'general' },
-  { key: 'bakery_address', value: 'Almaty, Abay Ave 10', group: 'general' },
-  { key: 'bakery_phone', value: '+7 727 123 4567', group: 'general' },
+  { key: 'bakery_address', value: '742 Elmwood Dr, Charlotte, NC 28205', group: 'general' },
+  { key: 'bakery_phone', value: '+1 (555) 555-5555', group: 'general' },
   { key: 'currency', value: 'USD', group: 'general' },
   { key: 'vat_rate', value: '12', group: 'tax' },
   { key: 'tax_included', value: 'true', group: 'tax' },

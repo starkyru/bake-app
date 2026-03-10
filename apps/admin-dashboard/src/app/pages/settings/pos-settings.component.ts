@@ -8,6 +8,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { BakeToastService } from '@bake-app/ui-components';
 import { ApiClientService } from '@bake-app/api-client';
+import { forkJoin } from 'rxjs';
 
 @Component({
   selector: 'bake-pos-settings',
@@ -73,8 +74,7 @@ import { ApiClientService } from '@bake-app/api-client';
 })
 export class PosSettingsComponent implements OnInit {
   pos = {
-    receiptHeader:
-      'Sweet Bake Almaty\nul. Abaya 52\nTel: +7 (727) 123-45-67\nThank you for your visit!',
+    receiptHeader: '',
     autoPrint: true,
   };
 
@@ -84,17 +84,21 @@ export class PosSettingsComponent implements OnInit {
   ) {}
 
   ngOnInit(): void {
-    this.apiClient.get<Record<string, unknown>>('/v1/settings/pos').subscribe({
-      next: (settings) => {
-        if (settings && Object.keys(settings).length) {
-          this.pos = {
-            receiptHeader:
-              (settings['receiptHeader'] as string) || this.pos.receiptHeader,
-            autoPrint:
-              settings['autoPrint'] != null
-                ? (settings['autoPrint'] as boolean)
-                : this.pos.autoPrint,
-          };
+    forkJoin({
+      general: this.apiClient.get<Record<string, unknown>>('/v1/settings/general'),
+      pos: this.apiClient.get<Record<string, unknown>>('/v1/settings/pos'),
+    }).subscribe({
+      next: ({ general, pos }) => {
+        const name = (general?.['bakeryName'] as string) || '';
+        const address = (general?.['address'] as string) || '';
+        const phone = (general?.['phone'] as string) || '';
+        const defaultHeader = [name, address, phone ? `Tel: ${phone}` : '', 'Thank you for your visit!']
+          .filter(Boolean)
+          .join('\n');
+
+        this.pos.receiptHeader = (pos?.['receiptHeader'] as string) || defaultHeader;
+        if (pos?.['autoPrint'] != null) {
+          this.pos.autoPrint = pos['autoPrint'] as boolean;
         }
       },
       error: () => this.toastService.error('Failed to load POS settings'),
