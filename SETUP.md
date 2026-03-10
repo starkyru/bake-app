@@ -35,7 +35,7 @@ bake-app/
 │   │   │   ├── environments/
 │   │   │   ├── index.html
 │   │   │   └── styles.css
-│   │   ├── proxy.conf.json       # API proxy config
+│   │   ├── proxy.conf.js          # API proxy config (reads from .env)
 │   │   └── tsconfig.app.json
 │   │
 │   ├── admin-dashboard/          # Admin Dashboard Angular App
@@ -79,10 +79,24 @@ bake-app/
    ```
 
 2. **Configure environment:**
+
+   Each app has its own `.env.example` file. Copy it to `.env` and adjust values:
+
    ```bash
+   # API (required)
    cp apps/api/.env.example apps/api/.env
+
+   # Frontend apps (optional — defaults to http://localhost:3000)
+   cp apps/pos-app/.env.example apps/pos-app/.env
+   cp apps/admin-dashboard/.env.example apps/admin-dashboard/.env
+   cp apps/kitchen-screen/.env.example apps/kitchen-screen/.env
+   cp apps/hub-app/.env.example apps/hub-app/.env
+
+   # Mobile app
+   cp apps/mobile-app/.env.example apps/mobile-app/.env
    ```
-   Update `.env` with your database and Redis connection details.
+
+   See the [Environment Configuration](#-environment-configuration) section below for details.
 
 3. **Create database:**
    ```bash
@@ -226,6 +240,72 @@ All endpoints follow RESTful conventions with `/api/v1/` prefix.
 - **Unit Tests:** Jest
 - **E2E Tests:** Playwright (setup ready)
 - **Coverage Target:** 80%+
+
+## ⚙️ Environment Configuration
+
+Each application reads its configuration from a `.env` file in its root directory. `.env` files are git-ignored — only `.env.example` files are committed.
+
+### API (`apps/api/.env`)
+
+| Variable | Description | Default |
+|---|---|---|
+| `NODE_ENV` | Environment mode | `development` |
+| `PORT` | API server port | `3000` |
+| `CORS_ORIGINS` | Comma-separated allowed origins | `http://localhost:4200,...4204` |
+| `DB_HOST` | PostgreSQL host | `localhost` |
+| `DB_PORT` | PostgreSQL port | `5432` |
+| `DB_USERNAME` | Database user | `postgres` |
+| `DB_PASSWORD` | Database password | `postgres` |
+| `DB_NAME` | Database name | `bake_app` |
+| `REDIS_HOST` | Redis host | `localhost` |
+| `REDIS_PORT` | Redis port | `6379` |
+| `JWT_SECRET` | Secret for JWT signing | *(must change in prod)* |
+| `JWT_EXPIRATION` | Token expiry duration | `24h` |
+| `ANTHROPIC_API_KEY` | API key for AI recipe features | *(optional)* |
+
+### Frontend Apps (`apps/<app-name>/.env`)
+
+All Angular frontend apps (pos-app, admin-dashboard, kitchen-screen, hub-app) share the same config:
+
+| Variable | Description | Default |
+|---|---|---|
+| `API_URL` | Backend API URL for the dev proxy | `http://localhost:3000` |
+
+To point a frontend at the production API during development:
+```bash
+echo "API_URL=https://api.bake.ilia.to" > apps/admin-dashboard/.env
+```
+
+The proxy is configured in `proxy.conf.js` which reads from `.env`. In production builds, frontends use relative `/api` paths and nginx proxies to the API.
+
+### Hub App (`apps/hub-app/.env`)
+
+Additional variables for sub-app links:
+
+| Variable | Description | Default |
+|---|---|---|
+| `POS_URL` | POS app URL | `https://pos.bake.ilia.to` |
+| `ADMIN_URL` | Admin dashboard URL | `https://admin.bake.ilia.to` |
+| `KITCHEN_URL` | Kitchen display URL | `https://kitchen.bake.ilia.to` |
+
+### Mobile App (`apps/mobile-app/.env`)
+
+| Variable | Description | Default |
+|---|---|---|
+| `API_URL` | Backend API URL | `http://localhost:3000` (dev) / `https://api.bake.ilia.to` (prod) |
+| `WS_URL` | WebSocket URL | Same as `API_URL` |
+
+### Production Deployment
+
+On the VPS, the API reads from `/opt/bake-app/.env.production` via PM2's `ecosystem.config.js`. Frontend apps are pre-built static files served by nginx with `/api` and `/socket.io/` proxied to the API on port 3100.
+
+### Security Notes
+
+- Never commit `.env` files (they are in `.gitignore`)
+- Only `.env.example` files with placeholder values are committed
+- Production `.env.production` should have `600` file permissions
+- NestJS does not serve static files, so `.env` is not web-accessible
+- nginx serves only the built frontend assets from `/var/www/bake-app/`
 
 ## 📝 Next Steps
 

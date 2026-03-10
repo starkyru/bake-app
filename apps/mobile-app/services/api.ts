@@ -1,8 +1,7 @@
 import { getToken } from './auth';
+import { API_URL } from './config';
 
-const API_BASE = __DEV__
-  ? 'http://localhost:3000/api'
-  : 'https://api.bake.ilia.to/api';
+const API_BASE = `${API_URL}/api`;
 
 interface RequestOptions {
   method?: string;

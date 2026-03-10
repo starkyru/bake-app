@@ -67,7 +67,7 @@
           },
           "defaultConfiguration": "development",
           "options": {
-            "proxyConfig": "apps/pos-app/proxy.conf.json"
+            "proxyConfig": "apps/pos-app/proxy.conf.js"
           }
         },
         "lint": {
@@ -131,7 +131,7 @@
           "defaultConfiguration": "development",
           "options": {
             "port": 4201,
-            "proxyConfig": "apps/admin-dashboard/proxy.conf.json"
+            "proxyConfig": "apps/admin-dashboard/proxy.conf.js"
           }
         }
       }
@@ -187,7 +187,7 @@
           "defaultConfiguration": "development",
           "options": {
             "port": 4202,
-            "proxyConfig": "apps/kitchen-screen/proxy.conf.json"
+            "proxyConfig": "apps/kitchen-screen/proxy.conf.js"
           }
         }
       }
@@ -251,7 +251,7 @@
           "defaultConfiguration": "development",
           "options": {
             "port": 4204,
-            "proxyConfig": "apps/hub-app/proxy.conf.json"
+            "proxyConfig": "apps/hub-app/proxy.conf.js"
           }
         },
         "lint": {

@@ -1,7 +1,6 @@
 import { io, Socket } from 'socket.io-client';
 import { getToken } from './auth';
-
-const WS_URL = __DEV__ ? 'http://localhost:3000' : 'https://api.bake.ilia.to';
+import { WS_URL } from './config';
 
 let socket: Socket | null = null;
 

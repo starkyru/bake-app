@@ -8,6 +8,7 @@ import { ApiClientService } from '@bake-app/api-client';
 import { AuthService } from '@bake-app/auth';
 import { Order } from '@bake-app/shared-types';
 import { io, Socket } from 'socket.io-client';
+import { environment } from '../../../environments/environment';
 
 interface PaginatedResponse<T> {
   data: T[];
@@ -599,7 +600,7 @@ export class QueueComponent implements OnInit, OnDestroy {
 
   private connectWebSocket(): void {
     const token = this.authService.getToken();
-    this.socket = io('http://localhost:3000', {
+    this.socket = io(environment.wsUrl || window.location.origin, {
       auth: { token },
     });
 

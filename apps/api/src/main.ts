@@ -15,13 +15,17 @@ async function bootstrap() {
   }));
 
   // CORS
-  const corsOrigins = (process.env.CORS_ORIGIN || 'http://localhost:4200').split(',').concat([
+  const envOrigins = process.env.CORS_ORIGINS || process.env.CORS_ORIGIN || '';
+  const defaultOrigins = [
     'http://localhost:4200',
     'http://localhost:4201',
     'http://localhost:4202',
     'http://localhost:4203',
     'http://localhost:4204',
-  ]);
+  ];
+  const corsOrigins = envOrigins
+    ? envOrigins.split(',').map((o) => o.trim())
+    : defaultOrigins;
   app.enableCors({
     origin: [...new Set(corsOrigins)],
     credentials: true,

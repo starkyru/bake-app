@@ -1,4 +1,5 @@
 import * as SecureStore from 'expo-secure-store';
+import { API_URL } from './config';
 
 const TOKEN_KEY = 'auth_token';
 
@@ -27,11 +28,7 @@ export async function login(
   email: string,
   password: string
 ): Promise<{ token: string }> {
-  const API_BASE = __DEV__
-    ? 'http://localhost:3000/api'
-    : 'https://api.bake.ilia.to/api';
-
-  const response = await fetch(`${API_BASE}/auth/login`, {
+  const response = await fetch(`${API_URL}/api/auth/login`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ email, password }),
