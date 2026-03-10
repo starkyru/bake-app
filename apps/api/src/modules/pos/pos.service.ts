@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, ConflictException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { EventEmitter2 } from '@nestjs/event-emitter';
@@ -7,6 +7,7 @@ import { Product } from './entities/product.entity';
 import { Order } from './entities/order.entity';
 import { OrderItem } from './entities/order-item.entity';
 import { Payment } from './entities/payment.entity';
+import { Ingredient } from '../inventory/entities/ingredient.entity';
 import { CreateCategoryDto, UpdateCategoryDto, CreateProductDto, UpdateProductDto, CreateOrderDto, CreatePaymentDto, UpdateOrderStatusDto } from './dto';
 import { PaginationDto } from '../../common/dto/pagination.dto';
 import { PaginatedResponseDto } from '../../common/dto/paginated-response.dto';
@@ -20,6 +21,7 @@ export class PosService {
     @InjectRepository(Order) private orderRepo: Repository<Order>,
     @InjectRepository(OrderItem) private orderItemRepo: Repository<OrderItem>,
     @InjectRepository(Payment) private paymentRepo: Repository<Payment>,
+    @InjectRepository(Ingredient) private ingredientRepo: Repository<Ingredient>,
     private eventEmitter: EventEmitter2,
   ) {}
 
@@ -50,6 +52,25 @@ export class PosService {
   async deleteCategory(id: string): Promise<void> {
     const cat = await this.categoryRepo.findOne({ where: { id } });
     if (!cat) throw new NotFoundException('Category not found');
+
+    const productCount = await this.productRepo.count({
+      where: { categoryId: id, isActive: true },
+    });
+    if (productCount > 0) {
+      throw new ConflictException(
+        `Cannot delete category "${cat.name}": it has ${productCount} product(s)`,
+      );
+    }
+
+    const ingredientCount = await this.ingredientRepo.count({
+      where: { category: cat.name, isActive: true },
+    });
+    if (ingredientCount > 0) {
+      throw new ConflictException(
+        `Cannot delete category "${cat.name}": it has ${ingredientCount} ingredient(s)`,
+      );
+    }
+
     cat.isActive = false;
     await this.categoryRepo.save(cat);
   }

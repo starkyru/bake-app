@@ -9,13 +9,14 @@ import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
 import { MatCardModule } from '@angular/material/card';
 import { MatDividerModule } from '@angular/material/divider';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import {
   BakePageContainerComponent,
   BakeConfirmationService,
   BakeToastService,
 } from '@bake-app/ui-components';
 import { ApiClientService } from '@bake-app/api-client';
-import { Category as SharedCategory, Product } from '@bake-app/shared-types';
+import { Category as SharedCategory, Product, Ingredient } from '@bake-app/shared-types';
 import { forkJoin } from 'rxjs';
 
 interface CategoryView {
@@ -24,6 +25,7 @@ interface CategoryView {
   parentId: string | null;
   children?: CategoryView[];
   productCount: number;
+  ingredientCount: number;
 }
 
 @Component({
@@ -40,6 +42,7 @@ interface CategoryView {
     MatSelectModule,
     MatCardModule,
     MatDividerModule,
+    MatTooltipModule,
     BakePageContainerComponent,
   ],
   template: `
@@ -106,15 +109,18 @@ interface CategoryView {
                   <mat-icon matListItemIcon class="category-icon">folder</mat-icon>
                   <div matListItemTitle class="item-content">
                     <span class="category-name">{{ category.name }}</span>
-                    <span class="product-count">{{ category.productCount }} products</span>
+                    <span class="product-count" *ngIf="category.productCount">{{ category.productCount }} products</span>
+                    <span class="product-count" *ngIf="category.ingredientCount">{{ category.ingredientCount }} ingredients</span>
                   </div>
                   <div matListItemMeta class="item-actions">
                     <button mat-icon-button (click)="onEdit(category)">
                       <mat-icon>edit</mat-icon>
                     </button>
-                    <button mat-icon-button color="warn" (click)="onDelete(category)">
-                      <mat-icon>delete</mat-icon>
-                    </button>
+                    <span [matTooltip]="getDeleteBlockedReason(category)" [matTooltipDisabled]="!getDeleteBlockedReason(category)">
+                      <button mat-icon-button color="warn" (click)="onDelete(category)" [disabled]="!!getDeleteBlockedReason(category)">
+                        <mat-icon>delete</mat-icon>
+                      </button>
+                    </span>
                   </div>
                 </mat-list-item>
 
@@ -126,15 +132,18 @@ interface CategoryView {
                     <mat-icon matListItemIcon class="child-icon">subdirectory_arrow_right</mat-icon>
                     <div matListItemTitle class="item-content">
                       <span class="category-name">{{ child.name }}</span>
-                      <span class="product-count">{{ child.productCount }} products</span>
+                      <span class="product-count" *ngIf="child.productCount">{{ child.productCount }} products</span>
+                      <span class="product-count" *ngIf="child.ingredientCount">{{ child.ingredientCount }} ingredients</span>
                     </div>
                     <div matListItemMeta class="item-actions">
                       <button mat-icon-button (click)="onEdit(child)">
                         <mat-icon>edit</mat-icon>
                       </button>
-                      <button mat-icon-button color="warn" (click)="onDelete(child)">
-                        <mat-icon>delete</mat-icon>
-                      </button>
+                      <span [matTooltip]="getDeleteBlockedReason(child)" [matTooltipDisabled]="!getDeleteBlockedReason(child)">
+                        <button mat-icon-button color="warn" (click)="onDelete(child)" [disabled]="!!getDeleteBlockedReason(child)">
+                          <mat-icon>delete</mat-icon>
+                        </button>
+                      </span>
                     </div>
                   </mat-list-item>
                 </ng-container>
@@ -266,19 +275,27 @@ export class CategoriesComponent implements OnInit {
     forkJoin({
       categories: this.apiClient.get<SharedCategory[]>('/v1/categories'),
       products: this.apiClient.get<{ data: Product[] }>('/v1/products?limit=200'),
+      ingredients: this.apiClient.get<{ data: Ingredient[] }>('/v1/ingredients?limit=200'),
     }).subscribe({
-      next: ({ categories: cats, products: productsRes }) => {
-        const countMap: Record<string, number> = {};
+      next: ({ categories: cats, products: productsRes, ingredients: ingredientsRes }) => {
+        const productCountMap: Record<string, number> = {};
         for (const product of productsRes.data) {
           if (product.categoryId) {
-            countMap[product.categoryId] = (countMap[product.categoryId] || 0) + 1;
+            productCountMap[product.categoryId] = (productCountMap[product.categoryId] || 0) + 1;
+          }
+        }
+        const ingredientCountMap: Record<string, number> = {};
+        for (const ing of ingredientsRes.data) {
+          if (ing.category) {
+            ingredientCountMap[ing.category] = (ingredientCountMap[ing.category] || 0) + 1;
           }
         }
         this.categories = cats.map((c) => ({
           id: c.id,
           name: c.name,
           parentId: c.parentId || null,
-          productCount: countMap[c.id] || 0,
+          productCount: productCountMap[c.id] || 0,
+          ingredientCount: ingredientCountMap[c.name] || 0,
         }));
       },
       error: () => {
@@ -331,6 +348,7 @@ export class CategoriesComponent implements OnInit {
               name: created.name,
               parentId: created.parentId || null,
               productCount: 0,
+              ingredientCount: 0,
             },
           ];
           this.toastService.success('Category created successfully');
@@ -355,6 +373,20 @@ export class CategoriesComponent implements OnInit {
     this.editingCategory = null;
     this.formName = '';
     this.formParentId = this.lastUsedParentId;
+  }
+
+  getDeleteBlockedReason(category: CategoryView): string {
+    const reasons: string[] = [];
+    if (category.productCount > 0) {
+      reasons.push(`${category.productCount} product(s)`);
+    }
+    if (category.ingredientCount > 0) {
+      reasons.push(`${category.ingredientCount} ingredient(s)`);
+    }
+    if (reasons.length > 0) {
+      return `Cannot delete: has ${reasons.join(' and ')}`;
+    }
+    return '';
   }
 
   onDelete(category: CategoryView): void {
@@ -383,8 +415,10 @@ export class CategoriesComponent implements OnInit {
                 this.cancelEdit();
               }
             },
-            error: () => {
-              this.toastService.error('Failed to delete category');
+            error: (err: any) => {
+              this.toastService.error(
+                err?.error?.message || 'Failed to delete category',
+              );
             },
           });
         }

@@ -29,9 +29,8 @@ import { ApiClientService } from '@bake-app/api-client';
       </mat-form-field>
 
       <mat-form-field appearance="outline" class="full-width">
-        <mat-label>Tax Rate (%)</mat-label>
+        <mat-label>Tax Rate, %</mat-label>
         <input matInput type="number" [(ngModel)]="tax.rate" placeholder="Tax percentage" />
-        <span matSuffix style="padding-right: 8px">%</span>
       </mat-form-field>
 
       <mat-slide-toggle [(ngModel)]="tax.included" color="primary" class="toggle-field">
