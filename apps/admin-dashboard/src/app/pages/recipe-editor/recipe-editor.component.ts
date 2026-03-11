@@ -25,6 +25,7 @@ import { BakePageContainerComponent, BakeConfirmationService, BakeToastService }
 import { ApiClientService } from '@bake-app/api-client';
 import { Recipe, Category as SharedCategory, Ingredient } from '@bake-app/shared-types';
 import { CreateIngredientDialogComponent } from '../../shared/ingredient-form/create-ingredient-dialog.component';
+import { forkJoin } from 'rxjs';
 
 interface PaginatedResponse<T> {
   data: T[];
@@ -181,7 +182,10 @@ export class EstimateCostDialogComponent {
       [title]="isNew ? 'New Recipe' : 'Edit Recipe'"
       subtitle="Define ingredients, quantities, and instructions"
     >
-      <div class="editor-layout">
+      <div *ngIf="loading" class="loading-container">
+        <mat-spinner diameter="48"></mat-spinner>
+      </div>
+      <div class="editor-layout" *ngIf="!loading">
         <!-- AI Generation Card -->
         <mat-card class="ai-card">
           <mat-card-content>
@@ -490,6 +494,11 @@ export class EstimateCostDialogComponent {
   `,
   styles: [
     `
+      .loading-container {
+        display: flex;
+        justify-content: center;
+        padding: 64px 0;
+      }
       .editor-layout {
         max-width: 900px;
       }
@@ -801,6 +810,7 @@ export class EstimateCostDialogComponent {
 export class RecipeEditorComponent implements OnInit {
   recipeId = '';
   isNew = true;
+  loading = false;
   saving = false;
   recipeName = '';
   recipeCategory = '';
@@ -837,33 +847,31 @@ export class RecipeEditorComponent implements OnInit {
   ngOnInit(): void {
     this.recipeId = this.route.snapshot.paramMap.get('id') || 'new';
     this.isNew = this.recipeId === 'new';
+    this.loadData();
+  }
 
-    this.loadCategories();
-    this.loadAvailableIngredients();
-
+  private loadData(): void {
+    this.loading = true;
+    const requests: Record<string, any> = {
+      categories: this.apiClient.get<SharedCategory[]>('/v1/categories'),
+      ingredients: this.apiClient.get<PaginatedResponse<Ingredient>>('/v1/ingredients?limit=200'),
+    };
     if (!this.isNew) {
-      this.loadRecipe();
+      requests['recipe'] = this.apiClient.get<Recipe>(`/v1/recipes/${this.recipeId}`);
     }
-  }
-
-  private loadCategories(): void {
-    this.apiClient.get<SharedCategory[]>('/v1/categories').subscribe({
-      next: (cats) => {
-        this.categories = cats.map((c) => c.name);
+    forkJoin(requests).subscribe({
+      next: (results: any) => {
+        this.categories = (results.categories || []).map((c: SharedCategory) => c.name);
+        this.availableIngredients = results.ingredients?.data || [];
+        if (results.recipe) {
+          this.applyRecipeData(results.recipe);
+        }
+        this.loading = false;
       },
       error: () => {
-        this.categories = [];
-      },
-    });
-  }
-
-  private loadAvailableIngredients(): void {
-    this.apiClient.get<PaginatedResponse<Ingredient>>('/v1/ingredients?limit=200').subscribe({
-      next: (res) => {
-        this.availableIngredients = res.data;
-      },
-      error: () => {
-        this.availableIngredients = [];
+        this.loading = false;
+        this.toastService.error('Failed to load recipe data');
+        this.router.navigate(['/recipes']);
       },
     });
   }
@@ -938,18 +946,6 @@ export class RecipeEditorComponent implements OnInit {
     if (value?.__createNew) return value.name || '';
     return value?.name || '';
   };
-
-  private loadRecipe(): void {
-    this.apiClient.get<Recipe>(`/v1/recipes/${this.recipeId}`).subscribe({
-      next: (recipe) => {
-        this.applyRecipeData(recipe);
-      },
-      error: () => {
-        this.toastService.error('Failed to load recipe');
-        this.router.navigate(['/recipes']);
-      },
-    });
-  }
 
   private applyRecipeData(recipe: Partial<Recipe>): void {
     if (recipe.name) this.recipeName = recipe.name;
