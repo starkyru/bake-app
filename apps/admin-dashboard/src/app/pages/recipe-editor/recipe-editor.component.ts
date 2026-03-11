@@ -478,7 +478,7 @@ export class EstimateCostDialogComponent {
 
             <div class="editor-actions">
               <button mat-button (click)="onCancel()">Cancel</button>
-              <button mat-flat-button class="save-btn" (click)="onSave()">
+              <button mat-flat-button class="save-btn" [disabled]="saving" (click)="onSave()">
                 <mat-icon>save</mat-icon>
                 Save Recipe
               </button>
@@ -801,6 +801,7 @@ export class EstimateCostDialogComponent {
 export class RecipeEditorComponent implements OnInit {
   recipeId = '';
   isNew = true;
+  saving = false;
   recipeName = '';
   recipeCategory = '';
   yieldQuantity = 0;
@@ -1175,12 +1176,15 @@ export class RecipeEditorComponent implements OnInit {
       ? this.apiClient.post<Recipe>('/v1/recipes', dto)
       : this.apiClient.put<Recipe>(`/v1/recipes/${this.recipeId}`, dto);
 
+    this.saving = true;
     request$.subscribe({
       next: () => {
+        this.saving = false;
         this.toastService.success('Recipe saved successfully');
         this.router.navigate(['/recipes']);
       },
       error: () => {
+        this.saving = false;
         this.toastService.error('Failed to save recipe');
       },
     });

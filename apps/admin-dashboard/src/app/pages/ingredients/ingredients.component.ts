@@ -56,8 +56,8 @@ interface PaginatedResponse<T> {
             <bake-ingredient-form
               [submitLabel]="editing ? 'Update' : 'Add Ingredient'"
               [showCancel]="!!editing"
-              [showPackages]="true"
               [initialData]="editFormData"
+              [saving]="saving"
               (save)="onSave($event)"
               (cancel)="cancelEdit()"
             ></bake-ingredient-form>
@@ -137,6 +137,7 @@ export class IngredientsComponent implements OnInit {
   ingredients: Ingredient[] = [];
   totalIngredients = 0;
   loading = false;
+  saving = false;
   currentPage = 1;
   pageSize = 50;
   editing: Ingredient | null = null;
@@ -224,28 +225,37 @@ export class IngredientsComponent implements OnInit {
       description: data.description || undefined,
       calories: data.calories ?? undefined,
       category: data.category || undefined,
-      packages: data.packages.map((p, i) => ({ ...p, sortOrder: i })),
     };
+
+    this.saving = true;
 
     if (this.editing) {
       this.apiClient
         .put<Ingredient>(`/v1/ingredients/${this.editing.id}`, dto)
         .subscribe({
           next: () => {
+            this.saving = false;
             this.toastService.success('Ingredient updated');
             this.cancelEdit();
             this.loadIngredients();
           },
-          error: () => this.toastService.error('Failed to update ingredient'),
+          error: () => {
+            this.saving = false;
+            this.toastService.error('Failed to update ingredient');
+          },
         });
     } else {
       this.apiClient.post<Ingredient>('/v1/ingredients', dto).subscribe({
         next: () => {
+          this.saving = false;
           this.toastService.success('Ingredient created');
           this.formComponent?.resetForm();
           this.loadIngredients();
         },
-        error: () => this.toastService.error('Failed to create ingredient'),
+        error: () => {
+          this.saving = false;
+          this.toastService.error('Failed to create ingredient');
+        },
       });
     }
   }
@@ -258,11 +268,6 @@ export class IngredientsComponent implements OnInit {
       description: ing.description || '',
       calories: ing.calories != null ? Number(ing.calories) : null,
       category: ing.category || '',
-      packages: (ing.packages || []).map((p) => ({
-        name: p.name,
-        size: Number(p.size),
-        unit: p.unit,
-      })),
     };
   }
 

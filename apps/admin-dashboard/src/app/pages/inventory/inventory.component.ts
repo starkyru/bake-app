@@ -11,19 +11,19 @@ import {
   TableColumn,
 } from '@bake-app/ui-components';
 import { ApiClientService } from '@bake-app/api-client';
-import { Ingredient, Location } from '@bake-app/shared-types';
+import { Ingredient } from '@bake-app/shared-types';
 import {
   AddInventoryDialogComponent,
   AddInventoryDialogResult,
 } from './add-inventory-dialog.component';
 
-interface InventoryItem {
+interface InventoryRow {
   title: string;
   ingredient: string;
   category: string;
-  quantity: number;
+  packages: string;
+  quantity: string;
   unit: string;
-  calories: number | null;
   minLevel: number;
   status: string;
 }
@@ -269,20 +269,19 @@ export class InventoryComponent implements OnInit {
   columns: TableColumn[] = [
     { key: 'title', label: 'Title', type: 'text' },
     { key: 'ingredient', label: 'Ingredient', type: 'text' },
-    { key: 'category', label: 'Category', type: 'badge', sortable: true},
-    { key: 'quantity', label: 'Qty', type: 'number', width: '80px' },
+    { key: 'category', label: 'Category', type: 'badge', sortable: true },
+    { key: 'packages', label: 'Packages', type: 'text', width: '160px' },
+    { key: 'quantity', label: 'Qty', type: 'text', width: '120px' },
     { key: 'unit', label: 'Unit', type: 'text', width: '80px' },
-    { key: 'calories', label: 'Calories', type: 'number', width: '90px' },
     { key: 'minLevel', label: 'Min Level', type: 'number', width: '100px' },
     { key: 'status', label: 'Status', type: 'badge', width: '120px' },
     { key: 'actions', label: 'Actions', type: 'actions', width: '100px', sortable: false },
   ];
 
-  inventoryData: InventoryItem[] = [];
+  inventoryData: InventoryRow[] = [];
   loading = false;
 
   private ingredients: Ingredient[] = [];
-  private locations: Location[] = [];
 
   constructor(
     private apiClient: ApiClientService,
@@ -293,7 +292,6 @@ export class InventoryComponent implements OnInit {
   ngOnInit(): void {
     this.loadInventory();
     this.loadIngredients();
-    this.loadLocations();
   }
 
   private loadIngredients(): void {
@@ -305,37 +303,41 @@ export class InventoryComponent implements OnInit {
       });
   }
 
-  private loadLocations(): void {
-    this.apiClient.get<Location[]>('/v1/locations').subscribe({
-      next: (locs) => (this.locations = locs),
-      error: () => {},
-    });
-  }
-
   private loadInventory(): void {
     this.loading = true;
     this.apiClient
-      .get<Record<string, unknown>>('/v1/reports/inventory/status')
+      .get<any[]>('/v1/inventory')
       .subscribe({
-        next: (data) => {
-          const stockLevels =
-            (data['stockLevels'] as Array<Record<string, unknown>>) || [];
-          this.inventoryData = stockLevels.map((item) => {
-            const qty = Number(item['quantity'] || 0);
-            const minLevel = Number(item['minStockLevel'] || 0);
+        next: (items) => {
+          this.inventoryData = items.map((item) => {
+            const qty = Number(item.quantity || 0);
+            const minLevel = Number(item.ingredient?.minStockLevel || 0);
             let status = 'In Stock';
             if (qty <= 0) {
               status = 'Out of Stock';
-            } else if (qty <= minLevel) {
+            } else if (minLevel > 0 && qty <= minLevel) {
               status = 'Low Stock';
             }
+
+            // Build packages summary
+            const pkgSummary = (item.packages || [])
+              .map((p: any) => `${p.size}${p.unit}`)
+              .join(', ');
+
+            // Build quantity display with metric equivalent
+            const ingredientUnit = item.ingredient?.unit || '';
+            let qtyDisplay = `${qty} ${ingredientUnit}`;
+            if (item.metricQuantity && item.metricUnit) {
+              qtyDisplay += ` (${item.metricQuantity} ${item.metricUnit})`;
+            }
+
             return {
-              title: String(item['title'] || ''),
-              ingredient: String(item['ingredientName'] || ''),
-              category: String(item['locationName'] || ''),
-              quantity: qty,
-              unit: String(item['unit'] || ''),
-              calories: item['calories'] != null ? Number(item['calories']) : null,
+              title: item.title || '',
+              ingredient: item.ingredient?.name || '',
+              category: item.ingredient?.ingredientCategory?.name || '',
+              packages: pkgSummary,
+              quantity: qtyDisplay,
+              unit: ingredientUnit,
               minLevel,
               status,
             };
@@ -362,12 +364,12 @@ export class InventoryComponent implements OnInit {
 
   openAddDialog(): void {
     const ref = this.dialog.open(AddInventoryDialogComponent, {
-      data: { ingredients: this.ingredients, locations: this.locations },
+      data: { ingredients: this.ingredients },
       width: '500px',
     });
     ref.afterClosed().subscribe((result: AddInventoryDialogResult | undefined) => {
       if (result) {
-        this.apiClient.post('/v1/inventory/delivery', result).subscribe({
+        this.apiClient.post('/v1/inventory', result).subscribe({
           next: () => {
             this.toastService.success('Inventory added successfully');
             this.loadInventory();

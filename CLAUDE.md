@@ -66,6 +66,7 @@ ESLint enforces Nx module boundaries: each app scope (`scope:api`, `scope:pos-ap
 ## UI Conventions
 
 - **Loading states**: All data tables and settings panels must show a `MatProgressBar` (indeterminate) while data is loading. For `BakeDataTableComponent`, pass `[loading]="loading"`. For settings sub-components, add `<mat-progress-bar *ngIf="loading" mode="indeterminate">` above the form. Set `loading = true` before API calls, `loading = false` in both `next` and `error` callbacks.
+- **Submit button disabling**: All form submit buttons (Add, Create, Save, Update) that trigger network calls must be disabled while the request is in flight. Use a `saving = false` property, set to `true` before the API call, `false` in both `next` and `error` callbacks. Bind with `[disabled]="saving"` on the button.
 
 ## Code Style
 

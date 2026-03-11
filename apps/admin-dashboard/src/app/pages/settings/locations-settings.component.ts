@@ -81,7 +81,7 @@ import { Location } from '@bake-app/shared-types';
             <button mat-button type="button" *ngIf="editing" (click)="cancelEdit()">
               Cancel
             </button>
-            <button mat-flat-button type="submit" class="save-btn">
+            <button mat-flat-button type="submit" class="save-btn" [disabled]="saving">
               {{ editing ? 'Update' : 'Add' }}
             </button>
           </div>
@@ -230,6 +230,7 @@ import { Location } from '@bake-app/shared-types';
 })
 export class LocationsSettingsComponent implements OnInit {
   loading = false;
+  saving = false;
   locations: Location[] = [];
   formName = '';
   formAddress = '';
@@ -282,27 +283,37 @@ export class LocationsSettingsComponent implements OnInit {
       type: this.formType,
     };
 
+    this.saving = true;
+
     if (this.editing) {
       this.apiClient
         .put<Location>(`/v1/locations/${this.editing.id}`, dto)
         .subscribe({
           next: (updated) => {
+            this.saving = false;
             this.locations = this.locations.map((l) =>
               l.id === this.editing!.id ? updated : l,
             );
             this.toastService.success('Location updated');
             this.cancelEdit();
           },
-          error: () => this.toastService.error('Failed to update location'),
+          error: () => {
+            this.saving = false;
+            this.toastService.error('Failed to update location');
+          },
         });
     } else {
       this.apiClient.post<Location>('/v1/locations', dto).subscribe({
         next: (created) => {
+          this.saving = false;
           this.locations = [...this.locations, created];
           this.toastService.success('Location created');
           this.resetForm();
         },
-        error: () => this.toastService.error('Failed to create location'),
+        error: () => {
+          this.saving = false;
+          this.toastService.error('Failed to create location');
+        },
       });
     }
   }

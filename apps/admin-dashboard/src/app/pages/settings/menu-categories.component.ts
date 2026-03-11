@@ -73,7 +73,7 @@ interface CategoryView {
             <button mat-button type="button" *ngIf="editing" (click)="cancelEdit()">
               Cancel
             </button>
-            <button mat-flat-button type="submit" class="save-btn">
+            <button mat-flat-button type="submit" class="save-btn" [disabled]="saving">
               {{ editing ? 'Update' : 'Add' }}
             </button>
           </div>
@@ -236,6 +236,7 @@ interface CategoryView {
 })
 export class MenuCategoriesComponent implements OnInit {
   loading = false;
+  saving = false;
   categories: CategoryView[] = [];
   formName = '';
   formParentId = '';
@@ -300,12 +301,14 @@ export class MenuCategoriesComponent implements OnInit {
       parentId: this.formParentId || undefined,
       type: 'menu',
     };
+    this.saving = true;
 
     if (this.editing) {
       this.apiClient
         .put<Category>(`/v1/categories/${this.editing.id}`, dto)
         .subscribe({
           next: (updated) => {
+            this.saving = false;
             this.categories = this.categories.map((c) =>
               c.id === this.editing!.id
                 ? { ...c, name: updated.name, parentId: updated.parentId || null }
@@ -314,11 +317,15 @@ export class MenuCategoriesComponent implements OnInit {
             this.toastService.success('Category updated');
             this.cancelEdit();
           },
-          error: () => this.toastService.error('Failed to update category'),
+          error: () => {
+            this.saving = false;
+            this.toastService.error('Failed to update category');
+          },
         });
     } else {
       this.apiClient.post<Category>('/v1/categories', dto).subscribe({
         next: (created) => {
+          this.saving = false;
           this.categories = [
             ...this.categories,
             {
@@ -332,7 +339,10 @@ export class MenuCategoriesComponent implements OnInit {
           this.lastUsedParentId = this.formParentId;
           this.formName = '';
         },
-        error: () => this.toastService.error('Failed to create category'),
+        error: () => {
+          this.saving = false;
+          this.toastService.error('Failed to create category');
+        },
       });
     }
   }

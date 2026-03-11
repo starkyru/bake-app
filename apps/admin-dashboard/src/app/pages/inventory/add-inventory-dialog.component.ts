@@ -11,21 +11,16 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
 import { MatIconModule } from '@angular/material/icon';
-import { Ingredient, Location } from '@bake-app/shared-types';
+import { Ingredient, UNIT_GROUPS } from '@bake-app/shared-types';
 
 export interface AddInventoryDialogData {
   ingredients: Ingredient[];
-  locations: Location[];
 }
 
 export interface AddInventoryDialogResult {
-  title?: string;
+  title: string;
   ingredientId: string;
-  locationId: string;
-  quantity: number;
-  unitCost?: number;
-  batchNumber?: string;
-  notes?: string;
+  packages: { size: number; unit: string }[];
 }
 
 @Component({
@@ -42,12 +37,12 @@ export interface AddInventoryDialogResult {
     MatIconModule,
   ],
   template: `
-    <h2 mat-dialog-title>Add Inventory</h2>
+    <h2 mat-dialog-title>Add Inventory Item</h2>
     <mat-dialog-content>
       <div class="dialog-form">
         <mat-form-field appearance="outline" class="full-width">
           <mat-label>Title</mat-label>
-          <input matInput [(ngModel)]="title" placeholder="e.g., Morning flour delivery" />
+          <input matInput [(ngModel)]="title" placeholder="e.g., King Arthur Flour" />
         </mat-form-field>
 
         <mat-form-field appearance="outline" class="full-width">
@@ -59,42 +54,36 @@ export interface AddInventoryDialogResult {
           </mat-select>
         </mat-form-field>
 
-        <mat-form-field appearance="outline" class="full-width">
-          <mat-label>Location</mat-label>
-          <mat-select [(ngModel)]="locationId">
-            <mat-option *ngFor="let loc of data.locations" [value]="loc.id">
-              {{ loc.name }}
-            </mat-option>
-          </mat-select>
-        </mat-form-field>
-
-        <div class="form-row">
-          <mat-form-field appearance="outline" class="flex-1">
-            <mat-label>Quantity</mat-label>
-            <input matInput type="number" [(ngModel)]="quantity" min="0.01" />
-            <span matSuffix class="unit-suffix">{{ selectedUnit }}</span>
-          </mat-form-field>
-
-          <mat-form-field appearance="outline" class="flex-1">
-            <mat-label>Unit Cost</mat-label>
-            <input matInput type="number" [(ngModel)]="unitCost" min="0" />
-          </mat-form-field>
+        <div class="section-label">Package Sizes</div>
+        <div class="packages-list">
+          <div class="form-row" *ngFor="let pkg of packages; let i = index">
+            <mat-form-field appearance="outline" class="flex-1">
+              <mat-label>Size</mat-label>
+              <input matInput type="number" [(ngModel)]="pkg.size" min="0.01" />
+            </mat-form-field>
+            <mat-form-field appearance="outline" class="flex-1">
+              <mat-label>Unit</mat-label>
+              <mat-select [(ngModel)]="pkg.unit">
+                <mat-option *ngFor="let u of availableUnits" [value]="u">
+                  {{ u }}
+                </mat-option>
+              </mat-select>
+            </mat-form-field>
+            <button
+              mat-icon-button
+              color="warn"
+              (click)="removePackage(i)"
+              *ngIf="packages.length > 1"
+              class="remove-btn"
+            >
+              <mat-icon>close</mat-icon>
+            </button>
+          </div>
         </div>
-
-        <div class="info-row" *ngIf="selectedCalories != null">
-          <mat-icon class="info-icon">local_fire_department</mat-icon>
-          <span class="info-text">{{ selectedCalories }} cal per 100g</span>
-        </div>
-
-        <mat-form-field appearance="outline" class="full-width">
-          <mat-label>Batch Number</mat-label>
-          <input matInput [(ngModel)]="batchNumber" placeholder="Optional" />
-        </mat-form-field>
-
-        <mat-form-field appearance="outline" class="full-width">
-          <mat-label>Notes</mat-label>
-          <textarea matInput [(ngModel)]="notes" rows="2" placeholder="Optional"></textarea>
-        </mat-form-field>
+        <button mat-stroked-button class="add-package-btn" (click)="addPackage()">
+          <mat-icon>add</mat-icon>
+          Add Package Size
+        </button>
       </div>
     </mat-dialog-content>
     <mat-dialog-actions align="end">
@@ -120,27 +109,30 @@ export interface AddInventoryDialogResult {
       .form-row {
         display: flex;
         gap: 12px;
+        align-items: flex-start;
       }
       .flex-1 {
         flex: 1;
       }
-      .unit-suffix {
-        padding-right: 8px;
-        color: #78909c;
-      }
-      .info-row {
-        display: flex;
-        align-items: center;
-        gap: 6px;
-        padding: 4px 0 8px;
-        color: #5d4037;
+      .section-label {
         font-size: 13px;
+        font-weight: 500;
+        color: #5d4037;
+        margin: 4px 0 8px;
       }
-      .info-icon {
-        font-size: 18px;
-        width: 18px;
-        height: 18px;
-        color: #e65100;
+      .packages-list {
+        display: flex;
+        flex-direction: column;
+        gap: 0;
+      }
+      .remove-btn {
+        margin-top: 8px;
+      }
+      .add-package-btn {
+        align-self: flex-start;
+        margin-bottom: 8px;
+        border-color: #8b4513 !important;
+        color: #8b4513 !important;
       }
       .save-btn {
         background-color: #8b4513 !important;
@@ -152,51 +144,56 @@ export interface AddInventoryDialogResult {
 export class AddInventoryDialogComponent implements OnInit {
   title = '';
   ingredientId = '';
-  locationId = '';
-  quantity: number | null = null;
-  unitCost: number | null = null;
-  batchNumber = '';
-  notes = '';
-
-  selectedUnit = '';
-  selectedCalories: number | null = null;
+  packages: { size: number | null; unit: string }[] = [{ size: null, unit: '' }];
+  availableUnits: string[] = [];
 
   constructor(
     public dialogRef: MatDialogRef<AddInventoryDialogComponent>,
     @Inject(MAT_DIALOG_DATA) public data: AddInventoryDialogData,
   ) {}
 
-  ngOnInit(): void {
-    if (this.data.locations.length === 1) {
-      this.locationId = this.data.locations[0].id;
-    }
-  }
+  ngOnInit(): void {}
 
   onIngredientChange(): void {
     const ing = this.data.ingredients.find((i) => i.id === this.ingredientId);
     if (ing) {
-      this.selectedUnit = ing.unit;
-      this.selectedCalories = ing.calories != null ? Number(ing.calories) : null;
+      this.availableUnits = UNIT_GROUPS[ing.unit] || [ing.unit];
+      // Reset units if they don't match new ingredient
+      for (const pkg of this.packages) {
+        if (!this.availableUnits.includes(pkg.unit)) {
+          pkg.unit = this.availableUnits[0] || '';
+        }
+      }
     } else {
-      this.selectedUnit = '';
-      this.selectedCalories = null;
+      this.availableUnits = [];
     }
   }
 
+  addPackage(): void {
+    this.packages.push({ size: null, unit: this.availableUnits[0] || '' });
+  }
+
+  removePackage(index: number): void {
+    this.packages.splice(index, 1);
+  }
+
   isValid(): boolean {
-    return !!this.ingredientId && !!this.locationId && !!this.quantity && this.quantity > 0;
+    return (
+      !!this.title &&
+      !!this.ingredientId &&
+      this.packages.length > 0 &&
+      this.packages.every((p) => p.size && p.size > 0 && !!p.unit)
+    );
   }
 
   onSubmit(): void {
     if (!this.isValid()) return;
     const result: AddInventoryDialogResult = {
-      title: this.title || undefined,
+      title: this.title,
       ingredientId: this.ingredientId,
-      locationId: this.locationId,
-      quantity: this.quantity!,
-      unitCost: this.unitCost ?? undefined,
-      batchNumber: this.batchNumber || undefined,
-      notes: this.notes || undefined,
+      packages: this.packages
+        .filter((p) => p.size && p.size > 0 && p.unit)
+        .map((p) => ({ size: p.size!, unit: p.unit })),
     };
     this.dialogRef.close(result);
   }

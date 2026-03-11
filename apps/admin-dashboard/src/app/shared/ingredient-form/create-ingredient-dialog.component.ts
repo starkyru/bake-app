@@ -22,7 +22,7 @@ import {
       <bake-ingredient-form
         submitLabel="Create Ingredient"
         [showCancel]="true"
-        [showPackages]="false"
+          [saving]="saving"
         (save)="onCreate($event)"
         (cancel)="dialogRef.close(null)"
       ></bake-ingredient-form>
@@ -43,6 +43,7 @@ import {
 })
 export class CreateIngredientDialogComponent {
   @ViewChild(IngredientFormComponent) form!: IngredientFormComponent;
+  saving = false;
 
   constructor(
     public dialogRef: MatDialogRef<CreateIngredientDialogComponent>,
@@ -57,15 +58,17 @@ export class CreateIngredientDialogComponent {
       description: data.description || undefined,
       calories: data.calories ?? undefined,
       category: data.category || undefined,
-      packages: [],
     };
 
+    this.saving = true;
     this.apiClient.post<Ingredient>('/v1/ingredients', dto).subscribe({
       next: (created) => {
+        this.saving = false;
         this.toastService.success(`Ingredient "${created.name}" created`);
         this.dialogRef.close(created);
       },
       error: () => {
+        this.saving = false;
         this.toastService.error('Failed to create ingredient');
       },
     });

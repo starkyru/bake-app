@@ -4,24 +4,29 @@ import { Repository } from 'typeorm';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { Ingredient } from './entities/ingredient.entity';
 import { IngredientCategory } from './entities/ingredient-category.entity';
-import { IngredientPackage } from './entities/ingredient-package.entity';
 import { InventoryItem } from './entities/inventory-item.entity';
-import { InventoryBatch } from './entities/inventory-batch.entity';
+import { InventoryItemPackage } from './entities/inventory-item-package.entity';
+import { InventoryShipment } from './entities/inventory-shipment.entity';
 import { InventoryMovement } from './entities/inventory-movement.entity';
 import { Location } from './entities/location.entity';
-import { CreateIngredientDto, UpdateIngredientDto, CreateLocationDto, UpdateLocationDto, DeliveryDto, WriteOffDto, TransferDto, CreateIngredientCategoryDto, UpdateIngredientCategoryDto } from './dto';
+import {
+  CreateIngredientDto, UpdateIngredientDto, CreateLocationDto, UpdateLocationDto,
+  CreateInventoryItemDto, AddShipmentDto, AddPackageDto, WriteOffDto, TransferDto,
+  CreateIngredientCategoryDto, UpdateIngredientCategoryDto,
+} from './dto';
 import { PaginationDto } from '../../common/dto/pagination.dto';
 import { PaginatedResponseDto } from '../../common/dto/paginated-response.dto';
 import { DOMAIN_EVENTS } from '../websocket/ws-events.constants';
+import { convertToBaseUnit, getMetricEquivalent, CONVERSION_FACTORS } from './unit-conversion';
 
 @Injectable()
 export class InventoryService {
   constructor(
     @InjectRepository(Ingredient) private ingredientRepo: Repository<Ingredient>,
     @InjectRepository(IngredientCategory) private ingredientCategoryRepo: Repository<IngredientCategory>,
-    @InjectRepository(IngredientPackage) private packageRepo: Repository<IngredientPackage>,
     @InjectRepository(InventoryItem) private inventoryItemRepo: Repository<InventoryItem>,
-    @InjectRepository(InventoryBatch) private batchRepo: Repository<InventoryBatch>,
+    @InjectRepository(InventoryItemPackage) private packageRepo: Repository<InventoryItemPackage>,
+    @InjectRepository(InventoryShipment) private shipmentRepo: Repository<InventoryShipment>,
     @InjectRepository(InventoryMovement) private movementRepo: Repository<InventoryMovement>,
     @InjectRepository(Location) private locationRepo: Repository<Location>,
     private eventEmitter: EventEmitter2,
@@ -30,11 +35,10 @@ export class InventoryService {
   // Ingredients
   async findAllIngredients(query: PaginationDto, category?: string): Promise<PaginatedResponseDto<Ingredient>> {
     const { page, limit, search } = query;
-    const qb = this.ingredientRepo.createQueryBuilder('i')
-      .leftJoinAndSelect('i.packages', 'pkg');
+    const qb = this.ingredientRepo.createQueryBuilder('i');
     if (search) qb.where('i.name ILIKE :search', { search: `%${search}%` });
     if (category) qb.andWhere('i.category = :category', { category });
-    qb.orderBy('i.name', 'ASC').addOrderBy('pkg.sortOrder', 'ASC');
+    qb.orderBy('i.name', 'ASC');
     const [data, total] = await qb.skip((page - 1) * limit).take(limit).getManyAndCount();
     return new PaginatedResponseDto(data, total, page, limit);
   }
@@ -46,14 +50,7 @@ export class InventoryService {
   async updateIngredient(id: string, dto: UpdateIngredientDto): Promise<Ingredient> {
     const ingredient = await this.ingredientRepo.findOne({ where: { id } });
     if (!ingredient) throw new NotFoundException('Ingredient not found');
-    const { packages, ...rest } = dto;
-    Object.assign(ingredient, rest);
-    if (packages !== undefined) {
-      await this.packageRepo.delete({ ingredientId: id });
-      ingredient.packages = packages.map((p) =>
-        this.packageRepo.create({ ...p, ingredientId: id }),
-      );
-    }
+    Object.assign(ingredient, dto);
     return this.ingredientRepo.save(ingredient);
   }
 
@@ -82,148 +79,264 @@ export class InventoryService {
   async deleteLocation(id: string): Promise<void> {
     const location = await this.locationRepo.findOne({ where: { id } });
     if (!location) throw new NotFoundException('Location not found');
-    const itemCount = await this.inventoryItemRepo.count({ where: { locationId: id } });
-    if (itemCount > 0) {
-      throw new BadRequestException('Cannot delete location with inventory items');
+    const shipmentCount = await this.shipmentRepo.count({ where: { locationId: id } });
+    if (shipmentCount > 0) {
+      throw new BadRequestException('Cannot delete location with inventory shipments');
     }
     await this.locationRepo.remove(location);
   }
 
-  // Stock levels
-  async getStockLevels(locationId?: string): Promise<InventoryItem[]> {
-    const qb = this.inventoryItemRepo.createQueryBuilder('item')
-      .leftJoinAndSelect('item.ingredient', 'ingredient')
-      .leftJoinAndSelect('item.location', 'location');
-    if (locationId) qb.where('item.locationId = :locationId', { locationId });
-    return qb.getMany();
+  // Inventory Items
+  async createInventoryItem(dto: CreateInventoryItemDto): Promise<InventoryItem> {
+    const item = this.inventoryItemRepo.create({
+      title: dto.title,
+      ingredientId: dto.ingredientId,
+    });
+    const saved = await this.inventoryItemRepo.save(item);
+
+    if (dto.packages?.length) {
+      const packages = dto.packages.map((pkg, idx) =>
+        this.packageRepo.create({
+          inventoryItemId: saved.id,
+          size: pkg.size,
+          unit: pkg.unit,
+          sortOrder: idx,
+        }),
+      );
+      await this.packageRepo.save(packages);
+    }
+
+    return this.inventoryItemRepo.findOne({
+      where: { id: saved.id },
+      relations: ['ingredient', 'packages'],
+    });
   }
 
-  // Delivery
-  async processDelivery(dto: DeliveryDto, userId?: string): Promise<InventoryMovement> {
-    let item = await this.inventoryItemRepo.findOne({
-      where: { ingredientId: dto.ingredientId, locationId: dto.locationId },
+  async addPackage(inventoryItemId: string, dto: AddPackageDto): Promise<InventoryItemPackage> {
+    const item = await this.inventoryItemRepo.findOne({ where: { id: inventoryItemId } });
+    if (!item) throw new NotFoundException('Inventory item not found');
+
+    const maxSort = await this.packageRepo
+      .createQueryBuilder('p')
+      .select('MAX(p.sort_order)', 'max')
+      .where('p.inventory_item_id = :id', { id: inventoryItemId })
+      .getRawOne();
+
+    return this.packageRepo.save(this.packageRepo.create({
+      inventoryItemId,
+      size: dto.size,
+      unit: dto.unit,
+      sortOrder: (parseInt(maxSort?.max, 10) || 0) + 1,
+    }));
+  }
+
+  async removePackage(inventoryItemId: string, packageId: string): Promise<void> {
+    const pkg = await this.packageRepo.findOne({
+      where: { id: packageId, inventoryItemId },
     });
-    if (item) {
-      item.quantity = Number(item.quantity) + dto.quantity;
-      if (dto.title) item.title = dto.title;
-    } else {
-      item = this.inventoryItemRepo.create({
-        title: dto.title,
-        ingredientId: dto.ingredientId,
-        locationId: dto.locationId,
-        quantity: dto.quantity,
-        status: 'in_stock',
-      });
-    }
-    await this.updateItemStatus(item);
-    await this.inventoryItemRepo.save(item);
+    if (!pkg) throw new NotFoundException('Package not found');
 
-    if (dto.batchNumber) {
-      await this.batchRepo.save(this.batchRepo.create({
-        batchNumber: dto.batchNumber,
-        quantity: dto.quantity,
-        ingredientId: dto.ingredientId,
-        locationId: dto.locationId,
-      }));
+    const shipmentCount = await this.shipmentRepo.count({ where: { packageId } });
+    if (shipmentCount > 0) {
+      throw new BadRequestException('Cannot remove package that has shipments');
     }
 
-    const movement = await this.movementRepo.save(this.movementRepo.create({
-      type: 'delivery',
-      quantity: dto.quantity,
+    await this.packageRepo.remove(pkg);
+  }
+
+  async addShipment(inventoryItemId: string, dto: AddShipmentDto, userId?: string): Promise<InventoryShipment> {
+    const item = await this.inventoryItemRepo.findOne({
+      where: { id: inventoryItemId },
+      relations: ['ingredient'],
+    });
+    if (!item) throw new NotFoundException('Inventory item not found');
+
+    const pkg = await this.packageRepo.findOne({
+      where: { id: dto.packageId, inventoryItemId },
+    });
+    if (!pkg) throw new NotFoundException('Package not found for this inventory item');
+
+    const shipment = await this.shipmentRepo.save(this.shipmentRepo.create({
+      inventoryItemId,
+      packageId: dto.packageId,
+      packageCount: dto.packageCount,
+      locationId: dto.locationId,
+      batchNumber: dto.batchNumber,
       unitCost: dto.unitCost,
       notes: dto.notes,
-      ingredientId: dto.ingredientId,
-      toLocationId: dto.locationId,
       userId,
     }));
-    const ingredient = await this.ingredientRepo.findOne({ where: { id: dto.ingredientId } });
-    this.eventEmitter.emit(DOMAIN_EVENTS.INVENTORY_DELIVERY, {
-      movementType: 'delivery',
-      ingredientId: dto.ingredientId,
-      ingredientName: ingredient?.name,
-      quantity: dto.quantity,
-      locationId: dto.locationId,
-    });
-    return movement;
-  }
 
-  // Write-off
-  async processWriteOff(dto: WriteOffDto, userId?: string): Promise<InventoryMovement> {
-    const item = await this.inventoryItemRepo.findOne({
-      where: { ingredientId: dto.ingredientId, locationId: dto.locationId },
-    });
-    if (!item || Number(item.quantity) < dto.quantity) {
-      throw new BadRequestException('Insufficient stock');
-    }
-    item.quantity = Number(item.quantity) - dto.quantity;
-    await this.updateItemStatus(item);
-    await this.inventoryItemRepo.save(item);
-
-    const movement = await this.movementRepo.save(this.movementRepo.create({
-      type: 'write_off',
-      quantity: dto.quantity,
-      notes: dto.reason,
-      ingredientId: dto.ingredientId,
-      fromLocationId: dto.locationId,
+    // Create movement record
+    const totalQuantity = Number(dto.packageCount) * convertToBaseUnit(
+      Number(pkg.size), pkg.unit, item.ingredient?.unit || 'g',
+    );
+    await this.movementRepo.save(this.movementRepo.create({
+      type: dto.packageCount >= 0 ? 'delivery' : 'write_off',
+      quantity: Math.abs(totalQuantity),
+      unitCost: dto.unitCost,
+      notes: dto.notes,
+      ingredientId: item.ingredientId,
+      toLocationId: dto.packageCount >= 0 ? dto.locationId : undefined,
+      fromLocationId: dto.packageCount < 0 ? dto.locationId : undefined,
       userId,
     }));
-    const ingredient = await this.ingredientRepo.findOne({ where: { id: dto.ingredientId } });
-    this.eventEmitter.emit(DOMAIN_EVENTS.INVENTORY_WRITE_OFF, {
-      movementType: 'write_off',
-      ingredientId: dto.ingredientId,
-      ingredientName: ingredient?.name,
-      quantity: dto.quantity,
-      locationId: dto.locationId,
-    });
-    return movement;
-  }
 
-  // Transfer
-  async processTransfer(dto: TransferDto, userId?: string): Promise<InventoryMovement> {
-    const fromItem = await this.inventoryItemRepo.findOne({
-      where: { ingredientId: dto.ingredientId, locationId: dto.fromLocationId },
-    });
-    if (!fromItem || Number(fromItem.quantity) < dto.quantity) {
-      throw new BadRequestException('Insufficient stock at source location');
-    }
-    fromItem.quantity = Number(fromItem.quantity) - dto.quantity;
-    await this.updateItemStatus(fromItem);
-    await this.inventoryItemRepo.save(fromItem);
-
-    let toItem = await this.inventoryItemRepo.findOne({
-      where: { ingredientId: dto.ingredientId, locationId: dto.toLocationId },
-    });
-    if (toItem) {
-      toItem.quantity = Number(toItem.quantity) + dto.quantity;
-    } else {
-      toItem = this.inventoryItemRepo.create({
-        ingredientId: dto.ingredientId,
-        locationId: dto.toLocationId,
-        quantity: dto.quantity,
-        status: 'in_stock',
+    if (dto.packageCount > 0) {
+      this.eventEmitter.emit(DOMAIN_EVENTS.INVENTORY_DELIVERY, {
+        movementType: 'delivery',
+        ingredientId: item.ingredientId,
+        ingredientName: item.ingredient?.name,
+        quantity: totalQuantity,
+        locationId: dto.locationId,
       });
     }
-    await this.updateItemStatus(toItem);
-    await this.inventoryItemRepo.save(toItem);
 
-    const movement = await this.movementRepo.save(this.movementRepo.create({
+    await this.checkLowStock(item);
+
+    return shipment;
+  }
+
+  async getShipments(inventoryItemId: string): Promise<InventoryShipment[]> {
+    return this.shipmentRepo.find({
+      where: { inventoryItemId },
+      relations: ['package', 'location'],
+      order: { createdAt: 'DESC' },
+    });
+  }
+
+  // Stock levels — quantity & status computed from shipments with unit conversions
+  async getStockLevels(): Promise<any[]> {
+    const items = await this.inventoryItemRepo.find({
+      relations: ['ingredient', 'packages', 'shipments'],
+    });
+
+    return items.map((item) => {
+      const ingredientUnit = item.ingredient?.unit || 'g';
+      let totalQuantity = 0;
+
+      // Build package map for quick lookup
+      const packageMap = new Map<string, InventoryItemPackage>();
+      for (const pkg of (item.packages || [])) {
+        packageMap.set(pkg.id, pkg);
+      }
+
+      // Sum shipments with conversion
+      for (const shipment of (item.shipments || [])) {
+        const pkg = packageMap.get(shipment.packageId);
+        if (!pkg) continue;
+        const converted = convertToBaseUnit(Number(pkg.size), pkg.unit, ingredientUnit);
+        totalQuantity += Number(shipment.packageCount) * converted;
+      }
+
+      const minStockLevel = Number(item.ingredient?.minStockLevel || 0);
+      let status = 'in_stock';
+      if (totalQuantity <= 0) {
+        status = 'out_of_stock';
+      } else if (minStockLevel > 0 && totalQuantity <= minStockLevel) {
+        status = 'low_stock';
+      }
+
+      // Metric equivalent
+      const metricEquiv = getMetricEquivalent(totalQuantity, ingredientUnit);
+
+      return {
+        ...item,
+        quantity: Math.round(totalQuantity * 100) / 100,
+        status,
+        metricQuantity: metricEquiv?.value,
+        metricUnit: metricEquiv?.unit,
+      };
+    });
+  }
+
+  // Write-off — creates a negative shipment
+  async processWriteOff(dto: WriteOffDto, userId?: string): Promise<InventoryShipment> {
+    const item = await this.inventoryItemRepo.findOne({
+      where: { id: dto.inventoryItemId },
+      relations: ['ingredient'],
+    });
+    if (!item) throw new NotFoundException('Inventory item not found');
+
+    const pkg = await this.packageRepo.findOne({
+      where: { id: dto.packageId, inventoryItemId: dto.inventoryItemId },
+    });
+    if (!pkg) throw new NotFoundException('Package not found');
+
+    const shipment = await this.addShipment(dto.inventoryItemId, {
+      packageId: dto.packageId,
+      packageCount: -dto.packageCount,
+      locationId: dto.locationId,
+      notes: dto.reason,
+    }, userId);
+
+    const totalQuantity = dto.packageCount * convertToBaseUnit(
+      Number(pkg.size), pkg.unit, item.ingredient?.unit || 'g',
+    );
+
+    this.eventEmitter.emit(DOMAIN_EVENTS.INVENTORY_WRITE_OFF, {
+      movementType: 'write_off',
+      ingredientId: item.ingredientId,
+      ingredientName: item.ingredient?.name,
+      quantity: totalQuantity,
+      locationId: dto.locationId,
+    });
+
+    return shipment;
+  }
+
+  // Transfer — negative shipment on source location, positive on destination
+  async processTransfer(dto: TransferDto, userId?: string): Promise<void> {
+    const fromItem = await this.inventoryItemRepo.findOne({
+      where: { id: dto.fromInventoryItemId },
+      relations: ['ingredient'],
+    });
+    if (!fromItem) throw new NotFoundException('Source inventory item not found');
+
+    const pkg = await this.packageRepo.findOne({
+      where: { id: dto.packageId, inventoryItemId: dto.fromInventoryItemId },
+    });
+    if (!pkg) throw new NotFoundException('Package not found');
+
+    // Create negative shipment at source location
+    await this.addShipment(dto.fromInventoryItemId, {
+      packageId: dto.packageId,
+      packageCount: -dto.packageCount,
+      locationId: dto.fromLocationId,
+      notes: dto.notes || 'Transfer out',
+    }, userId);
+
+    // Create positive shipment at destination location
+    await this.addShipment(dto.fromInventoryItemId, {
+      packageId: dto.packageId,
+      packageCount: dto.packageCount,
+      locationId: dto.toLocationId,
+      notes: dto.notes || 'Transfer in',
+    }, userId);
+
+    // Create transfer movement record
+    const totalQuantity = dto.packageCount * convertToBaseUnit(
+      Number(pkg.size), pkg.unit, fromItem.ingredient?.unit || 'g',
+    );
+
+    await this.movementRepo.save(this.movementRepo.create({
       type: 'transfer',
-      quantity: dto.quantity,
+      quantity: totalQuantity,
       notes: dto.notes,
-      ingredientId: dto.ingredientId,
+      ingredientId: fromItem.ingredientId,
       fromLocationId: dto.fromLocationId,
       toLocationId: dto.toLocationId,
       userId,
     }));
-    const ingredient = await this.ingredientRepo.findOne({ where: { id: dto.ingredientId } });
+
     this.eventEmitter.emit(DOMAIN_EVENTS.INVENTORY_TRANSFER, {
       movementType: 'transfer',
-      ingredientId: dto.ingredientId,
-      ingredientName: ingredient?.name,
-      quantity: dto.quantity,
-      locationId: dto.fromLocationId,
+      ingredientId: fromItem.ingredientId,
+      ingredientName: fromItem.ingredient?.name,
+      quantity: totalQuantity,
+      fromLocationId: dto.fromLocationId,
+      toLocationId: dto.toLocationId,
     });
-    return movement;
   }
 
   // Ingredient Categories
@@ -262,24 +375,34 @@ export class InventoryService {
     await this.ingredientCategoryRepo.save(cat);
   }
 
-  private async updateItemStatus(item: InventoryItem): Promise<void> {
-    const ingredient = await this.ingredientRepo.findOne({ where: { id: item.ingredientId } });
+  private async checkLowStock(item: InventoryItem): Promise<void> {
+    const ingredient = item.ingredient || await this.ingredientRepo.findOne({ where: { id: item.ingredientId } });
     if (!ingredient) return;
-    if (Number(item.quantity) <= 0) {
-      item.status = 'out_of_stock';
-    } else if (Number(item.quantity) <= Number(ingredient.minStockLevel)) {
-      item.status = 'low_stock';
-    } else {
-      item.status = 'in_stock';
+
+    const shipments = await this.shipmentRepo.find({
+      where: { inventoryItemId: item.id },
+      relations: ['package'],
+    });
+
+    let totalQuantity = 0;
+    for (const shipment of shipments) {
+      if (!shipment.package) continue;
+      const converted = convertToBaseUnit(
+        Number(shipment.package.size), shipment.package.unit, ingredient.unit,
+      );
+      totalQuantity += Number(shipment.packageCount) * converted;
     }
-    if (item.status === 'low_stock' || item.status === 'out_of_stock') {
+
+    const minStockLevel = Number(ingredient.minStockLevel);
+
+    if (minStockLevel > 0 && totalQuantity <= minStockLevel) {
+      const status = totalQuantity <= 0 ? 'out_of_stock' : 'low_stock';
       this.eventEmitter.emit(DOMAIN_EVENTS.INVENTORY_LOW_STOCK, {
         ingredientId: item.ingredientId,
         ingredientName: ingredient.name,
-        currentQuantity: Number(item.quantity),
-        minStockLevel: Number(ingredient.minStockLevel),
-        status: item.status,
-        locationId: item.locationId,
+        currentQuantity: totalQuantity,
+        minStockLevel,
+        status,
       });
     }
   }

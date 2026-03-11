@@ -9,8 +9,9 @@ import { FinanceTransaction } from '../finance/entities/finance-transaction.enti
 import { ExpenseRecord } from '../finance/entities/expense-record.entity';
 import { Ingredient } from '../inventory/entities/ingredient.entity';
 import { InventoryItem } from '../inventory/entities/inventory-item.entity';
+import { InventoryItemPackage } from '../inventory/entities/inventory-item-package.entity';
 import { InventoryMovement } from '../inventory/entities/inventory-movement.entity';
-import { InventoryBatch } from '../inventory/entities/inventory-batch.entity';
+import { InventoryShipment } from '../inventory/entities/inventory-shipment.entity';
 import { ProductionPlan } from '../production/entities/production-plan.entity';
 import { ProductionTask } from '../production/entities/production-task.entity';
 import { ReportingService } from './reporting.service';
@@ -28,8 +29,9 @@ import { ReportingController } from './reporting.controller';
       ExpenseRecord,
       Ingredient,
       InventoryItem,
+      InventoryItemPackage,
       InventoryMovement,
-      InventoryBatch,
+      InventoryShipment,
       ProductionPlan,
       ProductionTask,
     ]),

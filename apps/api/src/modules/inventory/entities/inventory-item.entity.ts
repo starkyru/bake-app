@@ -1,18 +1,13 @@
-import { Entity, Column, ManyToOne, JoinColumn } from 'typeorm';
+import { Entity, Column, ManyToOne, OneToMany, JoinColumn } from 'typeorm';
 import { BaseEntity } from '../../../common/entities/base.entity';
 import { Ingredient } from './ingredient.entity';
-import { Location } from './location.entity';
+import { InventoryItemPackage } from './inventory-item-package.entity';
+import { InventoryShipment } from './inventory-shipment.entity';
 
 @Entity('inventory_items')
 export class InventoryItem extends BaseEntity {
-  @Column({ nullable: true })
+  @Column()
   title: string;
-
-  @Column({ type: 'decimal', precision: 10, scale: 2, default: 0 })
-  quantity: number;
-
-  @Column({ default: 'in_stock' })
-  status: string;
 
   @ManyToOne(() => Ingredient, { eager: true })
   @JoinColumn({ name: 'ingredient_id' })
@@ -21,10 +16,9 @@ export class InventoryItem extends BaseEntity {
   @Column({ name: 'ingredient_id' })
   ingredientId: string;
 
-  @ManyToOne(() => Location)
-  @JoinColumn({ name: 'location_id' })
-  location: Location;
+  @OneToMany(() => InventoryItemPackage, (pkg) => pkg.inventoryItem, { cascade: true })
+  packages: InventoryItemPackage[];
 
-  @Column({ name: 'location_id' })
-  locationId: string;
+  @OneToMany(() => InventoryShipment, (shipment) => shipment.inventoryItem, { cascade: true })
+  shipments: InventoryShipment[];
 }

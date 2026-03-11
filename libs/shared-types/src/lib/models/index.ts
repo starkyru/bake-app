@@ -89,15 +89,6 @@ export interface Category {
   children?: Category[];
 }
 
-export interface IngredientPackage {
-  id: string;
-  name: string;
-  size: number;
-  unit: string;
-  sortOrder: number;
-  ingredientId: string;
-}
-
 export interface IngredientCategory {
   id: string;
   name: string;
@@ -117,18 +108,61 @@ export interface Ingredient {
   categoryId?: string;
   ingredientCategory?: IngredientCategory;
   isActive: boolean;
-  packages?: IngredientPackage[];
 }
 
 export interface InventoryItem {
   id: string;
-  title?: string;
-  quantity: number;
-  status: string;
+  title: string;
   ingredient: Ingredient;
   ingredientId: string;
-  locationId: string;
+  packages?: InventoryItemPackage[];
+  shipments?: InventoryShipment[];
+  // Computed fields (from API)
+  quantity?: number;
+  status?: string;
+  metricQuantity?: number;
+  metricUnit?: string;
 }
+
+export interface InventoryItemPackage {
+  id: string;
+  size: number;
+  unit: string;
+  sortOrder: number;
+  inventoryItemId: string;
+}
+
+export interface InventoryShipment {
+  id: string;
+  packageCount: number;
+  unitCost?: number;
+  notes?: string;
+  batchNumber?: string;
+  userId?: string;
+  inventoryItemId: string;
+  packageId: string;
+  locationId: string;
+  package?: InventoryItemPackage;
+  location?: Location;
+  metricQuantity?: number;
+  metricUnit?: string;
+  createdAt: Date;
+}
+
+export const UNIT_GROUPS: Record<string, string[]> = {
+  g: ['g', 'kg', 'lb', 'oz'],
+  ml: ['ml', 'L', 'fl oz'],
+  pcs: ['pcs'],
+  tbsp: ['tbsp', 'ml'],
+  tsp: ['tsp', 'ml'],
+};
+
+export const CONVERSION_FACTORS: Record<string, number> = {
+  g: 1, kg: 1000, lb: 453.592, oz: 28.3495,
+  ml: 1, L: 1000, 'fl oz': 29.5735,
+  pcs: 1,
+  tbsp: 15, tsp: 5,
+};
 
 export interface InventoryMovement {
   id: string;

@@ -1,7 +1,11 @@
 import { Controller, Get, Post, Put, Delete, Body, Param, Query, UseGuards, Request } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { InventoryService } from './inventory.service';
-import { CreateIngredientDto, UpdateIngredientDto, CreateLocationDto, UpdateLocationDto, DeliveryDto, WriteOffDto, TransferDto, CreateIngredientCategoryDto, UpdateIngredientCategoryDto } from './dto';
+import {
+  CreateIngredientDto, UpdateIngredientDto, CreateLocationDto, UpdateLocationDto,
+  CreateInventoryItemDto, AddShipmentDto, AddPackageDto, WriteOffDto, TransferDto,
+  CreateIngredientCategoryDto, UpdateIngredientCategoryDto,
+} from './dto';
 import { PaginationDto } from '../../common/dto/pagination.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../../common/guards/permissions.guard';
@@ -102,15 +106,43 @@ export class InventoryController {
   @Get('inventory')
   @RequirePermissions('inventory:read')
   @ApiOperation({ summary: 'Get stock levels' })
-  getStockLevels(@Query('locationId') locationId?: string) {
-    return this.inventoryService.getStockLevels(locationId);
+  getStockLevels() {
+    return this.inventoryService.getStockLevels();
   }
 
-  @Post('inventory/delivery')
+  @Post('inventory')
   @RequirePermissions('inventory:create')
-  @ApiOperation({ summary: 'Process delivery' })
-  processDelivery(@Body() dto: DeliveryDto, @Request() req: any) {
-    return this.inventoryService.processDelivery(dto, req.user?.id);
+  @ApiOperation({ summary: 'Create inventory item with packages' })
+  createInventoryItem(@Body() dto: CreateInventoryItemDto) {
+    return this.inventoryService.createInventoryItem(dto);
+  }
+
+  @Post('inventory/:id/packages')
+  @RequirePermissions('inventory:create')
+  @ApiOperation({ summary: 'Add package to inventory item' })
+  addPackage(@Param('id') id: string, @Body() dto: AddPackageDto) {
+    return this.inventoryService.addPackage(id, dto);
+  }
+
+  @Delete('inventory/:id/packages/:packageId')
+  @RequirePermissions('inventory:delete')
+  @ApiOperation({ summary: 'Remove package from inventory item' })
+  removePackage(@Param('id') id: string, @Param('packageId') packageId: string) {
+    return this.inventoryService.removePackage(id, packageId);
+  }
+
+  @Post('inventory/:id/shipments')
+  @RequirePermissions('inventory:create')
+  @ApiOperation({ summary: 'Add shipment to inventory item' })
+  addShipment(@Param('id') id: string, @Body() dto: AddShipmentDto, @Request() req: any) {
+    return this.inventoryService.addShipment(id, dto, req.user?.id);
+  }
+
+  @Get('inventory/:id/shipments')
+  @RequirePermissions('inventory:read')
+  @ApiOperation({ summary: 'Get shipments for inventory item' })
+  getShipments(@Param('id') id: string) {
+    return this.inventoryService.getShipments(id);
   }
 
   @Post('inventory/write-off')

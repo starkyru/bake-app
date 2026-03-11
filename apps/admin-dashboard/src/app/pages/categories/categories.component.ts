@@ -90,7 +90,7 @@ interface CategoryView {
                 >
                   Cancel
                 </button>
-                <button mat-flat-button type="submit" class="save-btn">
+                <button mat-flat-button type="submit" class="save-btn" [disabled]="saving">
                   {{ editingCategory ? 'Update' : 'Add Category' }}
                 </button>
               </div>
@@ -255,6 +255,7 @@ interface CategoryView {
 })
 export class CategoriesComponent implements OnInit {
   categories: CategoryView[] = [];
+  saving = false;
 
   formName = '';
   formParentId: string | null = null;
@@ -319,12 +320,15 @@ export class CategoriesComponent implements OnInit {
   onSaveCategory(): void {
     if (!this.formName.trim()) return;
 
+    this.saving = true;
+
     if (this.editingCategory) {
       const dto = { name: this.formName, parentId: this.formParentId || undefined };
       this.apiClient
         .put<SharedCategory>(`/v1/categories/${this.editingCategory.id}`, dto)
         .subscribe({
           next: (updated) => {
+            this.saving = false;
             this.categories = this.categories.map((c) =>
               c.id === this.editingCategory!.id
                 ? { ...c, name: updated.name, parentId: updated.parentId || null }
@@ -334,6 +338,7 @@ export class CategoriesComponent implements OnInit {
             this.cancelEdit();
           },
           error: () => {
+            this.saving = false;
             this.toastService.error('Failed to update category');
           },
         });
@@ -341,6 +346,7 @@ export class CategoriesComponent implements OnInit {
       const dto = { name: this.formName, parentId: this.formParentId || undefined };
       this.apiClient.post<SharedCategory>('/v1/categories', dto).subscribe({
         next: (created) => {
+          this.saving = false;
           this.categories = [
             ...this.categories,
             {
@@ -357,6 +363,7 @@ export class CategoriesComponent implements OnInit {
           this.formParentId = this.lastUsedParentId;
         },
         error: () => {
+          this.saving = false;
           this.toastService.error('Failed to create category');
         },
       });

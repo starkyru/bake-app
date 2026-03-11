@@ -1,28 +1,6 @@
-import { IsString, IsNumber, IsOptional, IsUUID, IsInt, IsArray, Min, ValidateNested } from 'class-validator';
+import { IsString, IsNumber, IsOptional, IsUUID, IsArray, Min, ValidateNested } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional, PartialType } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-
-export class CreateIngredientPackageDto {
-  @ApiProperty({ example: '25lb bag' })
-  @IsString()
-  name: string;
-
-  @ApiProperty({ example: 25 })
-  @Type(() => Number)
-  @IsNumber()
-  @Min(0)
-  size: number;
-
-  @ApiProperty({ example: 'lb' })
-  @IsString()
-  unit: string;
-
-  @ApiPropertyOptional({ example: 0 })
-  @IsOptional()
-  @Type(() => Number)
-  @IsInt()
-  sortOrder?: number;
-}
 
 export class CreateIngredientDto {
   @ApiProperty({ example: 'Flour' })
@@ -68,13 +46,6 @@ export class CreateIngredientDto {
   @IsOptional()
   @IsUUID()
   categoryId?: string;
-
-  @ApiPropertyOptional({ type: [CreateIngredientPackageDto] })
-  @IsOptional()
-  @IsArray()
-  @ValidateNested({ each: true })
-  @Type(() => CreateIngredientPackageDto)
-  packages?: CreateIngredientPackageDto[];
 }
 
 export class UpdateIngredientDto extends PartialType(CreateIngredientDto) {}
@@ -102,36 +73,59 @@ export class CreateLocationDto {
 
 export class UpdateLocationDto extends PartialType(CreateLocationDto) {}
 
-export class DeliveryDto {
-  @ApiPropertyOptional({ example: 'Morning flour delivery' })
-  @IsOptional()
+export class AddPackageDto {
+  @ApiProperty({ example: 25 })
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0.01)
+  size: number;
+
+  @ApiProperty({ example: 'lb' })
   @IsString()
-  title?: string;
+  unit: string;
+}
+
+export class CreateInventoryItemDto {
+  @ApiProperty({ example: 'King Arthur Flour' })
+  @IsString()
+  title: string;
 
   @ApiProperty()
   @IsUUID()
   ingredientId: string;
 
+  @ApiPropertyOptional({ type: [AddPackageDto] })
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => AddPackageDto)
+  packages?: AddPackageDto[];
+}
+
+export class AddShipmentDto {
+  @ApiProperty()
+  @IsUUID()
+  packageId: string;
+
+  @ApiProperty({ example: 10 })
+  @Type(() => Number)
+  @IsNumber()
+  packageCount: number;
+
   @ApiProperty()
   @IsUUID()
   locationId: string;
-
-  @ApiProperty({ example: 50 })
-  @Type(() => Number)
-  @IsNumber()
-  @Min(0.01)
-  quantity: number;
-
-  @ApiPropertyOptional({ example: 500 })
-  @IsOptional()
-  @Type(() => Number)
-  @IsNumber()
-  unitCost?: number;
 
   @ApiPropertyOptional()
   @IsOptional()
   @IsString()
   batchNumber?: string;
+
+  @ApiPropertyOptional({ example: 50 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  unitCost?: number;
 
   @ApiPropertyOptional()
   @IsOptional()
@@ -142,17 +136,21 @@ export class DeliveryDto {
 export class WriteOffDto {
   @ApiProperty()
   @IsUUID()
-  ingredientId: string;
+  inventoryItemId: string;
 
   @ApiProperty()
   @IsUUID()
-  locationId: string;
+  packageId: string;
 
   @ApiProperty()
   @Type(() => Number)
   @IsNumber()
   @Min(0.01)
-  quantity: number;
+  packageCount: number;
+
+  @ApiProperty()
+  @IsUUID()
+  locationId: string;
 
   @ApiProperty({ example: 'Expired' })
   @IsString()
@@ -162,7 +160,11 @@ export class WriteOffDto {
 export class TransferDto {
   @ApiProperty()
   @IsUUID()
-  ingredientId: string;
+  fromInventoryItemId: string;
+
+  @ApiProperty()
+  @IsUUID()
+  packageId: string;
 
   @ApiProperty()
   @IsUUID()
@@ -176,7 +178,7 @@ export class TransferDto {
   @Type(() => Number)
   @IsNumber()
   @Min(0.01)
-  quantity: number;
+  packageCount: number;
 
   @ApiPropertyOptional()
   @IsOptional()

@@ -10,8 +10,10 @@ import { FinanceTransaction } from '../finance/entities/finance-transaction.enti
 import { ExpenseRecord } from '../finance/entities/expense-record.entity';
 import { Ingredient } from '../inventory/entities/ingredient.entity';
 import { InventoryItem } from '../inventory/entities/inventory-item.entity';
+import { InventoryItemPackage } from '../inventory/entities/inventory-item-package.entity';
 import { InventoryMovement } from '../inventory/entities/inventory-movement.entity';
-import { InventoryBatch } from '../inventory/entities/inventory-batch.entity';
+import { InventoryShipment } from '../inventory/entities/inventory-shipment.entity';
+import { convertToBaseUnit, getMetricEquivalent } from '../inventory/unit-conversion';
 import { ProductionPlan } from '../production/entities/production-plan.entity';
 import { ProductionTask } from '../production/entities/production-task.entity';
 import {
@@ -33,8 +35,9 @@ export class ReportingService {
     @InjectRepository(ExpenseRecord) private expenseRepo: Repository<ExpenseRecord>,
     @InjectRepository(Ingredient) private ingredientRepo: Repository<Ingredient>,
     @InjectRepository(InventoryItem) private inventoryItemRepo: Repository<InventoryItem>,
+    @InjectRepository(InventoryItemPackage) private packageRepo: Repository<InventoryItemPackage>,
     @InjectRepository(InventoryMovement) private movementRepo: Repository<InventoryMovement>,
-    @InjectRepository(InventoryBatch) private batchRepo: Repository<InventoryBatch>,
+    @InjectRepository(InventoryShipment) private shipmentRepo: Repository<InventoryShipment>,
     @InjectRepository(ProductionPlan) private planRepo: Repository<ProductionPlan>,
     @InjectRepository(ProductionTask) private taskRepo: Repository<ProductionTask>,
   ) {}
@@ -219,59 +222,67 @@ export class ReportingService {
     };
   }
 
-  // 6. Inventory Status - Stock levels, low-stock alerts, expiring batches
+  // 6. Inventory Status - Stock levels computed via shipments with unit conversions
   async getInventoryStatus(query: InventoryReportQueryDto) {
-    const stockQb = this.inventoryItemRepo
-      .createQueryBuilder('item')
-      .leftJoin('item.ingredient', 'ing')
-      .leftJoin('item.location', 'loc')
-      .select('item.id', 'id')
-      .addSelect('item.title', 'title')
-      .addSelect('ing.name', 'ingredientName')
-      .addSelect('ing.unit', 'unit')
-      .addSelect('ing.minStockLevel', 'minStockLevel')
-      .addSelect('ing.calories', 'calories')
-      .addSelect('item.quantity', 'quantity')
-      .addSelect('item.status', 'status')
-      .addSelect('loc.name', 'locationName');
-    if (query.locationId)
-      stockQb.where('item.locationId = :locationId', { locationId: query.locationId });
-    const stockLevels = await stockQb.getRawMany();
+    const items = await this.inventoryItemRepo.find({
+      relations: ['ingredient', 'packages', 'shipments'],
+    });
 
-    const alertsQb = this.inventoryItemRepo
-      .createQueryBuilder('item')
-      .leftJoin('item.ingredient', 'ing')
-      .select('COUNT(item.id)', 'count')
-      .addSelect('item.status', 'status')
-      .groupBy('item.status');
-    if (query.locationId)
-      alertsQb.where('item.locationId = :locationId', { locationId: query.locationId });
-    const statusSummary = await alertsQb.getRawMany();
+    const stockLevels = items.map((item) => {
+      const ingredientUnit = item.ingredient?.unit || 'g';
+      let totalQuantity = 0;
 
-    const now = new Date();
-    const weekFromNow = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
-    const expiringQb = this.batchRepo
-      .createQueryBuilder('b')
-      .leftJoin('b.ingredient', 'ing')
-      .select('b.id', 'id')
-      .addSelect('ing.name', 'ingredientName')
-      .addSelect('b.batchNumber', 'batchNumber')
-      .addSelect('b.quantity', 'quantity')
-      .addSelect('b.expiresAt', 'expiresAt')
-      .where('b.expiresAt IS NOT NULL')
-      .andWhere('b.expiresAt BETWEEN :now AND :weekFromNow', { now, weekFromNow })
-      .andWhere('b.quantity > 0');
-    if (query.locationId)
-      expiringQb.andWhere('b.locationId = :locationId', { locationId: query.locationId });
-    const expiringBatches = await expiringQb.getRawMany();
+      const packageMap = new Map<string, InventoryItemPackage>();
+      for (const pkg of (item.packages || [])) {
+        packageMap.set(pkg.id, pkg);
+      }
 
-    const lowStockItems = stockLevels.filter(
-      (item) =>
-        item.minStockLevel != null &&
-        parseFloat(item.quantity) <= parseFloat(item.minStockLevel),
-    );
+      // Filter by locationId if provided
+      const shipments = query.locationId
+        ? (item.shipments || []).filter((s) => s.locationId === query.locationId)
+        : (item.shipments || []);
 
-    return { stockLevels, statusSummary, expiringBatches, lowStockItems };
+      for (const shipment of shipments) {
+        const pkg = packageMap.get(shipment.packageId);
+        if (!pkg) continue;
+        const converted = convertToBaseUnit(Number(pkg.size), pkg.unit, ingredientUnit);
+        totalQuantity += Number(shipment.packageCount) * converted;
+      }
+
+      const qty = Math.round(totalQuantity * 100) / 100;
+      const minLevel = Number(item.ingredient?.minStockLevel || 0);
+      let status = 'in_stock';
+      if (qty <= 0) {
+        status = 'out_of_stock';
+      } else if (minLevel > 0 && qty <= minLevel) {
+        status = 'low_stock';
+      }
+
+      const metricEquiv = getMetricEquivalent(qty, ingredientUnit);
+
+      return {
+        id: item.id,
+        title: item.title,
+        ingredientName: item.ingredient?.name,
+        unit: ingredientUnit,
+        minStockLevel: minLevel,
+        calories: item.ingredient?.calories,
+        quantity: qty,
+        status,
+        metricQuantity: metricEquiv?.value,
+        metricUnit: metricEquiv?.unit,
+      };
+    });
+
+    const statusSummary = [
+      { status: 'in_stock', count: stockLevels.filter((i) => i.status === 'in_stock').length },
+      { status: 'low_stock', count: stockLevels.filter((i) => i.status === 'low_stock').length },
+      { status: 'out_of_stock', count: stockLevels.filter((i) => i.status === 'out_of_stock').length },
+    ];
+
+    const lowStockItems = stockLevels.filter((item) => item.status !== 'in_stock');
+
+    return { stockLevels, statusSummary, expiringBatches: [], lowStockItems };
   }
 
   // 7. Inventory Movements - Movement summary by type, ingredient usage, waste
