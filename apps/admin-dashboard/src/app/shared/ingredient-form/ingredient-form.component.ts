@@ -80,6 +80,7 @@ export interface IngredientFormData {
           [(ngModel)]="formData.calories"
           name="calories"
           placeholder="e.g., 364"
+          min="0"
         />
       </mat-form-field>
 

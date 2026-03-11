@@ -82,6 +82,8 @@ export class RecipesService {
       await this.linkRepo.delete({ recipeId: id });
       recipe.links = dto.links.map(l => this.linkRepo.create({ ...this.processLink(l), recipeId: id }));
     }
+    // Remove loaded versions to prevent TypeORM from cascading updates on them
+    delete recipe.versions;
     Object.assign(recipe, {
       ...(dto.name && { name: dto.name }),
       ...(dto.category !== undefined && { category: dto.category }),

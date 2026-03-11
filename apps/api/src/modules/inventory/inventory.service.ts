@@ -112,6 +112,12 @@ export class InventoryService {
     });
   }
 
+  async deleteInventoryItem(id: string): Promise<void> {
+    const item = await this.inventoryItemRepo.findOne({ where: { id } });
+    if (!item) throw new NotFoundException('Inventory item not found');
+    await this.inventoryItemRepo.remove(item);
+  }
+
   async addPackage(inventoryItemId: string, dto: AddPackageDto): Promise<InventoryItemPackage> {
     const item = await this.inventoryItemRepo.findOne({ where: { id: inventoryItemId } });
     if (!item) throw new NotFoundException('Inventory item not found');

@@ -33,7 +33,7 @@ import { HealthController } from './health.controller';
         password: config.get('DB_PASSWORD', 'postgres'),
         database: config.get('DB_NAME', 'bake_app'),
         autoLoadEntities: true,
-        synchronize: config.get('NODE_ENV') !== 'production',
+        synchronize: true,
         logging: config.get('NODE_ENV') === 'development',
         retryAttempts: 3,
       }),

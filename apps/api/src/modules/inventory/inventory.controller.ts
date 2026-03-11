@@ -117,6 +117,13 @@ export class InventoryController {
     return this.inventoryService.createInventoryItem(dto);
   }
 
+  @Delete('inventory/:id')
+  @RequirePermissions('inventory:delete')
+  @ApiOperation({ summary: 'Delete inventory item' })
+  deleteInventoryItem(@Param('id') id: string) {
+    return this.inventoryService.deleteInventoryItem(id);
+  }
+
   @Post('inventory/:id/packages')
   @RequirePermissions('inventory:create')
   @ApiOperation({ summary: 'Add package to inventory item' })

@@ -5,6 +5,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import {
+  BakeConfirmationService,
   BakeDataTableComponent,
   BakePageContainerComponent,
   BakeToastService,
@@ -18,6 +19,7 @@ import {
 } from './add-inventory-dialog.component';
 
 interface InventoryRow {
+  id: string;
   title: string;
   ingredient: string;
   category: string;
@@ -287,6 +289,7 @@ export class InventoryComponent implements OnInit {
     private apiClient: ApiClientService,
     private dialog: MatDialog,
     private toastService: BakeToastService,
+    private confirmService: BakeConfirmationService,
   ) {}
 
   ngOnInit(): void {
@@ -332,6 +335,7 @@ export class InventoryComponent implements OnInit {
             }
 
             return {
+              id: item.id,
               title: item.title || '',
               ingredient: item.ingredient?.name || '',
               category: item.ingredient?.ingredientCategory?.name || '',
@@ -380,7 +384,31 @@ export class InventoryComponent implements OnInit {
     });
   }
 
-  onRowAction(event: { action: string; row: unknown }): void {
-    console.log('Row action:', event.action, event.row);
+  onRowAction(event: { action: string; row: InventoryRow }): void {
+    if (event.action === 'delete') {
+      this.confirmService
+        .confirm({
+          title: 'Delete Inventory Item',
+          message: `Are you sure you want to delete "${event.row.title}"? This action cannot be undone.`,
+          confirmText: 'Delete',
+          confirmColor: 'warn',
+        })
+        .subscribe((confirmed) => {
+          if (confirmed) {
+            this.apiClient.delete(`/v1/inventory/${event.row.id}`).subscribe({
+              next: () => {
+                this.inventoryData = this.inventoryData.filter(
+                  (i) => i.id !== event.row.id,
+                );
+                this.toastService.success('Inventory item deleted');
+              },
+              error: () => this.toastService.error('Failed to delete inventory item'),
+            });
+          }
+        });
+    } else if (event.action === 'edit') {
+      // TODO: implement edit dialog
+      this.toastService.info('Edit not yet implemented');
+    }
   }
 }

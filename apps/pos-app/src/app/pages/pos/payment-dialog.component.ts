@@ -71,6 +71,7 @@ export interface PaymentDialogResult {
                 [(ngModel)]="cashAmount"
                 (ngModelChange)="calculateChange()"
                 placeholder="0"
+                min="0"
                 class="amount-input"
               />
               <span matPrefix class="currency-prefix">$</span>

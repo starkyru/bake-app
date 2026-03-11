@@ -166,11 +166,11 @@ interface MenuDialogData {
         <div class="form-row">
           <mat-form-field appearance="outline" class="half-width">
             <mat-label>Sell Price ($)</mat-label>
-            <input matInput type="number" [(ngModel)]="price" placeholder="0" />
+            <input matInput type="number" [(ngModel)]="price" placeholder="0" min="0" />
           </mat-form-field>
           <mat-form-field appearance="outline" class="half-width">
             <mat-label>Cost Price ($)</mat-label>
-            <input matInput type="number" [(ngModel)]="cost" placeholder="Auto from recipe" />
+            <input matInput type="number" [(ngModel)]="cost" placeholder="Auto from recipe" min="0" />
           </mat-form-field>
         </div>
       </ng-container>
@@ -202,11 +202,11 @@ interface MenuDialogData {
         <div class="form-row">
           <mat-form-field appearance="outline" class="half-width">
             <mat-label>Sell Price ($)</mat-label>
-            <input matInput type="number" [(ngModel)]="price" placeholder="0" />
+            <input matInput type="number" [(ngModel)]="price" placeholder="0" min="0" />
           </mat-form-field>
           <mat-form-field appearance="outline" class="half-width">
             <mat-label>Cost Price ($)</mat-label>
-            <input matInput type="number" [(ngModel)]="cost" placeholder="Auto from ingredient" />
+            <input matInput type="number" [(ngModel)]="cost" placeholder="Auto from ingredient" min="0" />
           </mat-form-field>
         </div>
       </ng-container>

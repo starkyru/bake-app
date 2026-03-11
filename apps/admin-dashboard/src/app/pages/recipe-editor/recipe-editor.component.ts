@@ -258,6 +258,7 @@ export class EstimateCostDialogComponent {
                     type="number"
                     [(ngModel)]="yieldQuantity"
                     placeholder="10"
+                    min="0"
                   />
                 </mat-form-field>
                 <mat-form-field appearance="outline" class="flex-1">
@@ -358,6 +359,7 @@ export class EstimateCostDialogComponent {
                           type="number"
                           [(ngModel)]="row.quantity"
                           placeholder="0"
+                          min="0"
                         />
                       </mat-form-field>
                     </td>
