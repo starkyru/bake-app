@@ -1,5 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { Router } from '@angular/router';
 import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
@@ -12,7 +13,7 @@ import {
   TableColumn,
 } from '@bake-app/ui-components';
 import { ApiClientService } from '@bake-app/api-client';
-import { Ingredient } from '@bake-app/shared-types';
+import { Ingredient, InventoryItem } from '@bake-app/shared-types';
 import {
   AddInventoryDialogComponent,
   AddInventoryDialogResult,
@@ -125,6 +126,7 @@ interface InventoryRow {
             [loading]="loading"
             [searchable]="true"
             (rowAction)="onRowAction($event)"
+            (rowClick)="onRowClick($event)"
           ></bake-data-table>
         </mat-card-content>
       </mat-card>
@@ -284,12 +286,14 @@ export class InventoryComponent implements OnInit {
   loading = false;
 
   private ingredients: Ingredient[] = [];
+  private rawItems: any[] = [];
 
   constructor(
     private apiClient: ApiClientService,
     private dialog: MatDialog,
     private toastService: BakeToastService,
     private confirmService: BakeConfirmationService,
+    private router: Router,
   ) {}
 
   ngOnInit(): void {
@@ -312,9 +316,12 @@ export class InventoryComponent implements OnInit {
       .get<any[]>('/v1/inventory')
       .subscribe({
         next: (items) => {
+          this.rawItems = items;
           this.inventoryData = items.map((item) => {
             const qty = Number(item.quantity || 0);
-            const minLevel = Number(item.ingredient?.minStockLevel || 0);
+            const minLevel = item.minStockLevel != null
+              ? Number(item.minStockLevel)
+              : Number(item.ingredient?.minStockLevel || 0);
             let status = 'In Stock';
             if (qty <= 0) {
               status = 'Out of Stock';
@@ -338,7 +345,7 @@ export class InventoryComponent implements OnInit {
               id: item.id,
               title: item.title || '',
               ingredient: item.ingredient?.name || '',
-              category: item.ingredient?.ingredientCategory?.name || '',
+              category: item.ingredient?.ingredientCategory?.name || item.ingredient?.category || '',
               packages: pkgSummary,
               quantity: qtyDisplay,
               unit: ingredientUnit,
@@ -368,7 +375,7 @@ export class InventoryComponent implements OnInit {
 
   openAddDialog(): void {
     const ref = this.dialog.open(AddInventoryDialogComponent, {
-      data: { ingredients: this.ingredients },
+      data: { ingredients: this.ingredients, mode: 'create' },
       width: '500px',
     });
     ref.afterClosed().subscribe((result: AddInventoryDialogResult | undefined) => {
@@ -382,6 +389,10 @@ export class InventoryComponent implements OnInit {
         });
       }
     });
+  }
+
+  onRowClick(row: InventoryRow): void {
+    this.router.navigate(['/inventory', row.id]);
   }
 
   onRowAction(event: { action: string; row: InventoryRow }): void {
@@ -407,8 +418,39 @@ export class InventoryComponent implements OnInit {
           }
         });
     } else if (event.action === 'edit') {
-      // TODO: implement edit dialog
-      this.toastService.info('Edit not yet implemented');
+      this.openEditDialog(event.row.id);
     }
+  }
+
+  private openEditDialog(itemId: string): void {
+    const rawItem = this.rawItems.find((i) => i.id === itemId);
+    if (!rawItem) return;
+
+    const item: InventoryItem = {
+      id: rawItem.id,
+      title: rawItem.title,
+      ingredient: rawItem.ingredient,
+      ingredientId: rawItem.ingredientId || rawItem.ingredient?.id,
+      minStockLevel: rawItem.minStockLevel,
+      minStockUnit: rawItem.minStockUnit,
+      packages: rawItem.packages,
+    };
+
+    const ref = this.dialog.open(AddInventoryDialogComponent, {
+      data: { ingredients: this.ingredients, mode: 'edit', item },
+      width: '500px',
+    });
+    ref.afterClosed().subscribe((result: AddInventoryDialogResult | undefined) => {
+      if (result) {
+        const { ingredientId, ...updatePayload } = result;
+        this.apiClient.put(`/v1/inventory/${itemId}`, updatePayload).subscribe({
+          next: () => {
+            this.toastService.success('Inventory item updated');
+            this.loadInventory();
+          },
+          error: () => this.toastService.error('Failed to update inventory item'),
+        });
+      }
+    });
   }
 }

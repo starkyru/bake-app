@@ -12,6 +12,12 @@ export class InventoryItem extends BaseEntity {
   @Column({ name: 'in_stock', default: true })
   inStock: boolean;
 
+  @Column({ name: 'min_stock_level', type: 'decimal', precision: 10, scale: 2, nullable: true })
+  minStockLevel: number;
+
+  @Column({ name: 'min_stock_unit', nullable: true })
+  minStockUnit: string;
+
   @ManyToOne(() => Ingredient, { eager: true })
   @JoinColumn({ name: 'ingredient_id' })
   ingredient: Ingredient;

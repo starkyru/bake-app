@@ -3,8 +3,8 @@ import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { InventoryService } from './inventory.service';
 import {
   CreateIngredientDto, UpdateIngredientDto, CreateLocationDto, UpdateLocationDto,
-  CreateInventoryItemDto, AddShipmentDto, AddPackageDto, WriteOffDto, TransferDto,
-  CreateIngredientCategoryDto, UpdateIngredientCategoryDto,
+  CreateInventoryItemDto, UpdateInventoryItemDto, AddShipmentDto, AddPackageDto,
+  WriteOffDto, TransferDto, CreateIngredientCategoryDto, UpdateIngredientCategoryDto,
 } from './dto';
 import { PaginationDto } from '../../common/dto/pagination.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
@@ -110,11 +110,25 @@ export class InventoryController {
     return this.inventoryService.getStockLevels();
   }
 
+  @Get('inventory/:id')
+  @RequirePermissions('inventory:read')
+  @ApiOperation({ summary: 'Get single inventory item with package stock' })
+  getInventoryItem(@Param('id') id: string) {
+    return this.inventoryService.getInventoryItem(id);
+  }
+
   @Post('inventory')
   @RequirePermissions('inventory:create')
   @ApiOperation({ summary: 'Create inventory item with packages' })
   createInventoryItem(@Body() dto: CreateInventoryItemDto) {
     return this.inventoryService.createInventoryItem(dto);
+  }
+
+  @Put('inventory/:id')
+  @RequirePermissions('inventory:update')
+  @ApiOperation({ summary: 'Update inventory item' })
+  updateInventoryItem(@Param('id') id: string, @Body() dto: UpdateInventoryItemDto) {
+    return this.inventoryService.updateInventoryItem(id, dto);
   }
 
   @Delete('inventory/:id')

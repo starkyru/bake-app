@@ -82,6 +82,13 @@ export const routes: Routes = [
           ),
       },
       {
+        path: 'inventory/:id',
+        loadComponent: () =>
+          import('./pages/inventory/inventory-detail.component').then(
+            (m) => m.InventoryDetailComponent
+          ),
+      },
+      {
         path: 'finance',
         loadComponent: () =>
           import('./pages/finance/finance.component').then(

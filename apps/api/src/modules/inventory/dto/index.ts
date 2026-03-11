@@ -102,6 +102,32 @@ export class CreateInventoryItemDto {
   packages?: AddPackageDto[];
 }
 
+export class UpdateInventoryItemDto {
+  @ApiPropertyOptional({ example: 'King Arthur Flour' })
+  @IsOptional()
+  @IsString()
+  title?: string;
+
+  @ApiPropertyOptional({ example: 5 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0)
+  minStockLevel?: number;
+
+  @ApiPropertyOptional({ example: 'kg' })
+  @IsOptional()
+  @IsString()
+  minStockUnit?: string;
+
+  @ApiPropertyOptional({ type: [AddPackageDto] })
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => AddPackageDto)
+  packages?: AddPackageDto[];
+}
+
 export class AddShipmentDto {
   @ApiProperty()
   @IsUUID()

@@ -11,8 +11,8 @@ import { InventoryMovement } from './entities/inventory-movement.entity';
 import { Location } from './entities/location.entity';
 import {
   CreateIngredientDto, UpdateIngredientDto, CreateLocationDto, UpdateLocationDto,
-  CreateInventoryItemDto, AddShipmentDto, AddPackageDto, WriteOffDto, TransferDto,
-  CreateIngredientCategoryDto, UpdateIngredientCategoryDto,
+  CreateInventoryItemDto, UpdateInventoryItemDto, AddShipmentDto, AddPackageDto,
+  WriteOffDto, TransferDto, CreateIngredientCategoryDto, UpdateIngredientCategoryDto,
 } from './dto';
 import { PaginationDto } from '../../common/dto/pagination.dto';
 import { PaginatedResponseDto } from '../../common/dto/paginated-response.dto';
@@ -108,6 +108,62 @@ export class InventoryService {
 
     return this.inventoryItemRepo.findOne({
       where: { id: saved.id },
+      relations: ['ingredient', 'packages'],
+    });
+  }
+
+  async updateInventoryItem(id: string, dto: UpdateInventoryItemDto): Promise<InventoryItem> {
+    const item = await this.inventoryItemRepo.findOne({
+      where: { id },
+      relations: ['ingredient', 'packages'],
+    });
+    if (!item) throw new NotFoundException('Inventory item not found');
+
+    // Update scalar fields
+    if (dto.title !== undefined) item.title = dto.title;
+    if (dto.minStockLevel !== undefined) item.minStockLevel = dto.minStockLevel;
+    if (dto.minStockUnit !== undefined) item.minStockUnit = dto.minStockUnit;
+
+    await this.inventoryItemRepo.save(item);
+
+    // Sync packages if provided
+    if (dto.packages) {
+      const existingPkgs = item.packages || [];
+
+      // Remove packages that are no longer in the list (only if they have no shipments)
+      for (const existing of existingPkgs) {
+        const stillPresent = dto.packages.some(
+          (p) => p.size === existing.size && p.unit === existing.unit,
+        );
+        if (!stillPresent) {
+          const shipmentCount = await this.shipmentRepo.count({
+            where: { packageId: existing.id },
+          });
+          if (shipmentCount === 0) {
+            await this.packageRepo.remove(existing);
+          }
+        }
+      }
+
+      // Add new packages
+      for (let idx = 0; idx < dto.packages.length; idx++) {
+        const p = dto.packages[idx];
+        const exists = existingPkgs.some(
+          (e) => e.size === p.size && e.unit === p.unit,
+        );
+        if (!exists) {
+          await this.packageRepo.save(this.packageRepo.create({
+            inventoryItemId: id,
+            size: p.size,
+            unit: p.unit,
+            sortOrder: idx,
+          }));
+        }
+      }
+    }
+
+    return this.inventoryItemRepo.findOne({
+      where: { id },
       relations: ['ingredient', 'packages'],
     });
   }
@@ -211,10 +267,43 @@ export class InventoryService {
     });
   }
 
+  async getInventoryItem(id: string): Promise<any> {
+    const item = await this.inventoryItemRepo.findOne({
+      where: { id },
+      relations: ['ingredient', 'ingredient.ingredientCategory', 'packages', 'shipments', 'shipments.package', 'shipments.location'],
+    });
+    if (!item) throw new NotFoundException('Inventory item not found');
+
+    const ingredientUnit = item.ingredient?.unit || 'g';
+
+    // Compute per-package stock
+    const packageStockMap = new Map<string, number>();
+    for (const pkg of (item.packages || [])) {
+      packageStockMap.set(pkg.id, 0);
+    }
+    for (const shipment of (item.shipments || [])) {
+      const current = packageStockMap.get(shipment.packageId) || 0;
+      packageStockMap.set(shipment.packageId, current + Number(shipment.packageCount));
+    }
+
+    const packageStock = (item.packages || []).map((pkg) => ({
+      id: pkg.id,
+      size: pkg.size,
+      unit: pkg.unit,
+      sortOrder: pkg.sortOrder,
+      remaining: packageStockMap.get(pkg.id) || 0,
+    }));
+
+    return {
+      ...item,
+      packageStock,
+    };
+  }
+
   // Stock levels — quantity & status computed from shipments with unit conversions
   async getStockLevels(): Promise<any[]> {
     const items = await this.inventoryItemRepo.find({
-      relations: ['ingredient', 'packages', 'shipments'],
+      relations: ['ingredient', 'ingredient.ingredientCategory', 'packages', 'shipments'],
     });
 
     return items.map((item) => {
@@ -235,7 +324,16 @@ export class InventoryService {
         totalQuantity += Number(shipment.packageCount) * converted;
       }
 
-      const minStockLevel = Number(item.ingredient?.minStockLevel || 0);
+      // Use item-level minStockLevel, fall back to ingredient's
+      let minStockLevel = 0;
+      if (item.minStockLevel != null) {
+        // Convert from minStockUnit to ingredient base unit if needed
+        const minUnit = item.minStockUnit || ingredientUnit;
+        minStockLevel = convertToBaseUnit(Number(item.minStockLevel), minUnit, ingredientUnit);
+      } else {
+        minStockLevel = Number(item.ingredient?.minStockLevel || 0);
+      }
+
       let status = 'in_stock';
       if (totalQuantity <= 0) {
         status = 'out_of_stock';
@@ -385,6 +483,10 @@ export class InventoryService {
     const ingredient = item.ingredient || await this.ingredientRepo.findOne({ where: { id: item.ingredientId } });
     if (!ingredient) return;
 
+    // Reload item to get minStockLevel fields if not present
+    const fullItem = item.minStockLevel !== undefined ? item :
+      await this.inventoryItemRepo.findOne({ where: { id: item.id } });
+
     const shipments = await this.shipmentRepo.find({
       where: { inventoryItemId: item.id },
       relations: ['package'],
@@ -399,7 +501,14 @@ export class InventoryService {
       totalQuantity += Number(shipment.packageCount) * converted;
     }
 
-    const minStockLevel = Number(ingredient.minStockLevel);
+    // Use item-level minStockLevel, fall back to ingredient's
+    let minStockLevel = 0;
+    if (fullItem?.minStockLevel != null) {
+      const minUnit = fullItem.minStockUnit || ingredient.unit;
+      minStockLevel = convertToBaseUnit(Number(fullItem.minStockLevel), minUnit, ingredient.unit);
+    } else {
+      minStockLevel = Number(ingredient.minStockLevel);
+    }
 
     if (minStockLevel > 0 && totalQuantity <= minStockLevel) {
       const status = totalQuantity <= 0 ? 'out_of_stock' : 'low_stock';

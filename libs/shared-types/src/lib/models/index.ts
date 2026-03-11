@@ -115,6 +115,8 @@ export interface InventoryItem {
   title: string;
   ingredient: Ingredient;
   ingredientId: string;
+  minStockLevel?: number;
+  minStockUnit?: string;
   packages?: InventoryItemPackage[];
   shipments?: InventoryShipment[];
   // Computed fields (from API)

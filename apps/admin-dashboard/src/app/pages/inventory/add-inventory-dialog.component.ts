@@ -11,16 +11,20 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
 import { MatIconModule } from '@angular/material/icon';
-import { Ingredient, UNIT_GROUPS } from '@bake-app/shared-types';
+import { Ingredient, InventoryItem, UNIT_GROUPS } from '@bake-app/shared-types';
 
 export interface AddInventoryDialogData {
   ingredients: Ingredient[];
+  mode: 'create' | 'edit';
+  item?: InventoryItem;
 }
 
 export interface AddInventoryDialogResult {
   title: string;
   ingredientId: string;
   packages: { size: number; unit: string }[];
+  minStockLevel?: number;
+  minStockUnit?: string;
 }
 
 @Component({
@@ -37,7 +41,7 @@ export interface AddInventoryDialogResult {
     MatIconModule,
   ],
   template: `
-    <h2 mat-dialog-title>Add Inventory Item</h2>
+    <h2 mat-dialog-title>{{ isEdit ? 'Edit Inventory Item' : 'Add Inventory Item' }}</h2>
     <mat-dialog-content>
       <div class="dialog-form">
         <mat-form-field appearance="outline" class="full-width">
@@ -48,13 +52,33 @@ export interface AddInventoryDialogResult {
 
         <mat-form-field appearance="outline" class="full-width">
           <mat-label>Ingredient</mat-label>
-          <mat-select [(ngModel)]="ingredientId" (selectionChange)="onIngredientChange()">
+          <mat-select
+            [(ngModel)]="ingredientId"
+            (selectionChange)="onIngredientChange()"
+            [disabled]="isEdit"
+          >
             <mat-option *ngFor="let ing of data.ingredients" [value]="ing.id">
               {{ ing.name }} ({{ ing.unit }})
             </mat-option>
           </mat-select>
           <mat-error *ngIf="submitted && !ingredientId">Select an ingredient</mat-error>
         </mat-form-field>
+
+        <div class="section-label">Warn when level below</div>
+        <div class="form-row">
+          <mat-form-field appearance="outline" class="flex-1">
+            <mat-label>Level</mat-label>
+            <input matInput type="number" [(ngModel)]="minStockLevel" min="0" />
+          </mat-form-field>
+          <mat-form-field appearance="outline" class="flex-1">
+            <mat-label>Unit</mat-label>
+            <mat-select [(ngModel)]="minStockUnit">
+              <mat-option *ngFor="let u of availableUnits" [value]="u">
+                {{ u }}
+              </mat-option>
+            </mat-select>
+          </mat-form-field>
+        </div>
 
         <div class="section-label">Package Sizes</div>
         <div class="packages-list">
@@ -99,8 +123,8 @@ export interface AddInventoryDialogResult {
     <mat-dialog-actions align="end">
       <button mat-button (click)="dialogRef.close()">Cancel</button>
       <button mat-flat-button class="save-btn" (click)="onSubmit()">
-        <mat-icon>add</mat-icon>
-        Add
+        <mat-icon>{{ isEdit ? 'save' : 'add' }}</mat-icon>
+        {{ isEdit ? 'Save' : 'Add' }}
       </button>
     </mat-dialog-actions>
   `,
@@ -160,16 +184,42 @@ export interface AddInventoryDialogResult {
 export class AddInventoryDialogComponent implements OnInit {
   title = '';
   ingredientId = '';
+  minStockLevel: number | null = null;
+  minStockUnit = '';
   packages: { size: number | null; unit: string }[] = [{ size: null, unit: '' }];
   availableUnits: string[] = [];
   submitted = false;
+
+  get isEdit(): boolean {
+    return this.data.mode === 'edit';
+  }
 
   constructor(
     public dialogRef: MatDialogRef<AddInventoryDialogComponent>,
     @Inject(MAT_DIALOG_DATA) public data: AddInventoryDialogData,
   ) {}
 
-  ngOnInit(): void {}
+  ngOnInit(): void {
+    if (this.isEdit && this.data.item) {
+      const item = this.data.item;
+      this.title = item.title;
+      this.ingredientId = item.ingredientId;
+      this.minStockLevel = item.minStockLevel != null ? Number(item.minStockLevel) : null;
+      this.minStockUnit = item.minStockUnit || '';
+
+      // Set available units from ingredient
+      this.onIngredientChange();
+
+      if (item.packages?.length) {
+        this.packages = item.packages.map((p) => ({ size: p.size, unit: p.unit }));
+      }
+
+      // Set minStockUnit default if not set
+      if (!this.minStockUnit && this.availableUnits.length) {
+        this.minStockUnit = this.availableUnits[0];
+      }
+    }
+  }
 
   onIngredientChange(): void {
     const ing = this.data.ingredients.find((i) => i.id === this.ingredientId);
@@ -180,6 +230,9 @@ export class AddInventoryDialogComponent implements OnInit {
         if (!this.availableUnits.includes(pkg.unit)) {
           pkg.unit = this.availableUnits[0] || '';
         }
+      }
+      if (!this.availableUnits.includes(this.minStockUnit)) {
+        this.minStockUnit = this.availableUnits[0] || '';
       }
     } else {
       this.availableUnits = [];
@@ -212,6 +265,12 @@ export class AddInventoryDialogComponent implements OnInit {
       packages: this.packages
         .filter((p) => p.size && p.size > 0 && p.unit)
         .map((p) => ({ size: p.size!, unit: p.unit })),
+      minStockLevel: this.minStockLevel != null && this.minStockLevel > 0
+        ? this.minStockLevel
+        : undefined,
+      minStockUnit: this.minStockLevel != null && this.minStockLevel > 0
+        ? this.minStockUnit
+        : undefined,
     };
     this.dialogRef.close(result);
   }
