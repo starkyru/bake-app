@@ -190,6 +190,7 @@ export class InventoryDetailComponent implements OnInit {
   item: any = null;
   packageStock: PackageStock[] = [];
   allShipments: ShipmentRow[] = [];
+  filteredShipments: ShipmentRow[] = [];
   showArchive = false;
   loading = false;
   saving = false;
@@ -205,9 +206,10 @@ export class InventoryDetailComponent implements OnInit {
     { key: 'notes', label: 'Notes', type: 'text' },
   ];
 
-  get filteredShipments(): ShipmentRow[] {
-    if (this.showArchive) return this.allShipments;
-    return this.allShipments.filter((s) => s.count > 0);
+  private updateFilteredShipments(): void {
+    this.filteredShipments = this.showArchive
+      ? this.allShipments
+      : this.allShipments.filter((s) => s.count > 0);
   }
 
   private itemId = '';
@@ -233,6 +235,7 @@ export class InventoryDetailComponent implements OnInit {
 
   toggleArchive(): void {
     this.showArchive = !this.showArchive;
+    this.updateFilteredShipments();
   }
 
   openAddShipment(): void {
@@ -286,6 +289,7 @@ export class InventoryDetailComponent implements OnInit {
           batchNumber: s.batchNumber || '',
           notes: s.notes || '',
         }));
+        this.updateFilteredShipments();
         this.loading = false;
       },
       error: () => {

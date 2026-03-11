@@ -10,6 +10,7 @@ import {
   BakeDataTableComponent,
   BakePageContainerComponent,
   BakeToastService,
+  TableAction,
   TableColumn,
 } from '@bake-app/ui-components';
 import { ApiClientService } from '@bake-app/api-client';
@@ -279,7 +280,14 @@ export class InventoryComponent implements OnInit {
     { key: 'unit', label: 'Unit', type: 'text', width: '80px' },
     { key: 'minLevel', label: 'Min Level', type: 'number', width: '100px' },
     { key: 'status', label: 'Status', type: 'badge', width: '120px' },
-    { key: 'actions', label: 'Actions', type: 'actions', width: '100px', sortable: false },
+    {
+      key: 'actions', label: 'Actions', type: 'actions', width: '140px', sortable: false,
+      actions: [
+        { action: 'details', icon: 'visibility', tooltip: 'Details' },
+        { action: 'edit', icon: 'edit', tooltip: 'Edit' },
+        { action: 'delete', icon: 'delete', tooltip: 'Delete', color: 'warn' },
+      ],
+    },
   ];
 
   inventoryData: InventoryRow[] = [];
@@ -396,7 +404,9 @@ export class InventoryComponent implements OnInit {
   }
 
   onRowAction(event: { action: string; row: InventoryRow }): void {
-    if (event.action === 'delete') {
+    if (event.action === 'details') {
+      this.router.navigate(['/inventory', event.row.id]);
+    } else if (event.action === 'delete') {
       this.confirmService
         .confirm({
           title: 'Delete Inventory Item',
