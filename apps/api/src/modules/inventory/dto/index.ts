@@ -86,10 +86,9 @@ export class AddPackageDto {
 }
 
 export class CreateInventoryItemDto {
-  @ApiPropertyOptional({ example: 'King Arthur Flour' })
-  @IsOptional()
+  @ApiProperty({ example: 'King Arthur Flour' })
   @IsString()
-  title?: string;
+  title: string;
 
   @ApiProperty()
   @IsUUID()
