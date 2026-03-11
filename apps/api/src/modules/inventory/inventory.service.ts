@@ -294,8 +294,39 @@ export class InventoryService {
       remaining: packageStockMap.get(pkg.id) || 0,
     }));
 
+    // Build plain response to avoid circular references
     return {
-      ...item,
+      id: item.id,
+      title: item.title,
+      ingredientId: item.ingredientId,
+      inStock: item.inStock,
+      minStockLevel: item.minStockLevel,
+      minStockUnit: item.minStockUnit,
+      ingredient: item.ingredient ? {
+        id: item.ingredient.id,
+        name: item.ingredient.name,
+        unit: item.ingredient.unit,
+        category: item.ingredient.category,
+        ingredientCategory: item.ingredient.ingredientCategory ? {
+          id: item.ingredient.ingredientCategory.id,
+          name: item.ingredient.ingredientCategory.name,
+        } : null,
+      } : null,
+      packages: (item.packages || []).map((p) => ({
+        id: p.id, size: p.size, unit: p.unit, sortOrder: p.sortOrder,
+      })),
+      shipments: (item.shipments || []).map((s) => ({
+        id: s.id,
+        packageId: s.packageId,
+        packageCount: s.packageCount,
+        unitCost: s.unitCost,
+        notes: s.notes,
+        batchNumber: s.batchNumber,
+        locationId: s.locationId,
+        createdAt: s.createdAt,
+        package: s.package ? { id: s.package.id, size: s.package.size, unit: s.package.unit } : null,
+        location: s.location ? { id: s.location.id, name: s.location.name } : null,
+      })),
       packageStock,
     };
   }
@@ -344,8 +375,30 @@ export class InventoryService {
       // Metric equivalent
       const metricEquiv = getMetricEquivalent(totalQuantity, ingredientUnit);
 
+      // Build plain response to avoid circular references
+      const ingredient = item.ingredient ? {
+        id: item.ingredient.id,
+        name: item.ingredient.name,
+        unit: item.ingredient.unit,
+        category: item.ingredient.category,
+        minStockLevel: item.ingredient.minStockLevel,
+        ingredientCategory: item.ingredient.ingredientCategory ? {
+          id: item.ingredient.ingredientCategory.id,
+          name: item.ingredient.ingredientCategory.name,
+        } : null,
+      } : null;
+
       return {
-        ...item,
+        id: item.id,
+        title: item.title,
+        ingredientId: item.ingredientId,
+        inStock: item.inStock,
+        minStockLevel: item.minStockLevel,
+        minStockUnit: item.minStockUnit,
+        ingredient,
+        packages: (item.packages || []).map((p) => ({
+          id: p.id, size: p.size, unit: p.unit, sortOrder: p.sortOrder,
+        })),
         quantity: Math.round(totalQuantity * 100) / 100,
         status,
         metricQuantity: metricEquiv?.value,
