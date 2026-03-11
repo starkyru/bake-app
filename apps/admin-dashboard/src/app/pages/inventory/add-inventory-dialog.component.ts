@@ -43,6 +43,7 @@ export interface AddInventoryDialogResult {
         <mat-form-field appearance="outline" class="full-width">
           <mat-label>Title</mat-label>
           <input matInput [(ngModel)]="title" placeholder="e.g., King Arthur Flour" />
+          <mat-error *ngIf="submitted && !title">Title is required</mat-error>
         </mat-form-field>
 
         <mat-form-field appearance="outline" class="full-width">
@@ -52,32 +53,41 @@ export interface AddInventoryDialogResult {
               {{ ing.name }} ({{ ing.unit }})
             </mat-option>
           </mat-select>
+          <mat-error *ngIf="submitted && !ingredientId">Select an ingredient</mat-error>
         </mat-form-field>
 
         <div class="section-label">Package Sizes</div>
         <div class="packages-list">
-          <div class="form-row" *ngFor="let pkg of packages; let i = index">
-            <mat-form-field appearance="outline" class="flex-1">
-              <mat-label>Size</mat-label>
-              <input matInput type="number" [(ngModel)]="pkg.size" min="0.01" />
-            </mat-form-field>
-            <mat-form-field appearance="outline" class="flex-1">
-              <mat-label>Unit</mat-label>
-              <mat-select [(ngModel)]="pkg.unit">
-                <mat-option *ngFor="let u of availableUnits" [value]="u">
-                  {{ u }}
-                </mat-option>
-              </mat-select>
-            </mat-form-field>
-            <button
-              mat-icon-button
-              color="warn"
-              (click)="removePackage(i)"
-              *ngIf="packages.length > 1"
-              class="remove-btn"
-            >
-              <mat-icon>close</mat-icon>
-            </button>
+          <div class="package-row-wrapper" *ngFor="let pkg of packages; let i = index">
+            <div class="form-row">
+              <mat-form-field appearance="outline" class="flex-1">
+                <mat-label>Size</mat-label>
+                <input matInput type="number" [(ngModel)]="pkg.size" min="0.01" />
+              </mat-form-field>
+              <mat-form-field appearance="outline" class="flex-1">
+                <mat-label>Unit</mat-label>
+                <mat-select [(ngModel)]="pkg.unit">
+                  <mat-option *ngFor="let u of availableUnits" [value]="u">
+                    {{ u }}
+                  </mat-option>
+                </mat-select>
+              </mat-form-field>
+              <button
+                mat-icon-button
+                color="warn"
+                (click)="removePackage(i)"
+                *ngIf="packages.length > 1"
+                class="remove-btn"
+              >
+                <mat-icon>close</mat-icon>
+              </button>
+            </div>
+            <mat-error class="field-error" *ngIf="submitted && (!pkg.size || pkg.size <= 0)">
+              Package size must be greater than 0
+            </mat-error>
+            <mat-error class="field-error" *ngIf="submitted && pkg.size && pkg.size > 0 && !pkg.unit">
+              Select a unit
+            </mat-error>
           </div>
         </div>
         <button mat-stroked-button class="add-package-btn" (click)="addPackage()">
@@ -88,7 +98,7 @@ export interface AddInventoryDialogResult {
     </mat-dialog-content>
     <mat-dialog-actions align="end">
       <button mat-button (click)="dialogRef.close()">Cancel</button>
-      <button mat-flat-button class="save-btn" [disabled]="!isValid()" (click)="onSubmit()">
+      <button mat-flat-button class="save-btn" (click)="onSubmit()">
         <mat-icon>add</mat-icon>
         Add
       </button>
@@ -138,6 +148,12 @@ export interface AddInventoryDialogResult {
         background-color: #8b4513 !important;
         color: #ffffff !important;
       }
+      .field-error {
+        font-size: 12px;
+        margin-top: -16px;
+        margin-bottom: 8px;
+        padding-left: 16px;
+      }
     `,
   ],
 })
@@ -146,6 +162,7 @@ export class AddInventoryDialogComponent implements OnInit {
   ingredientId = '';
   packages: { size: number | null; unit: string }[] = [{ size: null, unit: '' }];
   availableUnits: string[] = [];
+  submitted = false;
 
   constructor(
     public dialogRef: MatDialogRef<AddInventoryDialogComponent>,
@@ -187,6 +204,7 @@ export class AddInventoryDialogComponent implements OnInit {
   }
 
   onSubmit(): void {
+    this.submitted = true;
     if (!this.isValid()) return;
     const result: AddInventoryDialogResult = {
       title: this.title,

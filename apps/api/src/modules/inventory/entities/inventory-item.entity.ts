@@ -6,8 +6,14 @@ import { InventoryShipment } from './inventory-shipment.entity';
 
 @Entity('inventory_items')
 export class InventoryItem extends BaseEntity {
-  @Column()
+  @Column({ nullable: true })
   title: string;
+
+  @Column({ default: 0 })
+  quantity: number;
+
+  @Column({ default: 'in_stock' })
+  status: string;
 
   @ManyToOne(() => Ingredient, { eager: true })
   @JoinColumn({ name: 'ingredient_id' })
