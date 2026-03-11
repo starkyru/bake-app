@@ -11,6 +11,7 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
 import { MatIconModule } from '@angular/material/icon';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { Ingredient, InventoryItem, UNIT_GROUPS } from '@bake-app/shared-types';
 
 export interface AddInventoryDialogData {
@@ -39,6 +40,7 @@ export interface AddInventoryDialogResult {
     MatInputModule,
     MatSelectModule,
     MatIconModule,
+    MatTooltipModule,
   ],
   template: `
     <h2 mat-dialog-title>{{ isEdit ? 'Edit Inventory Item' : 'Add Inventory Item' }}</h2>
@@ -100,10 +102,19 @@ export interface AddInventoryDialogResult {
                 mat-icon-button
                 color="warn"
                 (click)="removePackage(i)"
-                *ngIf="packages.length > 1"
+                *ngIf="packages.length > 1 && !pkg.hasShipments"
                 class="remove-btn"
               >
                 <mat-icon>close</mat-icon>
+              </button>
+              <button
+                mat-icon-button
+                disabled
+                *ngIf="packages.length > 1 && pkg.hasShipments"
+                class="remove-btn"
+                matTooltip="Cannot remove — this package has shipments"
+              >
+                <mat-icon>lock</mat-icon>
               </button>
             </div>
             <mat-error class="field-error" *ngIf="submitted && (!pkg.size || pkg.size <= 0)">
@@ -186,7 +197,7 @@ export class AddInventoryDialogComponent implements OnInit {
   ingredientId = '';
   minStockLevel: number | null = null;
   minStockUnit = '';
-  packages: { size: number | null; unit: string }[] = [{ size: null, unit: '' }];
+  packages: { size: number | null; unit: string; hasShipments?: boolean }[] = [{ size: null, unit: '' }];
   availableUnits: string[] = [];
   submitted = false;
 
@@ -211,7 +222,11 @@ export class AddInventoryDialogComponent implements OnInit {
       this.onIngredientChange();
 
       if (item.packages?.length) {
-        this.packages = item.packages.map((p) => ({ size: p.size, unit: p.unit }));
+        this.packages = item.packages.map((p: any) => ({
+          size: p.size,
+          unit: p.unit,
+          hasShipments: p.hasShipments || false,
+        }));
       }
 
       // Set minStockUnit default if not set

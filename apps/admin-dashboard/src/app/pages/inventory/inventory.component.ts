@@ -426,6 +426,10 @@ export class InventoryComponent implements OnInit {
     const rawItem = this.rawItems.find((i) => i.id === itemId);
     if (!rawItem) return;
 
+    const packageIdsWithShipments = new Set<string>(
+      (rawItem.shipments || []).map((s: any) => s.packageId),
+    );
+
     const item: InventoryItem = {
       id: rawItem.id,
       title: rawItem.title,
@@ -433,7 +437,10 @@ export class InventoryComponent implements OnInit {
       ingredientId: rawItem.ingredientId || rawItem.ingredient?.id,
       minStockLevel: rawItem.minStockLevel,
       minStockUnit: rawItem.minStockUnit,
-      packages: rawItem.packages,
+      packages: (rawItem.packages || []).map((p: any) => ({
+        ...p,
+        hasShipments: packageIdsWithShipments.has(p.id),
+      })),
     };
 
     const ref = this.dialog.open(AddInventoryDialogComponent, {
