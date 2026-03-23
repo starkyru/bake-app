@@ -24,6 +24,7 @@ export interface TableColumn {
   width?: string;
   format?: string;
   actions?: TableAction[];
+  tooltipKey?: string;
 }
 
 export interface SelectOption {

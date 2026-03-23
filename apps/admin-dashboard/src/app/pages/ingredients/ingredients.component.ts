@@ -146,17 +146,9 @@ export class IngredientsComponent implements OnInit {
   ingredientCategories: IngredientCategory[] = [];
 
   tableColumns: TableColumn[] = [
-    { key: 'name', label: 'Name', sortable: true },
-    { key: 'description', label: 'Description', sortable: false },
+    { key: 'name', label: 'Name', sortable: true, tooltipKey: '_tooltip' },
     { key: 'unit', label: 'Unit', sortable: true, width: '80px' },
-    {
-      key: 'calories',
-      label: 'Calories',
-      type: 'number',
-      sortable: true,
-      width: '90px',
-    },
-    { key: 'category', label: 'Category', type: 'badge',  sortable: true, width: '120px' },
+    { key: 'category', label: 'Category', type: 'badge', sortable: true, width: '120px' },
     { key: 'actions', label: '', type: 'actions', width: '100px' },
   ];
 
@@ -193,7 +185,15 @@ export class IngredientsComponent implements OnInit {
       .get<PaginatedResponse<Ingredient>>(url)
       .subscribe({
         next: (res) => {
-          this.ingredients = res.data;
+          this.ingredients = res.data.map((ing) => ({
+            ...ing,
+            _tooltip: [
+              ing.description,
+              ing.calories != null ? `Calories: ${ing.calories} per 100g` : '',
+            ]
+              .filter(Boolean)
+              .join('\n') || '',
+          }));
           this.totalIngredients = res.total;
           this.loading = false;
         },

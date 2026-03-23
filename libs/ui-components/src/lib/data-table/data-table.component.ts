@@ -67,7 +67,7 @@ import { TableColumn } from '../models';
             >
               {{ col.label }}
             </th>
-            <td mat-cell *matCellDef="let row">
+            <td mat-cell *matCellDef="let row" [matTooltip]="col.tooltipKey ? row[col.tooltipKey] : ''">
               <ng-container [ngSwitch]="col.type">
                 <span *ngSwitchCase="'currency'" class="currency">
                   {{ row[col.key] | currency : 'USD' : 'symbol' : '1.0-0' }}
