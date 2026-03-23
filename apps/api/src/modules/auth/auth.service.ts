@@ -50,7 +50,6 @@ export class AuthService {
       firstName: dto.firstName,
       lastName: dto.lastName,
       phone: dto.phone,
-      role: dto.roleId ? { id: dto.roleId } as any : undefined,
     });
     await this.usersRepository.save(user);
     const savedUser = await this.usersRepository.findOne({

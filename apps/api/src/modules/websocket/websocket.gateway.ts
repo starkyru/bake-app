@@ -71,6 +71,19 @@ export class AppWebSocketGateway implements OnGatewayConnection, OnGatewayDiscon
 
   @SubscribeMessage('joinRoom')
   handleJoinRoom(@ConnectedSocket() client: Socket, @MessageBody() room: string) {
+    const user = client.data.user;
+    if (!user) {
+      client.emit('error', { message: 'Not authenticated' });
+      return;
+    }
+    const roleName = user.role?.name || user.role;
+    const allowedRooms = ROLE_ROOM_MAP[roleName] || [];
+    const userRoom = WS_ROOMS.user(user.sub);
+    if (room !== userRoom && !allowedRooms.includes(room)) {
+      client.emit('error', { message: `Unauthorized to join room: ${room}` });
+      this.logger.warn(`Client ${client.id} denied access to room: ${room}`);
+      return;
+    }
     client.join(room);
     this.logger.log(`Client ${client.id} joined room: ${room}`);
     return { event: 'roomJoined', data: room };

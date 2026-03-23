@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Order } from '../pos/entities/order.entity';
@@ -91,10 +91,20 @@ export class ReportingService {
 
   // 1. Sales Summary - Revenue by day/week/month, order count, avg check
   async getSalesSummary(query: SalesReportQueryDto) {
-    const groupBy = query.groupBy || 'day';
+    const allowedGroupBy: Record<string, string> = {
+      day: 'day',
+      week: 'week',
+      month: 'month',
+    };
+    const groupByValue = allowedGroupBy[query.groupBy || 'day'];
+    if (!groupByValue) {
+      throw new BadRequestException(
+        `Invalid groupBy value. Allowed: ${Object.keys(allowedGroupBy).join(', ')}`,
+      );
+    }
     const qb = this.orderRepo
       .createQueryBuilder('o')
-      .select(`DATE_TRUNC('${groupBy}', o.createdAt)`, 'period')
+      .select(`DATE_TRUNC('${groupByValue}', o.createdAt)`, 'period')
       .addSelect('COUNT(o.id)', 'orderCount')
       .addSelect('SUM(o.total)', 'revenue')
       .addSelect('AVG(o.total)', 'avgCheck')

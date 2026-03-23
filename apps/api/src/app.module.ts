@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { ThrottlerModule } from '@nestjs/throttler';
 import { AuthModule } from './modules/auth/auth.module';
 import { UsersModule } from './modules/users/users.module';
 import { RolesModule } from './modules/roles/roles.module';
@@ -22,6 +23,7 @@ import { HealthController } from './health.controller';
       isGlobal: true,
       envFilePath: '.env',
     }),
+    ThrottlerModule.forRoot({ throttlers: [{ ttl: 60000, limit: 10 }] }),
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
@@ -33,7 +35,7 @@ import { HealthController } from './health.controller';
         password: config.get('DB_PASSWORD', 'postgres'),
         database: config.get('DB_NAME', 'bake_app'),
         autoLoadEntities: true,
-        synchronize: true,
+        synchronize: config.get('NODE_ENV') !== 'production',
         logging: config.get('NODE_ENV') === 'development',
         retryAttempts: 3,
       }),

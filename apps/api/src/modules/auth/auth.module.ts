@@ -19,7 +19,7 @@ import { UserPermission } from '../permissions/entities/user-permission.entity';
       imports: [ConfigModule],
       inject: [ConfigService],
       useFactory: (config: ConfigService) => ({
-        secret: config.get('JWT_SECRET', 'your-secret-key-change-in-production'),
+        secret: config.get('JWT_SECRET'),
         signOptions: { expiresIn: config.get('JWT_EXPIRATION', '24h') },
       }),
     }),

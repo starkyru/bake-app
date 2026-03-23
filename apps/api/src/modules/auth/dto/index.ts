@@ -35,10 +35,6 @@ export class RegisterDto {
   @IsString()
   phone?: string;
 
-  @ApiPropertyOptional()
-  @IsOptional()
-  @IsString()
-  roleId?: string;
 }
 
 export class RefreshTokenDto {

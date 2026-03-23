@@ -249,9 +249,17 @@ export async function seed(dataSource: DataSource): Promise<void> {
   const adminRole = await roleRepo.findOne({ where: { name: 'owner' } });
   const existingAdmin = await userRepo.findOne({ where: { email: 'admin@bakery.com' } });
   if (!existingAdmin && adminRole) {
-    // bcryptjs hash for 'admin123'
     const bcrypt = await import('bcryptjs');
-    const passwordHash = await bcrypt.hash('admin123', 10);
+    const { randomBytes } = await import('crypto');
+    let adminPassword = process.env.ADMIN_SEED_PASSWORD;
+    if (!adminPassword) {
+      if (process.env.NODE_ENV === 'production') {
+        throw new Error('ADMIN_SEED_PASSWORD environment variable is required in production');
+      }
+      adminPassword = randomBytes(16).toString('hex');
+      console.warn(`  WARNING: No ADMIN_SEED_PASSWORD set. Using generated password: ${adminPassword}`);
+    }
+    const passwordHash = await bcrypt.hash(adminPassword, 10);
     await userRepo.save(userRepo.create({
       email: 'admin@bakery.com',
       passwordHash,
@@ -260,7 +268,7 @@ export async function seed(dataSource: DataSource): Promise<void> {
       role: adminRole,
       isActive: true,
     }));
-    console.log('  Created admin user: admin@bakery.com / admin123');
+    console.log(`  Created admin user: admin@bakery.com`);
   }
 
   // --- Seed products ---

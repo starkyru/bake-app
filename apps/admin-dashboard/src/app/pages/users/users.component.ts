@@ -359,7 +359,7 @@ export class UsersComponent implements OnInit {
           firstName: result.firstName,
           lastName: result.lastName,
           email: result.email,
-          password: 'changeme123',
+          password: crypto.randomUUID().slice(0, 12),
           roleId: result.role,
         };
         this.apiClient.post<User>('/v1/users', dto).subscribe({
