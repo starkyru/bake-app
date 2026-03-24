@@ -344,7 +344,14 @@ export class InventoryComponent implements OnInit {
 
             // Build quantity display with metric equivalent
             const ingredientUnit = item.ingredient?.unit || '';
-            let qtyDisplay = `${qty} ${ingredientUnit}`;
+            let qtyDisplay: string;
+            if (qty > 999 && ingredientUnit.toLowerCase() === 'g') {
+              qtyDisplay = `${(qty / 1000).toFixed(3)} kg`;
+            } else if (qty > 999 && ingredientUnit.toLowerCase() === 'ml') {
+              qtyDisplay = `${(qty / 1000).toFixed(3)} L`;
+            } else {
+              qtyDisplay = `${qty} ${ingredientUnit}`;
+            }
             if (item.metricQuantity && item.metricUnit) {
               qtyDisplay += ` (${item.metricQuantity} ${item.metricUnit})`;
             }

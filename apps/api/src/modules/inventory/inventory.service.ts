@@ -91,6 +91,8 @@ export class InventoryService {
     const item = this.inventoryItemRepo.create({
       title: dto.title,
       ingredientId: dto.ingredientId,
+      ...(dto.minStockLevel != null && { minStockLevel: dto.minStockLevel }),
+      ...(dto.minStockUnit && { minStockUnit: dto.minStockUnit }),
     });
     const saved = await this.inventoryItemRepo.save(item);
 

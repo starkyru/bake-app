@@ -100,6 +100,18 @@ export class CreateInventoryItemDto {
   @ValidateNested({ each: true })
   @Type(() => AddPackageDto)
   packages?: AddPackageDto[];
+
+  @ApiPropertyOptional({ example: 100 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0)
+  minStockLevel?: number;
+
+  @ApiPropertyOptional({ example: 'g' })
+  @IsOptional()
+  @IsString()
+  minStockUnit?: string;
 }
 
 export class UpdateInventoryItemDto {

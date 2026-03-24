@@ -1,7 +1,10 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ViewChild, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, RouterOutlet, RouterLink, RouterLinkActive } from '@angular/router';
-import { MatSidenavModule } from '@angular/material/sidenav';
+import { MatSidenavModule, MatSidenav } from '@angular/material/sidenav';
+import { BreakpointObserver } from '@angular/cdk/layout';
+import { MatToolbarModule } from '@angular/material/toolbar';
+import { Subscription } from 'rxjs';
 import { MatListModule } from '@angular/material/list';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
@@ -27,10 +30,24 @@ interface NavItem {
     MatIconModule,
     MatButtonModule,
     MatDividerModule,
+    MatToolbarModule,
   ],
   template: `
-    <mat-sidenav-container class="shell-container">
-      <mat-sidenav mode="side" opened class="sidebar">
+    <mat-toolbar *ngIf="isMobile" class="mobile-toolbar">
+      <button mat-icon-button (click)="sidenav.toggle()">
+        <mat-icon>menu</mat-icon>
+      </button>
+      <mat-icon class="brand-icon-sm">bakery_dining</mat-icon>
+      <span class="brand-title-sm">Bake Admin</span>
+    </mat-toolbar>
+
+    <mat-sidenav-container class="shell-container" [class.has-toolbar]="isMobile">
+      <mat-sidenav
+        #sidenav
+        [mode]="isMobile ? 'over' : 'side'"
+        [opened]="!isMobile"
+        class="sidebar"
+      >
         <div class="sidebar-brand">
           <mat-icon class="brand-icon">bakery_dining</mat-icon>
           <span class="brand-title">Bake Admin</span>
@@ -44,6 +61,7 @@ interface NavItem {
             *ngFor="let item of navItems"
             [routerLink]="item.route"
             routerLinkActive="nav-active"
+            (click)="isMobile && sidenav.close()"
           >
             <mat-icon matListItemIcon>{{ item.icon }}</mat-icon>
             <span matListItemTitle>{{ item.label }}</span>
@@ -183,6 +201,37 @@ interface NavItem {
         overflow-y: auto;
       }
 
+      .mobile-toolbar {
+        background-color: #ffffff;
+        border-bottom: 1px solid #e0d6c8;
+        color: #8b4513;
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        z-index: 3;
+      }
+
+      .brand-icon-sm {
+        font-size: 24px;
+        width: 24px;
+        height: 24px;
+        color: #8b4513;
+        margin-left: 4px;
+      }
+
+      .brand-title-sm {
+        font-size: 18px;
+        font-weight: 700;
+        color: #8b4513;
+        margin-left: 8px;
+      }
+
+      .shell-container.has-toolbar {
+        height: calc(100vh - 64px);
+        margin-top: 64px;
+      }
+
       /* Make sidebar a flex column so spacer works */
       :host ::ng-deep .mat-drawer-inner-container {
         display: flex;
@@ -191,7 +240,11 @@ interface NavItem {
     `,
   ],
 })
-export class ShellComponent implements OnInit {
+export class ShellComponent implements OnInit, OnDestroy {
+  @ViewChild('sidenav') sidenav!: MatSidenav;
+  isMobile = false;
+  private bpSub!: Subscription;
+
   navItems: NavItem[] = [
     { label: 'Dashboard', icon: 'dashboard', route: '/dashboard' },
     { label: 'Users', icon: 'people', route: '/users' },
@@ -211,11 +264,21 @@ export class ShellComponent implements OnInit {
   constructor(
     private router: Router,
     private authService: AuthService,
+    private breakpointObserver: BreakpointObserver,
   ) {}
 
   ngOnInit(): void {
     this.userName = this.authService.getUserName() || 'User';
     this.userRole = this.authService.getUserRole() || 'Staff';
+    this.bpSub = this.breakpointObserver
+      .observe('(max-width: 768px)')
+      .subscribe((result) => {
+        this.isMobile = result.matches;
+      });
+  }
+
+  ngOnDestroy(): void {
+    this.bpSub?.unsubscribe();
   }
 
   onLogout(): void {
