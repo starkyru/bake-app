@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
+import { MatDialog } from '@angular/material/dialog';
 import {
   BakeDataTableComponent,
   BakePageContainerComponent,
@@ -11,7 +12,15 @@ import {
   TableColumn,
 } from '@bake-app/ui-components';
 import { ApiClientService } from '@bake-app/api-client';
-import { Recipe } from '@bake-app/shared-types';
+import {
+  Recipe,
+  Menu,
+  Product as SharedProduct,
+  Category as SharedCategory,
+  Ingredient as SharedIngredient,
+} from '@bake-app/shared-types';
+import { MenuDialogComponent, MenuDialogData } from '../menu/menu.component';
+import { forkJoin } from 'rxjs';
 
 interface PaginatedResponse<T> {
   data: T[];
@@ -29,6 +38,9 @@ interface RecipeData {
   costPerUnit: number;
   version: string;
   actions: string;
+  _rawName: string;
+  _rawCostPerUnit: number;
+  _rawInstructions: string;
 }
 
 @Component({
@@ -80,7 +92,17 @@ export class RecipesComponent implements OnInit {
     { key: 'yield', label: 'Yield', sortable: true },
     { key: 'costPerUnit', label: 'Cost/Unit', type: 'currency', sortable: true },
     { key: 'version', label: 'Version', sortable: true },
-    { key: 'actions', label: 'Actions', type: 'actions', width: '120px' },
+    {
+      key: 'actions',
+      label: 'Actions',
+      type: 'actions',
+      width: '160px',
+      actions: [
+        { action: 'create_menu_item', icon: 'restaurant_menu', tooltip: 'Create Menu Item' },
+        { action: 'edit', icon: 'edit', tooltip: 'Edit' },
+        { action: 'delete', icon: 'delete', color: 'warn', tooltip: 'Delete' },
+      ],
+    },
   ];
 
   recipes: RecipeData[] = [];
@@ -88,6 +110,7 @@ export class RecipesComponent implements OnInit {
 
   constructor(
     private router: Router,
+    private dialog: MatDialog,
     private confirmService: BakeConfirmationService,
     private toastService: BakeToastService,
     private apiClient: ApiClientService,
@@ -111,6 +134,9 @@ export class RecipesComponent implements OnInit {
             costPerUnit: Number(r.costPerUnit),
             version: `v${r.currentVersion}.0`,
             actions: '',
+            _rawName: r.name,
+            _rawCostPerUnit: Number(r.costPerUnit),
+            _rawInstructions: r.instructions || '',
           }));
           this.loading = false;
         },
@@ -130,7 +156,9 @@ export class RecipesComponent implements OnInit {
   }
 
   onRowAction(event: { action: string; row: RecipeData }): void {
-    if (event.action === 'edit') {
+    if (event.action === 'create_menu_item') {
+      this.openCreateMenuItemDialog(event.row);
+    } else if (event.action === 'edit') {
       this.router.navigate(['/recipes', event.row.id]);
     } else if (event.action === 'delete') {
       this.confirmService
@@ -154,5 +182,78 @@ export class RecipesComponent implements OnInit {
           }
         });
     }
+  }
+
+  private openCreateMenuItemDialog(recipe: RecipeData): void {
+    forkJoin([
+      this.apiClient.get<Menu[]>('/v1/menus'),
+      this.apiClient.get<SharedCategory[]>('/v1/categories'),
+      this.apiClient.get<PaginatedResponse<Recipe>>('/v1/recipes?limit=500'),
+      this.apiClient.get<PaginatedResponse<SharedIngredient>>('/v1/ingredients?limit=500'),
+    ]).subscribe({
+      next: ([menus, cats, recipesRes, ingredientsRes]) => {
+        const dialogRef = this.dialog.open(MenuDialogComponent, {
+          width: '580px',
+          data: {
+            mode: 'create',
+            categories: cats.map((c) => ({ id: c.id, name: c.name })),
+            recipes: recipesRes.data.map((r) => ({
+              id: r.id,
+              name: r.name,
+              costPerUnit: Number(r.costPerUnit),
+            })),
+            ingredients: ingredientsRes.data.map((i) => ({
+              id: i.id,
+              name: i.name,
+              costPerUnit: Number(i.costPerUnit),
+            })),
+            menus: menus.map((m) => ({ id: m.id, name: m.name })),
+            presetRecipeId: recipe.id,
+            presetName: recipe._rawName,
+            presetDescription: recipe._rawInstructions,
+            presetCostPrice: recipe._rawCostPerUnit,
+          } as MenuDialogData,
+        });
+
+        dialogRef.afterClosed().subscribe((result) => {
+          if (result) {
+            const menuId = result.menuId;
+            delete result.menuId;
+            this.apiClient
+              .post<SharedProduct>('/v1/products', result)
+              .subscribe({
+                next: (created) => {
+                  if (menuId) {
+                    this.apiClient
+                      .post(`/v1/menus/${menuId}/products`, {
+                        productId: created.id,
+                      })
+                      .subscribe({
+                        next: () => {
+                          this.toastService.success(
+                            'Menu item created and added to menu'
+                          );
+                        },
+                        error: () => {
+                          this.toastService.success(
+                            'Menu item created but failed to add to menu'
+                          );
+                        },
+                      });
+                  } else {
+                    this.toastService.success('Menu item created successfully');
+                  }
+                },
+                error: () => {
+                  this.toastService.error('Failed to create menu item');
+                },
+              });
+          }
+        });
+      },
+      error: () => {
+        this.toastService.error('Failed to load data for menu item creation');
+      },
+    });
   }
 }

@@ -73,12 +73,22 @@ interface IngredientOption {
   costPerUnit: number;
 }
 
-interface MenuDialogData {
+interface MenuOption {
+  id: string;
+  name: string;
+}
+
+export interface MenuDialogData {
   mode: 'create' | 'edit';
   item?: MenuItemData;
   categories: CategoryOption[];
   recipes: RecipeOption[];
   ingredients: IngredientOption[];
+  menus?: MenuOption[];
+  presetRecipeId?: string;
+  presetName?: string;
+  presetDescription?: string;
+  presetCostPrice?: number;
 }
 
 @Component({
@@ -220,6 +230,16 @@ interface MenuDialogData {
           placeholder="Menu item description"
         ></textarea>
       </mat-form-field>
+
+      <mat-form-field *ngIf="menus.length > 0" appearance="outline" class="full-width">
+        <mat-label>Add to Menu</mat-label>
+        <mat-select [(ngModel)]="selectedMenuId">
+          <mat-option value="">— None —</mat-option>
+          <mat-option *ngFor="let m of menus" [value]="m.id">
+            {{ m.name }}
+          </mat-option>
+        </mat-select>
+      </mat-form-field>
     </mat-dialog-content>
     <mat-dialog-actions align="end">
       <button mat-button [mat-dialog-close]="null">Cancel</button>
@@ -294,9 +314,12 @@ export class MenuDialogComponent {
   ingredientId = '';
   recipeSearch = '';
   ingredientSearch = '';
+  selectedMenuId = '';
+  isRecipePreset = false;
   categories: CategoryOption[] = [];
   recipes: RecipeOption[] = [];
   ingredients: IngredientOption[] = [];
+  menus: MenuOption[] = [];
   filteredRecipes: RecipeOption[] = [];
   filteredIngredients: IngredientOption[] = [];
 
@@ -307,8 +330,19 @@ export class MenuDialogComponent {
     this.categories = data.categories || [];
     this.recipes = data.recipes || [];
     this.ingredients = data.ingredients || [];
+    this.menus = data.menus || [];
     this.filteredRecipes = [...this.recipes];
     this.filteredIngredients = [...this.ingredients];
+
+    if (data.presetRecipeId) {
+      this.isRecipePreset = true;
+      this.type = 'produced';
+      this.recipeId = data.presetRecipeId;
+      this.recipeSearch = data.presetRecipeId;
+      this.name = data.presetName || '';
+      this.description = data.presetDescription || '';
+      this.cost = data.presetCostPrice || 0;
+    }
 
     if (data.item) {
       this.name = data.item.name;
@@ -352,8 +386,16 @@ export class MenuDialogComponent {
   onRecipeSelected(id: string): void {
     this.recipeId = id;
     const recipe = this.recipes.find((r) => r.id === id);
-    if (recipe && recipe.costPerUnit > 0) {
-      this.cost = recipe.costPerUnit;
+    if (recipe) {
+      if (recipe.costPerUnit > 0) {
+        this.cost = recipe.costPerUnit;
+      }
+      if (!this.name.trim()) {
+        this.name = recipe.name;
+      }
+      if (!this.description.trim()) {
+        this.description = recipe.name;
+      }
     }
   }
 
@@ -382,6 +424,10 @@ export class MenuDialogComponent {
     } else {
       result['ingredientId'] = this.ingredientId || null;
       result['recipeId'] = null;
+    }
+
+    if (this.selectedMenuId) {
+      result['menuId'] = this.selectedMenuId;
     }
 
     this.dialogRef.close(result);

@@ -37,6 +37,13 @@ export const routes: Routes = [
       {
         path: 'menu',
         loadComponent: () =>
+          import('./pages/menu/menus.component').then(
+            (m) => m.MenusComponent
+          ),
+      },
+      {
+        path: 'menu/items',
+        loadComponent: () =>
           import('./pages/menu/menu.component').then(
             (m) => m.MenuComponent
           ),
