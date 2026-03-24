@@ -855,7 +855,7 @@ export class RecipeEditorComponent implements OnInit {
   private loadData(): void {
     this.loading = true;
     const requests: Record<string, any> = {
-      categories: this.apiClient.get<SharedCategory[]>('/v1/categories'),
+      categories: this.apiClient.get<SharedCategory[]>('/v1/categories?type=menu'),
       ingredients: this.apiClient.get<PaginatedResponse<Ingredient>>('/v1/ingredients?limit=200'),
     };
     if (!this.isNew) {

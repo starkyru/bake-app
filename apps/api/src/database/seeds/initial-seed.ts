@@ -58,15 +58,19 @@ function buildPermissionList(): { resource: string; action: string }[] {
 const rolePermissionMap: Record<string, string[]> = {
   // owner is isAdmin, bypasses all checks — no explicit permissions needed
   manager: [
-    'users:read', 'users:create', 'users:update',
+    'users:read', 'users:create', 'users:update', 'users:delete',
+    'roles:read',
+    'permissions:read',
     'orders:read', 'orders:create', 'orders:update', 'orders:delete',
     'products:read', 'products:create', 'products:update', 'products:delete',
     'categories:read', 'categories:create', 'categories:update', 'categories:delete',
     'inventory:read', 'inventory:create', 'inventory:update', 'inventory:delete',
     'ingredients:read', 'ingredients:create', 'ingredients:update', 'ingredients:delete',
-    'locations:read', 'locations:create', 'locations:update',
-    'reports:read', 'finance:read',
-    'recipes:read', 'production:read',
+    'locations:read', 'locations:create', 'locations:update', 'locations:delete',
+    'reports:read',
+    'finance:read', 'finance:create', 'finance:update', 'finance:delete',
+    'recipes:read', 'recipes:create', 'recipes:update', 'recipes:delete',
+    'production:read', 'production:create', 'production:update', 'production:delete',
     'notifications:read', 'notifications:update',
     'settings:read', 'settings:update',
   ],

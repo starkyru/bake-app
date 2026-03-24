@@ -1,6 +1,8 @@
-import { Component } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
+import { CommonModule } from '@angular/common';
 import { MatExpansionModule } from '@angular/material/expansion';
 import { BakePageContainerComponent } from '@bake-app/ui-components';
+import { AuthService } from '@bake-app/auth';
 import { SettingsPanelComponent } from './settings-panel.component';
 import { GeneralSettingsComponent } from './general-settings.component';
 import { TaxSettingsComponent } from './tax-settings.component';
@@ -13,6 +15,7 @@ import { LocationsSettingsComponent } from './locations-settings.component';
   selector: 'bake-app-settings',
   standalone: true,
   imports: [
+    CommonModule,
     MatExpansionModule,
     BakePageContainerComponent,
     SettingsPanelComponent,
@@ -27,6 +30,7 @@ import { LocationsSettingsComponent } from './locations-settings.component';
     <bake-page-container title="Settings" subtitle="Configure your bakery system">
       <mat-accordion class="settings-accordion" multi>
         <bake-settings-panel
+          *ngIf="isAdmin"
           icon="store"
           title="General Settings"
           description="Bakery name, address, and contact info"
@@ -36,6 +40,7 @@ import { LocationsSettingsComponent } from './locations-settings.component';
         </bake-settings-panel>
 
         <bake-settings-panel
+          *ngIf="isAdmin"
           icon="receipt"
           title="Tax Configuration"
           description="Tax rates and calculation settings"
@@ -44,6 +49,7 @@ import { LocationsSettingsComponent } from './locations-settings.component';
         </bake-settings-panel>
 
         <bake-settings-panel
+          *ngIf="isAdmin"
           icon="point_of_sale"
           title="POS Settings"
           description="Receipt and point-of-sale configuration"
@@ -55,6 +61,7 @@ import { LocationsSettingsComponent } from './locations-settings.component';
           icon="restaurant_menu"
           title="Menu Categories"
           description="Categories for products and recipes"
+          [expanded]="!isAdmin"
         >
           <bake-menu-categories></bake-menu-categories>
         </bake-settings-panel>
@@ -68,6 +75,7 @@ import { LocationsSettingsComponent } from './locations-settings.component';
         </bake-settings-panel>
 
         <bake-settings-panel
+          *ngIf="isAdmin"
           icon="location_on"
           title="Locations"
           description="Bakery, store, and warehouse locations"
@@ -92,4 +100,13 @@ import { LocationsSettingsComponent } from './locations-settings.component';
     `,
   ],
 })
-export class SettingsComponent {}
+export class SettingsComponent implements OnInit {
+  isAdmin = false;
+
+  constructor(private authService: AuthService) {}
+
+  ngOnInit(): void {
+    const role = this.authService.getUserRole()?.toLowerCase();
+    this.isAdmin = role === 'owner';
+  }
+}
