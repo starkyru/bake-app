@@ -142,6 +142,7 @@ export class PasswordDialogComponent {
     MatInputModule,
     MatSelectModule,
     MatSlideToggleModule,
+    MatIconModule,
   ],
   template: `
     <h2 mat-dialog-title>{{ data.mode === 'create' ? 'Add User' : 'Edit User' }}</h2>
@@ -160,6 +161,14 @@ export class PasswordDialogComponent {
       <mat-form-field appearance="outline" class="full-width">
         <mat-label>Email</mat-label>
         <input matInput [(ngModel)]="email" type="email" placeholder="user@bakery.com" />
+      </mat-form-field>
+
+      <mat-form-field *ngIf="data.mode === 'create'" appearance="outline" class="full-width">
+        <mat-label>Password</mat-label>
+        <input matInput [(ngModel)]="password" [type]="hidePassword ? 'password' : 'text'" placeholder="Enter password" />
+        <button mat-icon-button matSuffix type="button" (click)="hidePassword = !hidePassword">
+          <mat-icon>{{ hidePassword ? 'visibility_off' : 'visibility' }}</mat-icon>
+        </button>
       </mat-form-field>
 
       <mat-form-field appearance="outline" class="full-width">
@@ -210,6 +219,8 @@ export class UserDialogComponent {
   firstName = '';
   lastName = '';
   email = '';
+  password = '';
+  hidePassword = true;
   role = UserRole.CASHIER;
   isActive = true;
   roles = Object.values(UserRole);
@@ -229,13 +240,17 @@ export class UserDialogComponent {
   }
 
   onSave(): void {
-    this.dialogRef.close({
+    const result: Record<string, unknown> = {
       firstName: this.firstName,
       lastName: this.lastName,
       email: this.email,
       role: this.role,
       isActive: this.isActive,
-    });
+    };
+    if (this.password) {
+      result['password'] = this.password;
+    }
+    this.dialogRef.close(result);
   }
 }
 
@@ -359,7 +374,7 @@ export class UsersComponent implements OnInit {
           firstName: result.firstName,
           lastName: result.lastName,
           email: result.email,
-          password: crypto.randomUUID().slice(0, 12),
+          password: result.password || crypto.randomUUID().slice(0, 12),
           roleId: result.role,
         };
         this.apiClient.post<User>('/v1/users', dto).subscribe({
