@@ -46,7 +46,11 @@ export class UsersService {
   async create(dto: CreateUserDto): Promise<User> {
     const existing = await this.usersRepository.findOne({ where: { email: dto.email } });
     if (existing) throw new ConflictException('Email already exists');
-    const role = await this.rolesService.findOne(dto.roleId);
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(dto.roleId);
+    const role = isUuid
+      ? await this.rolesService.findOne(dto.roleId)
+      : await this.rolesService.findByName(dto.roleId);
+    if (!role) throw new NotFoundException(`Role "${dto.roleId}" not found`);
     const passwordHash = await bcrypt.hash(dto.password, 10);
     const user = this.usersRepository.create({
       email: dto.email,
@@ -74,7 +78,11 @@ export class UsersService {
       ...(dto.lastName && { lastName: dto.lastName }),
       ...(dto.email && { email: dto.email }),
       ...(dto.phone !== undefined && { phone: dto.phone }),
-      ...(dto.roleId && { role: await this.rolesService.findOne(dto.roleId) }),
+      ...(dto.roleId && {
+        role: /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(dto.roleId)
+          ? await this.rolesService.findOne(dto.roleId)
+          : await this.rolesService.findByName(dto.roleId),
+      }),
       ...(dto.locationId !== undefined && { locationId: dto.locationId }),
       ...(dto.isActive !== undefined && { isActive: dto.isActive }),
     });
