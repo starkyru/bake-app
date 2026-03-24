@@ -1,7 +1,7 @@
 import { Controller, Get, Post, Put, Delete, Body, Param, Query, UseGuards, Request } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { PosService } from './pos.service';
-import { CreateCategoryDto, UpdateCategoryDto, CreateProductDto, UpdateProductDto, CreateOrderDto, CreatePaymentDto, UpdateOrderStatusDto } from './dto';
+import { CreateCategoryDto, UpdateCategoryDto, CreateProductDto, UpdateProductDto, CreateOrderDto, CreatePaymentDto, UpdateOrderStatusDto, CreateMenuDto, UpdateMenuDto, AddMenuProductDto } from './dto';
 import { PaginationDto } from '../../common/dto/pagination.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../../common/guards/permissions.guard';
@@ -83,4 +83,39 @@ export class PosController {
   @RequirePermissions('orders:update')
   @ApiOperation({ summary: 'Add payment to order' })
   addPayment(@Param('id') id: string, @Body() dto: CreatePaymentDto) { return this.posService.addPayment(id, dto); }
+
+  @Get('menus')
+  @RequirePermissions('products:read')
+  @ApiOperation({ summary: 'Get all menus' })
+  findAllMenus() { return this.posService.findAllMenus(); }
+
+  @Get('menus/:id')
+  @RequirePermissions('products:read')
+  @ApiOperation({ summary: 'Get menu by ID' })
+  findOneMenu(@Param('id') id: string) { return this.posService.findOneMenu(id); }
+
+  @Post('menus')
+  @RequirePermissions('products:create')
+  @ApiOperation({ summary: 'Create menu' })
+  createMenu(@Body() dto: CreateMenuDto) { return this.posService.createMenu(dto); }
+
+  @Put('menus/:id')
+  @RequirePermissions('products:update')
+  @ApiOperation({ summary: 'Update menu' })
+  updateMenu(@Param('id') id: string, @Body() dto: UpdateMenuDto) { return this.posService.updateMenu(id, dto); }
+
+  @Delete('menus/:id')
+  @RequirePermissions('products:delete')
+  @ApiOperation({ summary: 'Delete menu' })
+  deleteMenu(@Param('id') id: string) { return this.posService.deleteMenu(id); }
+
+  @Post('menus/:id/products')
+  @RequirePermissions('products:update')
+  @ApiOperation({ summary: 'Add product to menu' })
+  addProductToMenu(@Param('id') id: string, @Body() dto: AddMenuProductDto) { return this.posService.addProductToMenu(id, dto); }
+
+  @Delete('menus/:menuId/products/:productId')
+  @RequirePermissions('products:update')
+  @ApiOperation({ summary: 'Remove product from menu' })
+  removeProductFromMenu(@Param('menuId') menuId: string, @Param('productId') productId: string) { return this.posService.removeProductFromMenu(menuId, productId); }
 }

@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, ConflictException, ForbiddenException } from '@nestjs/common';
+import { Injectable, NotFoundException, ConflictException, ForbiddenException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, Like } from 'typeorm';
 import * as bcrypt from 'bcryptjs';
@@ -6,12 +6,14 @@ import { User } from './entities/user.entity';
 import { CreateUserDto, UpdateUserDto } from './dto';
 import { PaginationDto } from '../../common/dto/pagination.dto';
 import { PaginatedResponseDto } from '../../common/dto/paginated-response.dto';
+import { RolesService } from '../roles/roles.service';
 
 @Injectable()
 export class UsersService {
   constructor(
     @InjectRepository(User)
     private usersRepository: Repository<User>,
+    private rolesService: RolesService,
   ) {}
 
   async findAll(query: PaginationDto): Promise<PaginatedResponseDto<User>> {
@@ -44,6 +46,7 @@ export class UsersService {
   async create(dto: CreateUserDto): Promise<User> {
     const existing = await this.usersRepository.findOne({ where: { email: dto.email } });
     if (existing) throw new ConflictException('Email already exists');
+    const role = await this.rolesService.findOne(dto.roleId);
     const passwordHash = await bcrypt.hash(dto.password, 10);
     const user = this.usersRepository.create({
       email: dto.email,
@@ -51,7 +54,7 @@ export class UsersService {
       firstName: dto.firstName,
       lastName: dto.lastName,
       phone: dto.phone,
-      role: { id: dto.roleId } as any,
+      role,
       locationId: dto.locationId,
     });
     return this.usersRepository.save(user);
@@ -71,7 +74,7 @@ export class UsersService {
       ...(dto.lastName && { lastName: dto.lastName }),
       ...(dto.email && { email: dto.email }),
       ...(dto.phone !== undefined && { phone: dto.phone }),
-      ...(dto.roleId && { role: { id: dto.roleId } }),
+      ...(dto.roleId && { role: await this.rolesService.findOne(dto.roleId) }),
       ...(dto.locationId !== undefined && { locationId: dto.locationId }),
       ...(dto.isActive !== undefined && { isActive: dto.isActive }),
     });

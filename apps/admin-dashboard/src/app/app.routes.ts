@@ -42,6 +42,13 @@ export const routes: Routes = [
           ),
       },
       {
+        path: 'menu/:id',
+        loadComponent: () =>
+          import('./pages/menu/menu-detail.component').then(
+            (m) => m.MenuDetailComponent
+          ),
+      },
+      {
         path: 'categories',
         redirectTo: 'settings',
         pathMatch: 'full',

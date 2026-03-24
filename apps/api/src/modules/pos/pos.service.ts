@@ -7,7 +7,9 @@ import { Product } from './entities/product.entity';
 import { Order } from './entities/order.entity';
 import { OrderItem } from './entities/order-item.entity';
 import { Payment } from './entities/payment.entity';
-import { CreateCategoryDto, UpdateCategoryDto, CreateProductDto, UpdateProductDto, CreateOrderDto, CreatePaymentDto, UpdateOrderStatusDto } from './dto';
+import { Menu } from './entities/menu.entity';
+import { MenuProduct } from './entities/menu-product.entity';
+import { CreateCategoryDto, UpdateCategoryDto, CreateProductDto, UpdateProductDto, CreateOrderDto, CreatePaymentDto, UpdateOrderStatusDto, CreateMenuDto, UpdateMenuDto, AddMenuProductDto } from './dto';
 import { PaginationDto } from '../../common/dto/pagination.dto';
 import { PaginatedResponseDto } from '../../common/dto/paginated-response.dto';
 import { DOMAIN_EVENTS } from '../websocket/ws-events.constants';
@@ -20,6 +22,8 @@ export class PosService {
     @InjectRepository(Order) private orderRepo: Repository<Order>,
     @InjectRepository(OrderItem) private orderItemRepo: Repository<OrderItem>,
     @InjectRepository(Payment) private paymentRepo: Repository<Payment>,
+    @InjectRepository(Menu) private menuRepo: Repository<Menu>,
+    @InjectRepository(MenuProduct) private menuProductRepo: Repository<MenuProduct>,
     private eventEmitter: EventEmitter2,
   ) {}
 
@@ -204,5 +208,79 @@ export class PosService {
       method: savedPayment.method,
     });
     return savedPayment;
+  }
+
+  // Menus
+  async findAllMenus(): Promise<any[]> {
+    const menus = await this.menuRepo
+      .createQueryBuilder('menu')
+      .leftJoin('menu.menuProducts', 'menuProducts')
+      .addSelect('COUNT(menuProducts.id)', 'productCount')
+      .where('menu.isActive = :isActive', { isActive: true })
+      .groupBy('menu.id')
+      .orderBy('menu.sortOrder', 'ASC')
+      .addOrderBy('menu.name', 'ASC')
+      .getRawAndEntities();
+
+    return menus.entities.map((menu, index) => ({
+      ...menu,
+      productCount: parseInt(menus.raw[index].productCount, 10) || 0,
+    }));
+  }
+
+  async findOneMenu(id: string): Promise<Menu> {
+    const menu = await this.menuRepo.findOne({
+      where: { id },
+      relations: ['menuProducts'],
+    });
+    if (!menu) throw new NotFoundException('Menu not found');
+    return menu;
+  }
+
+  async createMenu(dto: CreateMenuDto): Promise<Menu> {
+    return this.menuRepo.save(this.menuRepo.create(dto));
+  }
+
+  async updateMenu(id: string, dto: UpdateMenuDto): Promise<Menu> {
+    const menu = await this.menuRepo.findOne({ where: { id } });
+    if (!menu) throw new NotFoundException('Menu not found');
+    Object.assign(menu, dto);
+    return this.menuRepo.save(menu);
+  }
+
+  async deleteMenu(id: string): Promise<void> {
+    const menu = await this.menuRepo.findOne({ where: { id } });
+    if (!menu) throw new NotFoundException('Menu not found');
+    menu.isActive = false;
+    await this.menuRepo.save(menu);
+  }
+
+  async addProductToMenu(menuId: string, dto: AddMenuProductDto): Promise<MenuProduct> {
+    const menu = await this.menuRepo.findOne({ where: { id: menuId } });
+    if (!menu) throw new NotFoundException('Menu not found');
+
+    const product = await this.productRepo.findOne({ where: { id: dto.productId } });
+    if (!product) throw new NotFoundException('Product not found');
+
+    const existing = await this.menuProductRepo.findOne({
+      where: { menuId, productId: dto.productId },
+    });
+    if (existing) throw new ConflictException('Product already exists in this menu');
+
+    return this.menuProductRepo.save(
+      this.menuProductRepo.create({
+        menuId,
+        productId: dto.productId,
+        sortOrder: dto.sortOrder || 0,
+      }),
+    );
+  }
+
+  async removeProductFromMenu(menuId: string, productId: string): Promise<void> {
+    const menuProduct = await this.menuProductRepo.findOne({
+      where: { menuId, productId },
+    });
+    if (!menuProduct) throw new NotFoundException('Product not found in this menu');
+    await this.menuProductRepo.remove(menuProduct);
   }
 }

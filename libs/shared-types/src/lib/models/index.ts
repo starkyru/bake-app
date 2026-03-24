@@ -79,6 +79,26 @@ export interface Product {
   ingredient?: Ingredient;
 }
 
+export interface Menu {
+  id: string;
+  name: string;
+  description?: string;
+  sortOrder: number;
+  isActive: boolean;
+  menuProducts?: MenuProduct[];
+  productCount?: number;
+  createdAt?: Date;
+  updatedAt?: Date;
+}
+
+export interface MenuProduct {
+  id: string;
+  menuId: string;
+  productId: string;
+  product?: Product;
+  sortOrder: number;
+}
+
 export interface Category {
   id: string;
   name: string;
