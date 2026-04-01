@@ -1,0 +1,916 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Bake App — Database Schema</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      background: #faf3e8;
+      color: #3e2723;
+      overflow: hidden;
+      height: 100vh;
+    }
+
+    /* ---- Top bar (stays fixed) ---- */
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 24px;
+      background: white;
+      border-bottom: 1px solid #e0d5c7;
+      box-shadow: 0 1px 4px rgba(139,69,19,0.06);
+      position: relative;
+      z-index: 10;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .topbar-left {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+    .topbar h1 {
+      font-size: 20px;
+      font-weight: 700;
+      color: #8b4513;
+      white-space: nowrap;
+    }
+    .topbar .subtitle {
+      color: #8d6e63;
+      font-size: 13px;
+      white-space: nowrap;
+    }
+
+    /* Zoom controls */
+    .zoom-controls {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: #faf3e8;
+      border-radius: 8px;
+      padding: 4px 8px;
+      user-select: none;
+    }
+    .zoom-controls button {
+      width: 32px;
+      height: 32px;
+      border: 1px solid #d7ccc8;
+      background: white;
+      border-radius: 6px;
+      font-size: 18px;
+      font-weight: 600;
+      color: #5d4037;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.15s, border-color 0.15s;
+    }
+    .zoom-controls button:hover {
+      background: #efebe9;
+      border-color: #8b4513;
+    }
+    .zoom-controls button:active {
+      background: #d7ccc8;
+    }
+    .zoom-level {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 13px;
+      font-weight: 600;
+      color: #5d4037;
+      min-width: 44px;
+      text-align: center;
+    }
+
+    /* Stats pills */
+    .stats-row {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .stat-pill {
+      background: #faf3e8;
+      border: 1px solid #e0d5c7;
+      border-radius: 16px;
+      padding: 4px 12px;
+      font-size: 12px;
+      color: #5d4037;
+      white-space: nowrap;
+    }
+    .stat-pill strong {
+      color: #8b4513;
+      font-family: 'JetBrains Mono', monospace;
+      font-weight: 700;
+    }
+
+    /* Legend */
+    .legend {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 11px;
+      color: #5d4037;
+    }
+    .legend-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 3px;
+      flex-shrink: 0;
+    }
+
+    /* ---- Pan/Zoom canvas ---- */
+    .canvas-wrapper {
+      position: relative;
+      width: 100%;
+      height: calc(100vh - 60px);
+      overflow: hidden;
+      cursor: grab;
+      background:
+        radial-gradient(circle, #e0d5c7 1px, transparent 1px);
+      background-size: 24px 24px;
+    }
+    .canvas-wrapper:active {
+      cursor: grabbing;
+    }
+    .canvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      transform-origin: 0 0;
+      /* transform set by JS */
+    }
+
+    /* Help hint */
+    .hint {
+      position: fixed;
+      bottom: 16px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(62, 39, 35, 0.85);
+      color: #fff;
+      padding: 8px 20px;
+      border-radius: 20px;
+      font-size: 12px;
+      pointer-events: none;
+      z-index: 20;
+      opacity: 1;
+      transition: opacity 0.6s;
+    }
+    .hint.hidden { opacity: 0; }
+    .hint kbd {
+      background: rgba(255,255,255,0.2);
+      padding: 1px 6px;
+      border-radius: 4px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+    }
+
+    /* minimap */
+    .minimap {
+      position: fixed;
+      bottom: 16px;
+      right: 16px;
+      width: 180px;
+      height: 120px;
+      background: rgba(255,255,255,0.92);
+      border: 1px solid #d7ccc8;
+      border-radius: 8px;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.1);
+      overflow: hidden;
+      z-index: 20;
+    }
+    .minimap-viewport {
+      position: absolute;
+      border: 2px solid #8b4513;
+      border-radius: 2px;
+      background: rgba(139,69,19,0.08);
+      pointer-events: none;
+    }
+    .minimap-content {
+      width: 100%;
+      height: 100%;
+    }
+    .minimap-content svg {
+      width: 100%;
+      height: 100%;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="topbar">
+    <div class="topbar-left">
+      <h1>Bake App Database Schema</h1>
+      <span class="subtitle">PostgreSQL &middot; TypeORM</span>
+      <div class="stats-row">
+        <span class="stat-pill"><strong>30</strong> entities</span>
+        <span class="stat-pill"><strong>13</strong> modules</span>
+        <span class="stat-pill"><strong>62</strong> relations</span>
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap">
+      <div class="legend">
+        <div class="legend-item"><div class="legend-dot" style="background:#42a5f5"></div>Auth</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#66bb6a"></div>POS</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#ffa726"></div>Inventory</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#ab47bc"></div>Recipes</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#ef5350"></div>Production</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#26c6da"></div>Finance</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#78909c"></div>System</div>
+      </div>
+      <div class="zoom-controls">
+        <button id="zoom-out" title="Zoom out (-)">-</button>
+        <span class="zoom-level" id="zoom-level">100%</span>
+        <button id="zoom-in" title="Zoom in (+)">+</button>
+        <button id="zoom-fit" title="Fit to screen" style="font-size:14px">Fit</button>
+        <button id="zoom-reset" title="Reset to 100%">1:1</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="canvas-wrapper" id="wrapper">
+    <div class="canvas" id="canvas">
+      <div class="mermaid" id="diagram">
+erDiagram
+
+    %% ============ AUTH and USERS ============
+
+    users {
+        uuid id PK
+        string email UK "unique"
+        string password_hash
+        string first_name
+        string last_name
+        string phone "nullable"
+        boolean is_active "default true"
+        uuid role_id FK
+        uuid location_id "nullable"
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    roles {
+        uuid id PK
+        string name UK "unique"
+        string description "nullable"
+        jsonb permissions "default []"
+        boolean is_admin "default false"
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    permissions {
+        uuid id PK
+        string resource
+        string action
+        string description "nullable"
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    role_permissions {
+        uuid id PK
+        uuid role_id FK
+        uuid permission_id FK
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    user_permissions {
+        uuid id PK
+        uuid user_id FK
+        uuid permission_id FK
+        string grant_type "grant or deny"
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    refresh_tokens {
+        uuid id PK
+        string token_hash
+        timestamp expires_at
+        boolean revoked "default false"
+        uuid user_id FK
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    %% ============ POS and ORDERS ============
+
+    categories {
+        uuid id PK
+        string name
+        string type "nullable"
+        int sort_order "default 0"
+        boolean is_active "default true"
+        uuid parent_id FK "nullable self-ref"
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    products {
+        uuid id PK
+        string name
+        string sku "nullable unique"
+        string type "default produced"
+        decimal price "precision 10-2"
+        decimal cost_price "precision 10-2"
+        string description "nullable"
+        boolean is_active "default true"
+        uuid category_id FK "nullable"
+        uuid recipe_id FK "nullable"
+        uuid ingredient_id FK "nullable"
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    menus {
+        uuid id PK
+        string name
+        string description "nullable"
+        int sort_order "default 0"
+        boolean is_active "default true"
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    menu_products {
+        uuid id PK
+        uuid menu_id FK
+        uuid product_id FK
+        int sort_order "default 0"
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    orders {
+        uuid id PK
+        string order_number UK "unique"
+        string type "default dine_in"
+        string status "default pending"
+        decimal subtotal "precision 10-2"
+        decimal tax "precision 10-2"
+        decimal total "precision 10-2"
+        decimal discount "precision 5-2"
+        string notes "nullable"
+        uuid user_id "nullable"
+        uuid location_id "nullable"
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    order_items {
+        uuid id PK
+        int quantity
+        decimal unit_price "precision 10-2"
+        decimal subtotal "precision 10-2"
+        string notes "nullable"
+        uuid order_id FK
+        uuid product_id FK
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    payments {
+        uuid id PK
+        decimal amount "precision 10-2"
+        string method "default cash"
+        string status "default completed"
+        uuid order_id FK
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    %% ============ INVENTORY ============
+
+    ingredient_categories {
+        uuid id PK
+        string name
+        int sort_order "default 0"
+        boolean is_active "default true"
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    ingredients {
+        uuid id PK
+        string name
+        string unit
+        string description "nullable"
+        decimal cost_per_unit "precision 10-2"
+        decimal min_stock_level "precision 10-2"
+        decimal calories "nullable"
+        string category "nullable"
+        uuid category_id FK "nullable"
+        boolean is_active "default true"
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    inventory_items {
+        uuid id PK
+        string title
+        boolean in_stock "default true"
+        decimal min_stock_level "nullable"
+        string min_stock_unit "nullable"
+        uuid ingredient_id FK
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    inventory_item_packages {
+        uuid id PK
+        decimal size "precision 10-2"
+        string unit
+        int sort_order "default 0"
+        uuid inventory_item_id FK
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    inventory_shipments {
+        uuid id PK
+        decimal package_count "precision 10-2"
+        decimal unit_cost "nullable"
+        text notes "nullable"
+        string batch_number "nullable"
+        uuid user_id "nullable"
+        uuid inventory_item_id FK
+        uuid package_id FK
+        uuid location_id FK
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    inventory_movements {
+        uuid id PK
+        string type
+        decimal quantity "precision 10-2"
+        decimal unit_cost "nullable"
+        text notes "nullable"
+        uuid ingredient_id FK
+        uuid from_location_id FK "nullable"
+        uuid to_location_id FK "nullable"
+        uuid user_id "nullable"
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    locations {
+        uuid id PK
+        string name
+        string address "nullable"
+        string type "default retail"
+        string phone "nullable"
+        boolean is_active "default true"
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    %% ============ RECIPES ============
+
+    recipes {
+        uuid id PK
+        string name
+        string category "nullable"
+        decimal yield_quantity "precision 10-2"
+        string yield_unit "default pcs"
+        decimal cost_per_unit "precision 10-2"
+        int current_version "default 1"
+        string instructions "nullable"
+        uuid product_id "nullable"
+        boolean is_active "default true"
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    recipe_ingredients {
+        uuid id PK
+        decimal quantity "precision 10-3"
+        string unit "default g"
+        uuid ingredient_id FK "nullable"
+        string ingredient_name "nullable"
+        decimal cost_per_unit "precision 10-2"
+        uuid recipe_id FK
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    recipe_links {
+        uuid id PK
+        string url
+        string title "nullable"
+        string description "nullable"
+        boolean is_youtube "default false"
+        string youtube_video_id "nullable"
+        uuid recipe_id FK
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    recipe_versions {
+        uuid id PK
+        int version_number
+        jsonb ingredients_snapshot "default []"
+        text instructions_snapshot "nullable"
+        uuid changed_by_id "nullable"
+        string change_notes "nullable"
+        uuid recipe_id FK
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    %% ============ PRODUCTION ============
+
+    production_plans {
+        uuid id PK
+        date date
+        string status "default draft"
+        text notes "nullable"
+        uuid location_id "nullable"
+        uuid created_by_id "nullable"
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    production_tasks {
+        uuid id PK
+        int planned_quantity
+        int actual_yield "nullable"
+        int waste_quantity "default 0"
+        string status "default pending"
+        timestamp scheduled_start "nullable"
+        timestamp scheduled_end "nullable"
+        timestamp actual_start "nullable"
+        timestamp actual_end "nullable"
+        uuid recipe_id FK
+        string recipe_name "nullable"
+        uuid assignee_id "nullable"
+        string assignee_name "nullable"
+        uuid plan_id FK
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    %% ============ FINANCE ============
+
+    finance_transactions {
+        uuid id PK
+        string type
+        decimal amount "precision 12-2"
+        string category "nullable"
+        string description "nullable"
+        string reference_type "nullable"
+        string reference_id "nullable"
+        uuid location_id "nullable"
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    expense_records {
+        uuid id PK
+        string category
+        decimal amount "precision 12-2"
+        string description "nullable"
+        date date
+        uuid location_id "nullable"
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    %% ============ SYSTEM ============
+
+    notifications {
+        uuid id PK
+        string type
+        string title
+        text message
+        string priority "default medium"
+        boolean is_read "default false"
+        string reference_type "nullable"
+        string reference_id "nullable"
+        uuid user_id FK
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    settings {
+        uuid id PK
+        string key UK "unique"
+        text value
+        string group "default general"
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    %% ============ RELATIONSHIPS ============
+
+    roles ||--o{ users : "has many"
+    users ||--o{ refresh_tokens : "has many"
+    users ||--o{ user_permissions : "has many"
+    roles ||--o{ role_permissions : "has many"
+    permissions ||--o{ role_permissions : "referenced by"
+    permissions ||--o{ user_permissions : "referenced by"
+
+    categories ||--o{ categories : "parent-child"
+    categories ||--o{ products : "has many"
+    recipes ||--o{ products : "linked to"
+    ingredients ||--o{ products : "linked to"
+    menus ||--o{ menu_products : "has many"
+    products ||--o{ menu_products : "in menus"
+    orders ||--o{ order_items : "has many"
+    orders ||--o{ payments : "has many"
+    products ||--o{ order_items : "ordered as"
+
+    ingredient_categories ||--o{ ingredients : "has many"
+    ingredients ||--o{ inventory_items : "tracked by"
+    inventory_items ||--o{ inventory_item_packages : "has packages"
+    inventory_items ||--o{ inventory_shipments : "receives"
+    inventory_item_packages ||--o{ inventory_shipments : "shipped in"
+    locations ||--o{ inventory_shipments : "delivered to"
+    ingredients ||--o{ inventory_movements : "moved"
+    locations ||--o{ inventory_movements : "from-to"
+
+    recipes ||--o{ recipe_ingredients : "contains"
+    recipes ||--o{ recipe_links : "has links"
+    recipes ||--o{ recipe_versions : "versioned"
+    ingredients ||--o{ recipe_ingredients : "used in"
+
+    production_plans ||--o{ production_tasks : "has tasks"
+      </div>
+    </div>
+  </div>
+
+  <div class="hint" id="hint">
+    Scroll to zoom &middot; Drag to pan &middot; <kbd>+</kbd> <kbd>-</kbd> to zoom &middot; <kbd>0</kbd> to reset &middot; <kbd>F</kbd> fit to screen
+  </div>
+
+  <div class="minimap" id="minimap">
+    <div class="minimap-viewport" id="minimap-vp"></div>
+    <div class="minimap-content" id="minimap-content"></div>
+  </div>
+
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+
+    mermaid.initialize({
+      startOnLoad: false,
+      theme: 'base',
+      themeVariables: {
+        primaryColor: '#fff8f0',
+        primaryBorderColor: '#8b4513',
+        primaryTextColor: '#3e2723',
+        lineColor: '#8d6e63',
+        secondaryColor: '#faf3e8',
+        tertiaryColor: '#fff',
+        fontSize: '13px',
+      },
+      er: {
+        diagramPadding: 40,
+        layoutDirection: 'TB',
+        minEntityWidth: 180,
+        entityPadding: 14,
+        useMaxWidth: false,
+      },
+    });
+
+    // Render mermaid
+    const el = document.getElementById('diagram');
+    const { svg } = await mermaid.render('er-diagram', el.textContent);
+    el.innerHTML = svg;
+
+    // ---- Pan & Zoom Engine ----
+    const wrapper = document.getElementById('wrapper');
+    const canvas = document.getElementById('canvas');
+    const zoomLevelEl = document.getElementById('zoom-level');
+
+    let scale = 1;
+    let panX = 0;
+    let panY = 0;
+    const MIN_SCALE = 0.1;
+    const MAX_SCALE = 4;
+
+    function applyTransform() {
+      canvas.style.transform = `translate(${panX}px, ${panY}px) scale(${scale})`;
+      zoomLevelEl.textContent = Math.round(scale * 100) + '%';
+      updateMinimap();
+    }
+
+    // --- Mouse wheel zoom ---
+    wrapper.addEventListener('wheel', (e) => {
+      e.preventDefault();
+      const rect = wrapper.getBoundingClientRect();
+      const mx = e.clientX - rect.left;
+      const my = e.clientY - rect.top;
+
+      const delta = e.deltaY > 0 ? 0.9 : 1.1;
+      const newScale = Math.min(MAX_SCALE, Math.max(MIN_SCALE, scale * delta));
+      const factor = newScale / scale;
+
+      panX = mx - factor * (mx - panX);
+      panY = my - factor * (my - panY);
+      scale = newScale;
+      applyTransform();
+      hideHint();
+    }, { passive: false });
+
+    // --- Trackpad pinch (ctrlKey + wheel) handled by same listener ---
+
+    // --- Drag to pan ---
+    let dragging = false;
+    let dragStartX = 0;
+    let dragStartY = 0;
+
+    wrapper.addEventListener('mousedown', (e) => {
+      if (e.button !== 0) return;
+      dragging = true;
+      dragStartX = e.clientX - panX;
+      dragStartY = e.clientY - panY;
+      hideHint();
+    });
+
+    window.addEventListener('mousemove', (e) => {
+      if (!dragging) return;
+      panX = e.clientX - dragStartX;
+      panY = e.clientY - dragStartY;
+      applyTransform();
+    });
+
+    window.addEventListener('mouseup', () => { dragging = false; });
+
+    // --- Touch support ---
+    let lastTouchDist = 0;
+    let lastTouchX = 0;
+    let lastTouchY = 0;
+
+    wrapper.addEventListener('touchstart', (e) => {
+      if (e.touches.length === 1) {
+        dragging = true;
+        dragStartX = e.touches[0].clientX - panX;
+        dragStartY = e.touches[0].clientY - panY;
+      } else if (e.touches.length === 2) {
+        dragging = false;
+        const dx = e.touches[0].clientX - e.touches[1].clientX;
+        const dy = e.touches[0].clientY - e.touches[1].clientY;
+        lastTouchDist = Math.hypot(dx, dy);
+        lastTouchX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
+        lastTouchY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+      }
+      hideHint();
+    }, { passive: true });
+
+    wrapper.addEventListener('touchmove', (e) => {
+      e.preventDefault();
+      if (e.touches.length === 1 && dragging) {
+        panX = e.touches[0].clientX - dragStartX;
+        panY = e.touches[0].clientY - dragStartY;
+        applyTransform();
+      } else if (e.touches.length === 2) {
+        const dx = e.touches[0].clientX - e.touches[1].clientX;
+        const dy = e.touches[0].clientY - e.touches[1].clientY;
+        const dist = Math.hypot(dx, dy);
+        const centerX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
+        const centerY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+        const rect = wrapper.getBoundingClientRect();
+        const mx = centerX - rect.left;
+        const my = centerY - rect.top;
+
+        const delta = dist / lastTouchDist;
+        const newScale = Math.min(MAX_SCALE, Math.max(MIN_SCALE, scale * delta));
+        const factor = newScale / scale;
+        panX = mx - factor * (mx - panX);
+        panY = my - factor * (my - panY);
+        scale = newScale;
+
+        lastTouchDist = dist;
+        applyTransform();
+      }
+    }, { passive: false });
+
+    wrapper.addEventListener('touchend', () => { dragging = false; });
+
+    // --- Keyboard shortcuts ---
+    window.addEventListener('keydown', (e) => {
+      if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+      const rect = wrapper.getBoundingClientRect();
+      const cx = rect.width / 2;
+      const cy = rect.height / 2;
+
+      if (e.key === '=' || e.key === '+') {
+        zoomAt(cx, cy, 1.2);
+      } else if (e.key === '-') {
+        zoomAt(cx, cy, 1 / 1.2);
+      } else if (e.key === '0') {
+        resetZoom();
+      } else if (e.key === 'f' || e.key === 'F') {
+        fitToScreen();
+      }
+    });
+
+    function zoomAt(mx, my, delta) {
+      const newScale = Math.min(MAX_SCALE, Math.max(MIN_SCALE, scale * delta));
+      const factor = newScale / scale;
+      panX = mx - factor * (mx - panX);
+      panY = my - factor * (my - panY);
+      scale = newScale;
+      applyTransform();
+    }
+
+    function resetZoom() {
+      scale = 1;
+      panX = 0;
+      panY = 0;
+      applyTransform();
+    }
+
+    function fitToScreen() {
+      const wRect = wrapper.getBoundingClientRect();
+      const svgEl = canvas.querySelector('svg');
+      if (!svgEl) return;
+      const sRect = svgEl.getBoundingClientRect();
+      const realW = sRect.width / scale;
+      const realH = sRect.height / scale;
+      const pad = 40;
+      const fitScale = Math.min(
+        (wRect.width - pad * 2) / realW,
+        (wRect.height - pad * 2) / realH,
+        2
+      );
+      scale = fitScale;
+      panX = (wRect.width - realW * scale) / 2;
+      panY = (wRect.height - realH * scale) / 2;
+      applyTransform();
+    }
+
+    // --- Buttons ---
+    document.getElementById('zoom-in').addEventListener('click', () => {
+      const rect = wrapper.getBoundingClientRect();
+      zoomAt(rect.width / 2, rect.height / 2, 1.25);
+    });
+    document.getElementById('zoom-out').addEventListener('click', () => {
+      const rect = wrapper.getBoundingClientRect();
+      zoomAt(rect.width / 2, rect.height / 2, 1 / 1.25);
+    });
+    document.getElementById('zoom-fit').addEventListener('click', fitToScreen);
+    document.getElementById('zoom-reset').addEventListener('click', resetZoom);
+
+    // --- Hint auto-hide ---
+    const hint = document.getElementById('hint');
+    function hideHint() {
+      hint.classList.add('hidden');
+    }
+    setTimeout(hideHint, 6000);
+
+    // --- Minimap ---
+    const minimapContent = document.getElementById('minimap-content');
+    const minimapVp = document.getElementById('minimap-vp');
+    const minimap = document.getElementById('minimap');
+
+    // Clone SVG into minimap
+    const svgClone = canvas.querySelector('svg')?.cloneNode(true);
+    if (svgClone) {
+      svgClone.removeAttribute('style');
+      svgClone.style.width = '100%';
+      svgClone.style.height = '100%';
+      minimapContent.appendChild(svgClone);
+    }
+
+    function updateMinimap() {
+      const svgEl = canvas.querySelector('svg');
+      if (!svgEl) return;
+      const sRect = svgEl.getBoundingClientRect();
+      const realW = sRect.width / scale;
+      const realH = sRect.height / scale;
+      const wRect = wrapper.getBoundingClientRect();
+
+      const mmRect = minimap.getBoundingClientRect();
+      const mmScale = Math.min(mmRect.width / realW, mmRect.height / realH);
+
+      // Viewport box
+      const vpW = (wRect.width / scale) * mmScale;
+      const vpH = (wRect.height / scale) * mmScale;
+      const vpX = (-panX / scale) * mmScale;
+      const vpY = (-panY / scale) * mmScale;
+
+      minimapVp.style.width = Math.min(vpW, mmRect.width) + 'px';
+      minimapVp.style.height = Math.min(vpH, mmRect.height) + 'px';
+      minimapVp.style.left = Math.max(0, vpX) + 'px';
+      minimapVp.style.top = Math.max(0, vpY) + 'px';
+    }
+
+    // Initial fit
+    requestAnimationFrame(() => {
+      fitToScreen();
+    });
+  </script>
+</body>
+</html>

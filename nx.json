@@ -3,12 +3,6 @@
   "extends": "nx/presets/npm.json",
   "plugins": [
     {
-      "plugin": "@nrwl/angular/plugin",
-      "options": {
-        "projectType": "application"
-      }
-    },
-    {
       "plugin": "@nrwl/nest/plugin",
       "options": {
         "projectType": "application"

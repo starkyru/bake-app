@@ -1,0 +1,5 @@
+{
+  "name": "react-api-client",
+  "sourceRoot": "libs/react/api-client/src",
+  "projectType": "library"
+}

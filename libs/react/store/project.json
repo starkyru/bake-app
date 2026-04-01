@@ -1,0 +1,5 @@
+{
+  "name": "react-store",
+  "sourceRoot": "libs/react/store/src",
+  "projectType": "library"
+}

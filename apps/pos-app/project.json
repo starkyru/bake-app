@@ -1,0 +1,21 @@
+{
+  "name": "pos-app",
+  "sourceRoot": "apps/pos-app/src",
+  "projectType": "application",
+  "targets": {
+    "serve": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "npx vite --config apps/pos-app/vite.config.ts",
+        "cwd": "apps/pos-app"
+      }
+    },
+    "build": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "npx vite build --config apps/pos-app/vite.config.ts",
+        "cwd": "apps/pos-app"
+      }
+    }
+  }
+}

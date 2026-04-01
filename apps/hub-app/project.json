@@ -1,0 +1,21 @@
+{
+  "name": "hub-app",
+  "sourceRoot": "apps/hub-app/src",
+  "projectType": "application",
+  "targets": {
+    "serve": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "npx vite --config apps/hub-app/vite.config.ts",
+        "cwd": "apps/hub-app"
+      }
+    },
+    "build": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "npx vite build --config apps/hub-app/vite.config.ts",
+        "cwd": "apps/hub-app"
+      }
+    }
+  }
+}

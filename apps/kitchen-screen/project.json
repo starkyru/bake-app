@@ -1,0 +1,22 @@
+{
+  "name": "kitchen-screen",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "projectType": "application",
+  "sourceRoot": "apps/kitchen-screen/src",
+  "targets": {
+    "serve": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "npx vite --config apps/kitchen-screen/vite.config.ts"
+      }
+    },
+    "build": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "npx vite build --config apps/kitchen-screen/vite.config.ts"
+      },
+      "outputs": ["{workspaceRoot}/dist/apps/kitchen-screen"]
+    }
+  },
+  "tags": ["scope:kitchen"]
+}

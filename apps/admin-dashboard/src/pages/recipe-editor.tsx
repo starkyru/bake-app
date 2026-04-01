@@ -1,0 +1,649 @@
+import { useEffect, useMemo, useState } from 'react';
+import { useParams, useNavigate } from 'react-router';
+import {
+  ArrowLeft,
+  Plus,
+  Trash2,
+  Save,
+  Link as LinkIcon,
+  Video,
+  Search,
+} from 'lucide-react';
+import { toast } from 'sonner';
+import type { RecipeIngredient, RecipeLink, Ingredient } from '@bake-app/shared-types';
+import {
+  useRecipe,
+  useCreateRecipe,
+  useUpdateRecipe,
+  useIngredients,
+} from '@bake-app/react/api-client';
+import {
+  PageContainer,
+  LoadingSpinner,
+  CurrencyDisplay,
+} from '@bake-app/react/ui';
+
+const UNIT_OPTIONS = ['g', 'kg', 'ml', 'L', 'pcs', 'oz', 'lb', 'tbsp', 'tsp'];
+
+const RECIPE_CATEGORIES = ['bread', 'pastry', 'cake', 'beverage', 'sandwich', 'other'] as const;
+const CATEGORY_OPTIONS = RECIPE_CATEGORIES.map((val) => ({
+  value: val,
+  label: val.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()),
+}));
+
+interface RecipeIngredientRow {
+  id?: string;
+  ingredientId: string;
+  ingredientName: string;
+  quantity: string;
+  unit: string;
+  costPerUnit: number;
+}
+
+interface RecipeLinkRow {
+  id?: string;
+  url: string;
+  title: string;
+}
+
+function extractYouTubeId(url: string): string | null {
+  const match = url.match(
+    /(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/)|youtu\.be\/)([\w-]{11})/,
+  );
+  return match?.[1] ?? null;
+}
+
+export function RecipeEditorPage() {
+  const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
+  const isNew = id === 'new';
+
+  const { data: existingRecipe, isLoading: recipeLoading } = useRecipe(
+    isNew ? '' : id!,
+  );
+  const { data: allIngredients } = useIngredients();
+  const createRecipe = useCreateRecipe();
+  const updateRecipe = useUpdateRecipe();
+
+  // Form state
+  const [name, setName] = useState('');
+  const [category, setCategory] = useState('');
+  const [yieldQuantity, setYieldQuantity] = useState('');
+  const [yieldUnit, setYieldUnit] = useState('pcs');
+  const [instructions, setInstructions] = useState('');
+  const [ingredientRows, setIngredientRows] = useState<RecipeIngredientRow[]>(
+    [],
+  );
+  const [linkRows, setLinkRows] = useState<RecipeLinkRow[]>([]);
+  const [saving, setSaving] = useState(false);
+
+  // Ingredient autocomplete state
+  const [activeIngredientIdx, setActiveIngredientIdx] = useState<number | null>(
+    null,
+  );
+  const [ingredientSearch, setIngredientSearch] = useState('');
+
+  // Populate form when editing
+  useEffect(() => {
+    if (existingRecipe && !isNew) {
+      setName(existingRecipe.name);
+      setCategory(existingRecipe.category ?? '');
+      setYieldQuantity(String(existingRecipe.yieldQuantity));
+      setYieldUnit(existingRecipe.yieldUnit);
+      setInstructions(existingRecipe.instructions ?? '');
+      setIngredientRows(
+        (existingRecipe.ingredients ?? []).map((ri) => ({
+          id: ri.id,
+          ingredientId: ri.ingredientId,
+          ingredientName: ri.ingredientName ?? '',
+          quantity: String(ri.quantity),
+          unit: ri.unit,
+          costPerUnit: ri.costPerUnit,
+        })),
+      );
+      setLinkRows(
+        (existingRecipe.links ?? []).map((l) => ({
+          id: l.id,
+          url: l.url,
+          title: l.title ?? '',
+        })),
+      );
+    }
+  }, [existingRecipe, isNew]);
+
+  const totalCost = useMemo(() => {
+    return ingredientRows.reduce((sum, row) => {
+      const qty = parseFloat(row.quantity) || 0;
+      return sum + qty * row.costPerUnit;
+    }, 0);
+  }, [ingredientRows]);
+
+  const filteredIngredients = useMemo(() => {
+    if (!allIngredients) return [];
+    const query = ingredientSearch.toLowerCase();
+    return allIngredients.filter(
+      (ing) =>
+        ing.name.toLowerCase().includes(query) &&
+        !ingredientRows.some((r) => r.ingredientId === ing.id),
+    );
+  }, [allIngredients, ingredientSearch, ingredientRows]);
+
+  // Ingredient row management
+  const addIngredientRow = () => {
+    setIngredientRows((rows) => [
+      ...rows,
+      {
+        ingredientId: '',
+        ingredientName: '',
+        quantity: '',
+        unit: 'g',
+        costPerUnit: 0,
+      },
+    ]);
+  };
+
+  const removeIngredientRow = (idx: number) => {
+    setIngredientRows((rows) => rows.filter((_, i) => i !== idx));
+  };
+
+  const selectIngredient = (idx: number, ingredient: Ingredient) => {
+    setIngredientRows((rows) =>
+      rows.map((row, i) =>
+        i === idx
+          ? {
+              ...row,
+              ingredientId: ingredient.id,
+              ingredientName: ingredient.name,
+              unit: ingredient.unit,
+              costPerUnit: ingredient.costPerUnit,
+            }
+          : row,
+      ),
+    );
+    setActiveIngredientIdx(null);
+    setIngredientSearch('');
+  };
+
+  const updateIngredientRow = (
+    idx: number,
+    field: keyof RecipeIngredientRow,
+    value: string,
+  ) => {
+    setIngredientRows((rows) =>
+      rows.map((row, i) => (i === idx ? { ...row, [field]: value } : row)),
+    );
+  };
+
+  // Link row management
+  const addLinkRow = () => {
+    setLinkRows((rows) => [...rows, { url: '', title: '' }]);
+  };
+
+  const removeLinkRow = (idx: number) => {
+    setLinkRows((rows) => rows.filter((_, i) => i !== idx));
+  };
+
+  const updateLinkRow = (
+    idx: number,
+    field: keyof RecipeLinkRow,
+    value: string,
+  ) => {
+    setLinkRows((rows) =>
+      rows.map((row, i) => (i === idx ? { ...row, [field]: value } : row)),
+    );
+  };
+
+  const handleSave = async () => {
+    if (!name.trim()) {
+      toast.error('Recipe name is required');
+      return;
+    }
+    if (!yieldQuantity || parseFloat(yieldQuantity) <= 0) {
+      toast.error('Yield quantity must be greater than zero');
+      return;
+    }
+
+    setSaving(true);
+
+    const ingredients: Partial<RecipeIngredient>[] = ingredientRows
+      .filter((r) => r.ingredientId)
+      .map((r) => ({
+        ingredientId: r.ingredientId,
+        quantity: parseFloat(r.quantity) || 0,
+        unit: r.unit,
+        costPerUnit: r.costPerUnit,
+      }));
+
+    const links: Partial<RecipeLink>[] = linkRows
+      .filter((l) => l.url.trim())
+      .map((l) => {
+        const ytId = extractYouTubeId(l.url);
+        return {
+          url: l.url.trim(),
+          title: l.title.trim() || undefined,
+          isVideo: !!ytId,
+          youtubeVideoId: ytId ?? undefined,
+        };
+      });
+
+    const payload = {
+      name: name.trim(),
+      category: category || undefined,
+      yieldQuantity: parseFloat(yieldQuantity),
+      yieldUnit,
+      instructions: instructions.trim() || undefined,
+      ingredients,
+      links,
+      isActive: true,
+    };
+
+    try {
+      if (isNew) {
+        const created = await createRecipe.mutateAsync(payload as any);
+        toast.success('Recipe created');
+        navigate(`/recipes/${created.id}`, { replace: true });
+      } else {
+        await updateRecipe.mutateAsync({ id: id!, ...payload } as any);
+        toast.success('Recipe updated');
+      }
+    } catch {
+      toast.error(isNew ? 'Failed to create recipe' : 'Failed to update recipe');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (!isNew && recipeLoading) {
+    return (
+      <PageContainer>
+        <LoadingSpinner message="Loading recipe..." />
+      </PageContainer>
+    );
+  }
+
+  return (
+    <PageContainer
+      title={isNew ? 'New Recipe' : `Edit: ${name || 'Recipe'}`}
+      subtitle={
+        isNew ? 'Create a new recipe' : 'Edit recipe details and ingredients'
+      }
+      actions={
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => navigate('/recipes')}
+            className="flex items-center gap-2 rounded-lg border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 transition-all hover:bg-gray-50"
+          >
+            <ArrowLeft size={16} />
+            Back
+          </button>
+          <button
+            type="button"
+            onClick={handleSave}
+            disabled={saving}
+            className="flex items-center gap-2 rounded-lg bg-[#8b4513] px-4 py-2 text-sm font-medium text-white transition-all hover:bg-[#5d4037] active:scale-95 disabled:opacity-50"
+          >
+            <Save size={16} />
+            {saving ? 'Saving...' : 'Save Recipe'}
+          </button>
+        </div>
+      }
+    >
+      <div className="space-y-6">
+        {/* Basic Info */}
+        <div className="rounded-xl border border-[#8b4513]/10 bg-white p-6 shadow-sm">
+          <h3 className="text-base font-semibold text-[#3e2723]">
+            Basic Information
+          </h3>
+          <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="sm:col-span-2">
+              <label className="block text-sm font-medium text-[#5d4037]">
+                Recipe Name *
+              </label>
+              <input
+                type="text"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                className="mt-1 w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm focus:border-[#8b4513] focus:bg-white focus:outline-none focus:ring-1 focus:ring-[#8b4513]/30"
+                placeholder="e.g. Sourdough Bread"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-[#5d4037]">
+                Category
+              </label>
+              <select
+                value={category}
+                onChange={(e) => setCategory(e.target.value)}
+                className="mt-1 w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm focus:border-[#8b4513] focus:bg-white focus:outline-none focus:ring-1 focus:ring-[#8b4513]/30"
+              >
+                <option value="">Select category</option>
+                {CATEGORY_OPTIONS.map((opt) => (
+                  <option key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="flex gap-2">
+              <div className="flex-1">
+                <label className="block text-sm font-medium text-[#5d4037]">
+                  Yield *
+                </label>
+                <input
+                  type="number"
+                  step="0.1"
+                  min="0"
+                  value={yieldQuantity}
+                  onChange={(e) => setYieldQuantity(e.target.value)}
+                  className="mt-1 w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm focus:border-[#8b4513] focus:bg-white focus:outline-none focus:ring-1 focus:ring-[#8b4513]/30"
+                  placeholder="10"
+                />
+              </div>
+              <div className="w-24">
+                <label className="block text-sm font-medium text-[#5d4037]">
+                  Unit
+                </label>
+                <select
+                  value={yieldUnit}
+                  onChange={(e) => setYieldUnit(e.target.value)}
+                  className="mt-1 w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm focus:border-[#8b4513] focus:bg-white focus:outline-none focus:ring-1 focus:ring-[#8b4513]/30"
+                >
+                  {UNIT_OPTIONS.map((u) => (
+                    <option key={u} value={u}>
+                      {u}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-4">
+            <label className="block text-sm font-medium text-[#5d4037]">
+              Instructions
+            </label>
+            <textarea
+              value={instructions}
+              onChange={(e) => setInstructions(e.target.value)}
+              rows={4}
+              className="mt-1 w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm focus:border-[#8b4513] focus:bg-white focus:outline-none focus:ring-1 focus:ring-[#8b4513]/30"
+              placeholder="Step-by-step instructions..."
+            />
+          </div>
+        </div>
+
+        {/* Ingredients Section */}
+        <div className="rounded-xl border border-[#8b4513]/10 bg-white p-6 shadow-sm">
+          <div className="flex items-center justify-between">
+            <h3 className="text-base font-semibold text-[#3e2723]">
+              Ingredients
+            </h3>
+            <button
+              type="button"
+              onClick={addIngredientRow}
+              className="flex items-center gap-1.5 rounded-lg border border-[#8b4513]/20 px-3 py-1.5 text-sm font-medium text-[#8b4513] transition-all hover:bg-[#faf3e8]"
+            >
+              <Plus size={14} />
+              Add Row
+            </button>
+          </div>
+
+          {ingredientRows.length === 0 ? (
+            <div className="mt-4 rounded-lg border-2 border-dashed border-gray-200 py-8 text-center text-sm text-gray-400">
+              No ingredients added yet. Click "Add Row" to start.
+            </div>
+          ) : (
+            <div className="mt-4 overflow-x-auto">
+              <table className="w-full text-left">
+                <thead>
+                  <tr className="border-b border-gray-100">
+                    <th className="pb-2 text-xs font-semibold uppercase tracking-wider text-[#5d4037]">
+                      Ingredient
+                    </th>
+                    <th className="pb-2 text-xs font-semibold uppercase tracking-wider text-[#5d4037] w-28">
+                      Quantity
+                    </th>
+                    <th className="pb-2 text-xs font-semibold uppercase tracking-wider text-[#5d4037] w-24">
+                      Unit
+                    </th>
+                    <th className="pb-2 text-xs font-semibold uppercase tracking-wider text-[#5d4037] w-28">
+                      Cost
+                    </th>
+                    <th className="pb-2 w-12" />
+                  </tr>
+                </thead>
+                <tbody>
+                  {ingredientRows.map((row, idx) => {
+                    const rowCost =
+                      (parseFloat(row.quantity) || 0) * row.costPerUnit;
+                    return (
+                      <tr key={idx} className="border-b border-gray-50">
+                        <td className="py-2 pr-2">
+                          <div className="relative">
+                            {row.ingredientId ? (
+                              <div className="flex items-center gap-2">
+                                <span className="text-sm font-medium text-[#3e2723]">
+                                  {row.ingredientName}
+                                </span>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    updateIngredientRow(idx, 'ingredientId', '');
+                                    updateIngredientRow(
+                                      idx,
+                                      'ingredientName',
+                                      '',
+                                    );
+                                    setActiveIngredientIdx(idx);
+                                    setIngredientSearch('');
+                                  }}
+                                  className="text-xs text-gray-400 hover:text-gray-600"
+                                >
+                                  change
+                                </button>
+                              </div>
+                            ) : (
+                              <>
+                                <div className="relative">
+                                  <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-gray-400" />
+                                  <input
+                                    type="text"
+                                    value={
+                                      activeIngredientIdx === idx
+                                        ? ingredientSearch
+                                        : ''
+                                    }
+                                    onChange={(e) => {
+                                      setIngredientSearch(e.target.value);
+                                      setActiveIngredientIdx(idx);
+                                    }}
+                                    onFocus={() => {
+                                      setActiveIngredientIdx(idx);
+                                      setIngredientSearch('');
+                                    }}
+                                    placeholder="Search ingredient..."
+                                    className="w-full rounded-lg border border-gray-200 bg-gray-50 py-1.5 pl-8 pr-3 text-sm focus:border-[#8b4513] focus:bg-white focus:outline-none focus:ring-1 focus:ring-[#8b4513]/30"
+                                  />
+                                </div>
+                                {activeIngredientIdx === idx && (
+                                  <div className="absolute z-10 mt-1 max-h-48 w-64 overflow-y-auto rounded-lg border border-gray-200 bg-white shadow-lg">
+                                    {filteredIngredients.length === 0 ? (
+                                      <div className="px-3 py-2 text-sm text-gray-400">
+                                        No ingredients found
+                                      </div>
+                                    ) : (
+                                      filteredIngredients
+                                        .slice(0, 20)
+                                        .map((ing) => (
+                                          <button
+                                            key={ing.id}
+                                            type="button"
+                                            onClick={() =>
+                                              selectIngredient(idx, ing)
+                                            }
+                                            className="flex w-full items-center justify-between px-3 py-2 text-left text-sm hover:bg-[#faf3e8]/60"
+                                          >
+                                            <span className="text-[#3e2723]">
+                                              {ing.name}
+                                            </span>
+                                            <span className="text-xs text-gray-400">
+                                              {ing.unit}
+                                            </span>
+                                          </button>
+                                        ))
+                                    )}
+                                  </div>
+                                )}
+                              </>
+                            )}
+                          </div>
+                        </td>
+                        <td className="py-2 pr-2">
+                          <input
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            value={row.quantity}
+                            onChange={(e) =>
+                              updateIngredientRow(idx, 'quantity', e.target.value)
+                            }
+                            className="w-full rounded-lg border border-gray-200 bg-gray-50 px-2 py-1.5 text-sm focus:border-[#8b4513] focus:bg-white focus:outline-none focus:ring-1 focus:ring-[#8b4513]/30"
+                            placeholder="0"
+                          />
+                        </td>
+                        <td className="py-2 pr-2">
+                          <select
+                            value={row.unit}
+                            onChange={(e) =>
+                              updateIngredientRow(idx, 'unit', e.target.value)
+                            }
+                            className="w-full rounded-lg border border-gray-200 bg-gray-50 px-2 py-1.5 text-sm focus:border-[#8b4513] focus:bg-white focus:outline-none focus:ring-1 focus:ring-[#8b4513]/30"
+                          >
+                            {UNIT_OPTIONS.map((u) => (
+                              <option key={u} value={u}>
+                                {u}
+                              </option>
+                            ))}
+                          </select>
+                        </td>
+                        <td className="py-2 pr-2">
+                          <CurrencyDisplay amount={rowCost} size="sm" />
+                        </td>
+                        <td className="py-2">
+                          <button
+                            type="button"
+                            onClick={() => removeIngredientRow(idx)}
+                            className="rounded-lg p-1 text-red-400 transition-all hover:bg-red-50 hover:text-red-600"
+                            title="Remove ingredient"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+
+              {/* Total Cost */}
+              <div className="mt-3 flex items-center justify-end gap-3 border-t border-gray-100 pt-3">
+                <span className="text-sm font-medium text-[#5d4037]">
+                  Total Cost:
+                </span>
+                <CurrencyDisplay amount={totalCost} size="md" />
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Links Section */}
+        <div className="rounded-xl border border-[#8b4513]/10 bg-white p-6 shadow-sm">
+          <div className="flex items-center justify-between">
+            <h3 className="text-base font-semibold text-[#3e2723]">Links</h3>
+            <button
+              type="button"
+              onClick={addLinkRow}
+              className="flex items-center gap-1.5 rounded-lg border border-[#8b4513]/20 px-3 py-1.5 text-sm font-medium text-[#8b4513] transition-all hover:bg-[#faf3e8]"
+            >
+              <Plus size={14} />
+              Add Link
+            </button>
+          </div>
+
+          {linkRows.length === 0 ? (
+            <div className="mt-4 rounded-lg border-2 border-dashed border-gray-200 py-8 text-center text-sm text-gray-400">
+              No links added yet. Click "Add Link" to add reference links or
+              videos.
+            </div>
+          ) : (
+            <div className="mt-4 space-y-4">
+              {linkRows.map((link, idx) => {
+                const ytId = extractYouTubeId(link.url);
+                return (
+                  <div key={idx} className="space-y-2">
+                    <div className="flex items-start gap-2">
+                      <div className="mt-2 text-gray-400">
+                        {ytId ? (
+                          <Video size={16} className="text-red-500" />
+                        ) : (
+                          <LinkIcon size={16} />
+                        )}
+                      </div>
+                      <div className="flex-1 space-y-2">
+                        <input
+                          type="url"
+                          value={link.url}
+                          onChange={(e) =>
+                            updateLinkRow(idx, 'url', e.target.value)
+                          }
+                          className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm focus:border-[#8b4513] focus:bg-white focus:outline-none focus:ring-1 focus:ring-[#8b4513]/30"
+                          placeholder="https://..."
+                        />
+                        <input
+                          type="text"
+                          value={link.title}
+                          onChange={(e) =>
+                            updateLinkRow(idx, 'title', e.target.value)
+                          }
+                          className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm focus:border-[#8b4513] focus:bg-white focus:outline-none focus:ring-1 focus:ring-[#8b4513]/30"
+                          placeholder="Link title (optional)"
+                        />
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => removeLinkRow(idx)}
+                        className="mt-2 rounded-lg p-1 text-red-400 transition-all hover:bg-red-50 hover:text-red-600"
+                        title="Remove link"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+
+                    {/* YouTube Preview */}
+                    {ytId && (
+                      <div className="ml-6 overflow-hidden rounded-lg border border-gray-200">
+                        <iframe
+                          width="100%"
+                          height="200"
+                          src={`https://www.youtube.com/embed/${ytId}`}
+                          title={link.title || 'YouTube video'}
+                          frameBorder="0"
+                          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                          allowFullScreen
+                          className="block"
+                        />
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      </div>
+    </PageContainer>
+  );
+}

@@ -1,0 +1,21 @@
+{
+  "name": "admin-dashboard",
+  "sourceRoot": "apps/admin-dashboard/src",
+  "projectType": "application",
+  "targets": {
+    "serve": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "npx vite --config apps/admin-dashboard/vite.config.ts",
+        "cwd": "apps/admin-dashboard"
+      }
+    },
+    "build": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "npx vite build --config apps/admin-dashboard/vite.config.ts",
+        "cwd": "apps/admin-dashboard"
+      }
+    }
+  }
+}

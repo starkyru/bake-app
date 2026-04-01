@@ -1,0 +1,5 @@
+{
+  "name": "react-auth",
+  "sourceRoot": "libs/react/auth/src",
+  "projectType": "library"
+}
