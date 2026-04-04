@@ -16,6 +16,7 @@ import {
   getUserEmail,
   hasPermission as checkPermission,
   hasAllPermissions as checkAllPermissions,
+  isTokenExpired,
 } from './token-utils';
 
 interface AuthUser {
@@ -50,6 +51,15 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 function runTokenPassthrough(): string | null {
   const localToken = localStorage.getItem('token');
   const cookieToken = getSharedCookie();
+
+  const token = localToken || cookieToken;
+
+  // Clear expired tokens
+  if (token && isTokenExpired(token)) {
+    localStorage.removeItem('token');
+    deleteSharedCookie();
+    return null;
+  }
 
   if (!localToken && cookieToken) {
     localStorage.setItem('token', cookieToken);

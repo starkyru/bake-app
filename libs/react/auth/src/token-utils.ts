@@ -4,6 +4,7 @@ interface JwtPayload {
   email?: string;
   role?: string;
   permissions?: string[];
+  exp?: number;
   [key: string]: unknown;
 }
 
@@ -16,6 +17,13 @@ export function decodePayload(token: string): JwtPayload | null {
   } catch {
     return null;
   }
+}
+
+/** Check if a JWT token is expired. */
+export function isTokenExpired(token: string): boolean {
+  const payload = decodePayload(token);
+  if (!payload?.exp) return true;
+  return Date.now() >= payload.exp * 1000;
 }
 
 /** Get the permissions array from a JWT token. */
