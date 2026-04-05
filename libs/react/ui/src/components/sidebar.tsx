@@ -42,6 +42,7 @@ export function Sidebar({ items, onLogout, userName, userRole }: SidebarProps) {
               )}
               <NavLink
                 to={item.path}
+                end
                 className={({ isActive }) =>
                   cn(
                     'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium',
