@@ -1,0 +1,8 @@
+{
+  "extends": "../../../tsconfig.json",
+  "compilerOptions": {
+    "jsx": "react-jsx",
+    "outDir": "../../../dist/libs/react/customer-auth"
+  },
+  "include": ["src/**/*.ts", "src/**/*.tsx"]
+}

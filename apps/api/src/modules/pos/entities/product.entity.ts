@@ -1,11 +1,15 @@
-import { Entity, Column, ManyToOne, JoinColumn } from 'typeorm';
+import { Entity, Column, ManyToOne, OneToMany, JoinColumn } from 'typeorm';
 import { BaseEntity } from '../../../common/entities/base.entity';
 import { Category } from './category.entity';
 import { Recipe } from '../../recipes/entities/recipe.entity';
 import { Ingredient } from '../../inventory/entities/ingredient.entity';
+import { ProductOptionGroup } from './product-option-group.entity';
 
 @Entity('products')
 export class Product extends BaseEntity {
+  @OneToMany(() => ProductOptionGroup, (group) => group.product, { cascade: true })
+  optionGroups: ProductOptionGroup[];
+
   @Column()
   name: string;
 

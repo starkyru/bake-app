@@ -16,7 +16,8 @@
     "serve:admin": "npx vite --config apps/admin-dashboard/vite.config.ts",
     "serve:kitchen": "npx vite --config apps/kitchen-screen/vite.config.ts",
     "serve:hub": "npx vite --config apps/hub-app/vite.config.ts",
-    "serve:mobile": "cd apps/mobile-app && expo start"
+    "serve:mobile": "cd apps/mobile-app && expo start",
+    "serve:ordering": "nx serve ordering-app"
   },
   "private": true,
   "dependencies": {

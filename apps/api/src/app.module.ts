@@ -15,6 +15,8 @@ import { NotificationsModule } from './modules/notifications/notifications.modul
 import { PermissionsModule } from './modules/permissions/permissions.module';
 import { WebsocketModule } from './modules/websocket/websocket.module';
 import { SettingsModule } from './modules/settings/settings.module';
+import { OnlineOrderingModule } from './modules/online-ordering/online-ordering.module';
+import { PaymentProvidersModule } from './modules/payment-providers/payment-providers.module';
 import { HealthController } from './health.controller';
 
 @Module({
@@ -53,6 +55,8 @@ import { HealthController } from './health.controller';
     PermissionsModule,
     WebsocketModule,
     SettingsModule,
+    OnlineOrderingModule,
+    PaymentProvidersModule,
   ],
   controllers: [HealthController],
 })

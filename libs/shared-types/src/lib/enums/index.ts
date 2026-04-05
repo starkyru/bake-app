@@ -12,8 +12,13 @@ export enum UserRole {
 
 export enum OrderStatus {
   PENDING = 'pending',
+  PENDING_APPROVAL = 'pending_approval',
   CONFIRMED = 'confirmed',
+  SCHEDULED = 'scheduled',
   IN_PROGRESS = 'in_progress',
+  READY_FOR_PICKUP = 'ready_for_pickup',
+  OUT_FOR_DELIVERY = 'out_for_delivery',
+  DELIVERED = 'delivered',
   COMPLETED = 'completed',
   CANCELLED = 'cancelled',
 }
@@ -28,6 +33,8 @@ export enum PaymentMethod {
   CASH = 'cash',
   CARD = 'card',
   SPLIT = 'split',
+  STRIPE = 'stripe',
+  PAYPAL = 'paypal',
 }
 
 export enum PaymentStatus {
@@ -98,4 +105,67 @@ export enum LocationType {
 export enum MenuItemType {
   PRODUCED = 'produced',
   BOUGHT_FOR_RESALE = 'bought_for_resale',
+}
+
+export enum FulfillmentType {
+  PICKUP = 'pickup',
+  DELIVERY = 'delivery',
+  SHIPPING = 'shipping',
+  DINE_IN_QR = 'dine_in_qr',
+}
+
+export enum OrderSource {
+  POS = 'pos',
+  ONLINE = 'online',
+  CUSTOM = 'custom',
+}
+
+export enum AuthProvider {
+  LOCAL = 'local',
+  GOOGLE = 'google',
+  APPLE = 'apple',
+  PHONE = 'phone',
+}
+
+export enum CustomOrderStatus {
+  SUBMITTED = 'submitted',
+  QUOTED = 'quoted',
+  APPROVED = 'approved',
+  REJECTED = 'rejected',
+  COMPLETED = 'completed',
+}
+
+export enum OptionGroupType {
+  SINGLE = 'single',
+  MULTIPLE = 'multiple',
+}
+
+export enum PaymentProviderType {
+  STRIPE = 'stripe',
+  PAYPAL = 'paypal',
+}
+
+export enum ThemePreset {
+  WARM = 'warm',
+  MODERN = 'modern',
+  MINIMAL = 'minimal',
+}
+
+export enum NotificationSubscriptionType {
+  MENU_AVAILABLE = 'menu_available',
+  NEW_MENU = 'new_menu',
+  PROMOTION = 'promotion',
+}
+
+export enum DietaryTag {
+  VEGAN = 'vegan',
+  VEGETARIAN = 'vegetarian',
+  GLUTEN_FREE = 'gluten_free',
+  NUT_FREE = 'nut_free',
+  DAIRY_FREE = 'dairy_free',
+  SUGAR_FREE = 'sugar_free',
+  HALAL = 'halal',
+  KOSHER = 'kosher',
+  ORGANIC = 'organic',
+  KETO = 'keto',
 }

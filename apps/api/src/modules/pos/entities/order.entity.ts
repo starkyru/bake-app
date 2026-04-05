@@ -5,6 +5,40 @@ import { Payment } from './payment.entity';
 
 @Entity('orders')
 export class Order extends BaseEntity {
+  @Column({ name: 'customer_id', type: 'uuid', nullable: true })
+  customerId: string;
+
+  @ManyToOne('Customer', { nullable: true })
+  @JoinColumn({ name: 'customer_id' })
+  customer: any;
+
+  @Column({ name: 'fulfillment_type', nullable: true })
+  fulfillmentType: string;
+
+  @Column({ name: 'scheduled_date', type: 'date', nullable: true })
+  scheduledDate: string;
+
+  @Column({ name: 'scheduled_time_slot', nullable: true })
+  scheduledTimeSlot: string;
+
+  @Column({ name: 'delivery_address_id', type: 'uuid', nullable: true })
+  deliveryAddressId: string;
+
+  @Column({ name: 'delivery_address', type: 'jsonb', nullable: true })
+  deliveryAddress: any;
+
+  @Column({ name: 'requires_approval', default: false })
+  requiresApproval: boolean;
+
+  @Column({ name: 'approved_at', type: 'timestamp', nullable: true })
+  approvedAt: Date;
+
+  @Column({ name: 'approved_by', type: 'uuid', nullable: true })
+  approvedBy: string;
+
+  @Column({ default: 'pos' })
+  source: string;
+
   @Column({ name: 'order_number', unique: true })
   orderNumber: string;
 

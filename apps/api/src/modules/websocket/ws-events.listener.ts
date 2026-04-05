@@ -64,4 +64,31 @@ export class WsEventsListener {
       payload,
     );
   }
+
+  @OnEvent(DOMAIN_EVENTS.ONLINE_ORDER_CREATED)
+  handleOnlineOrderCreated(payload: any) {
+    this.logger.debug(`Online order created: ${payload.orderNumber}`);
+    this.gateway.emitToRoom(WS_ROOMS.KITCHEN, WS_EVENTS.ONLINE_ORDER_NEW, payload);
+    this.gateway.emitToRoom(WS_ROOMS.POS, WS_EVENTS.ONLINE_ORDER_NEW, payload);
+  }
+
+  @OnEvent(DOMAIN_EVENTS.ONLINE_ORDER_APPROVAL_NEEDED)
+  handleOnlineOrderApprovalNeeded(payload: any) {
+    this.logger.debug(`Online order needs approval: ${payload.orderNumber}`);
+    this.gateway.emitToRoom(WS_ROOMS.MANAGER, WS_EVENTS.ONLINE_ORDER_APPROVAL_NEEDED, payload);
+  }
+
+  @OnEvent(DOMAIN_EVENTS.ONLINE_ORDER_APPROVED)
+  handleOnlineOrderApproved(payload: any) {
+    this.logger.debug(`Online order approved: ${payload.orderNumber}`);
+    this.gateway.emitToRoom(WS_ROOMS.KITCHEN, WS_EVENTS.ONLINE_ORDER_APPROVED, payload);
+  }
+
+  @OnEvent(DOMAIN_EVENTS.ONLINE_ORDER_STATUS_CHANGED)
+  handleOnlineOrderStatusChanged(payload: any) {
+    this.logger.debug(`Online order status changed: ${payload.orderNumber} -> ${payload.newStatus}`);
+    this.gateway.emitToRoom(WS_ROOMS.KITCHEN, WS_EVENTS.ONLINE_ORDER_STATUS_CHANGED, payload);
+    this.gateway.emitToRoom(WS_ROOMS.MANAGER, WS_EVENTS.ONLINE_ORDER_STATUS_CHANGED, payload);
+    this.gateway.emitToRoom(WS_ROOMS.POS, WS_EVENTS.ONLINE_ORDER_STATUS_CHANGED, payload);
+  }
 }

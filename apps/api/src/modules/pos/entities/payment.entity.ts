@@ -19,4 +19,13 @@ export class Payment extends BaseEntity {
 
   @Column({ name: 'order_id' })
   orderId: string;
+
+  @Column({ nullable: true })
+  provider: string;
+
+  @Column({ name: 'online_transaction_id', nullable: true })
+  onlineTransactionId: string;
+
+  @Column({ name: 'provider_reference', nullable: true })
+  providerReference: string;
 }

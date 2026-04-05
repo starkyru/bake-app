@@ -298,3 +298,207 @@ export interface Notification {
   userId: string;
   createdAt: Date;
 }
+
+// Online Ordering Types
+
+export interface Customer {
+  id: string;
+  email?: string;
+  phone?: string;
+  firstName: string;
+  lastName: string;
+  authProvider: string;
+  socialId?: string;
+  isEmailVerified: boolean;
+  isPhoneVerified: boolean;
+  notificationPrefs: { email: boolean; sms: boolean; push: boolean };
+  dietaryPreferences?: string[];
+  allergies?: string[];
+  isGuest: boolean;
+  isActive: boolean;
+  addresses?: CustomerAddress[];
+  createdAt?: Date;
+  updatedAt?: Date;
+}
+
+export interface CustomerAddress {
+  id: string;
+  customerId: string;
+  label: string;
+  street: string;
+  city: string;
+  state?: string;
+  zip: string;
+  lat?: number;
+  lng?: number;
+  isDefault: boolean;
+}
+
+export interface LocationMenu {
+  id: string;
+  locationId: string;
+  menuId: string;
+  menu?: Menu;
+  location?: Location;
+}
+
+export interface MenuSchedule {
+  id: string;
+  menuId: string;
+  dayOfWeek?: number;
+  startTime: string;
+  endTime: string;
+  specificDate?: string;
+  isActive: boolean;
+}
+
+export interface MenuConfig {
+  id: string;
+  menuId: string;
+  mergeWithOthers: boolean;
+  standalone: boolean;
+  preorderEnabled: boolean;
+  preorderDaysAhead: number;
+  requiresApproval: boolean;
+  prepTimeMinutes: number;
+  leadTimeHours: number;
+}
+
+export interface MenuTag {
+  id: string;
+  name: string;
+}
+
+export interface LocationConfig {
+  id: string;
+  locationId: string;
+  enabledForOnlineOrdering: boolean;
+  preorderEnabled: boolean;
+  preorderDaysAhead: number;
+  deliveryEnabled: boolean;
+  pickupEnabled: boolean;
+  shippingEnabled: boolean;
+  dineInQrEnabled: boolean;
+  fulfillmentSlots: FulfillmentSlot[];
+  taxRate: number;
+}
+
+export interface FulfillmentSlot {
+  dayOfWeek: number;
+  startTime: string;
+  endTime: string;
+  maxOrders: number;
+}
+
+export interface ProductOptionGroup {
+  id: string;
+  productId: string;
+  name: string;
+  type: string;
+  isRequired: boolean;
+  sortOrder: number;
+  maxSelections?: number;
+  options: ProductOption[];
+}
+
+export interface ProductOption {
+  id: string;
+  groupId: string;
+  name: string;
+  priceModifier: number;
+  isDefault: boolean;
+  isActive: boolean;
+  sortOrder: number;
+}
+
+export interface OrderItemOption {
+  id: string;
+  orderItemId: string;
+  optionGroupName: string;
+  optionName: string;
+  priceModifier: number;
+}
+
+export interface CustomOrderRequest {
+  id: string;
+  customerId: string;
+  locationId: string;
+  occasion?: string;
+  servingSize?: string;
+  inscriptionText?: string;
+  decorationNotes?: string;
+  themeColors?: string;
+  referenceImageUrls: string[];
+  status: string;
+  quotedPrice?: number;
+  deposit?: number;
+  staffNotes?: string;
+  requestedDate?: string;
+  assignedUserId?: string;
+  createdAt?: Date;
+  updatedAt?: Date;
+}
+
+export interface DeliveryZone {
+  id: string;
+  locationId: string;
+  name: string;
+  polygon?: { lat: number; lng: number }[];
+  radiusKm?: number;
+  deliveryFee: number;
+  minimumOrder: number;
+  estimatedMinutes: number;
+  isActive: boolean;
+}
+
+export interface StorefrontConfig {
+  id: string;
+  locationId?: string;
+  themePreset: string;
+  logoUrl?: string;
+  heroImageUrl?: string;
+  businessName?: string;
+  tagline?: string;
+  primaryColor?: string;
+  accentColor?: string;
+  customDomain?: string;
+}
+
+export interface StorefrontPaymentConfig {
+  id: string;
+  locationId?: string;
+  provider: string;
+  publicKey: string;
+  isActive: boolean;
+  isSandbox: boolean;
+}
+
+export interface CustomerNotificationSubscription {
+  id: string;
+  customerId: string;
+  menuId?: string;
+  locationId?: string;
+  type: string;
+  channels: { email: boolean; sms: boolean; push: boolean };
+}
+
+export interface PushSubscription {
+  id: string;
+  customerId: string;
+  endpoint: string;
+  p256dh: string;
+  auth: string;
+}
+
+export interface OnlineOrderExtensions {
+  customerId?: string;
+  fulfillmentType?: string;
+  scheduledDate?: string;
+  scheduledTimeSlot?: string;
+  deliveryAddressId?: string;
+  deliveryAddress?: Record<string, unknown>;
+  requiresApproval?: boolean;
+  approvedAt?: Date;
+  approvedBy?: string;
+  source?: string;
+}

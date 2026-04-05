@@ -16,6 +16,17 @@ import { FinancePage } from './pages/finance';
 import { SalesPage } from './pages/sales';
 import { ProductionPage } from './pages/production';
 import { SettingsPage } from './pages/settings';
+import { OnlineOrdersPage } from './pages/online-orders';
+import { OnlineOrderDetailPage } from './pages/online-order-detail';
+import { CustomOrderRequestsPage } from './pages/custom-order-requests';
+import { CustomOrderDetailPage } from './pages/custom-order-detail';
+import { CustomersPage } from './pages/customers';
+import { CustomerDetailPage } from './pages/customer-detail';
+import { StorefrontSettingsPage } from './pages/storefront-settings';
+import { PaymentConfigPage } from './pages/payment-config';
+import { LocationOnlineConfigPage } from './pages/location-online-config';
+import { MenuOnlineConfigPage } from './pages/menu-online-config';
+import { ProductOptionsEditorPage } from './pages/product-options-editor';
 
 const router = createBrowserRouter([
   { path: '/login', element: <LoginPage /> },
@@ -40,6 +51,17 @@ const router = createBrowserRouter([
           { path: '/sales', element: <SalesPage /> },
           { path: '/production', element: <ProductionPage /> },
           { path: '/settings', element: <SettingsPage /> },
+          { path: '/online-orders', element: <OnlineOrdersPage /> },
+          { path: '/online-orders/:id', element: <OnlineOrderDetailPage /> },
+          { path: '/custom-requests', element: <CustomOrderRequestsPage /> },
+          { path: '/custom-requests/:id', element: <CustomOrderDetailPage /> },
+          { path: '/customers', element: <CustomersPage /> },
+          { path: '/customers/:id', element: <CustomerDetailPage /> },
+          { path: '/storefront', element: <StorefrontSettingsPage /> },
+          { path: '/storefront/payments', element: <PaymentConfigPage /> },
+          { path: '/online-config', element: <LocationOnlineConfigPage /> },
+          { path: '/online-config/menu/:menuId', element: <MenuOnlineConfigPage /> },
+          { path: '/online-config/product/:productId/options', element: <ProductOptionsEditorPage /> },
         ],
       },
     ],

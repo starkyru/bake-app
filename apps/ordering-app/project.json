@@ -1,0 +1,21 @@
+{
+  "name": "ordering-app",
+  "sourceRoot": "apps/ordering-app/src",
+  "projectType": "application",
+  "targets": {
+    "serve": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "npx vite --config apps/ordering-app/vite.config.ts",
+        "cwd": "apps/ordering-app"
+      }
+    },
+    "build": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "npx vite build --config apps/ordering-app/vite.config.ts",
+        "cwd": "apps/ordering-app"
+      }
+    }
+  }
+}

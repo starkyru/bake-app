@@ -1,10 +1,14 @@
-import { Entity, Column, ManyToOne, JoinColumn } from 'typeorm';
+import { Entity, Column, ManyToOne, OneToMany, JoinColumn } from 'typeorm';
 import { BaseEntity } from '../../../common/entities/base.entity';
 import { Order } from './order.entity';
 import { Product } from './product.entity';
+import { OrderItemOption } from '../../online-ordering/entities/order-item-option.entity';
 
 @Entity('order_items')
 export class OrderItem extends BaseEntity {
+  @OneToMany(() => OrderItemOption, (option) => option.orderItem, { cascade: true })
+  options: OrderItemOption[];
+
   @Column({ type: 'int' })
   quantity: number;
 

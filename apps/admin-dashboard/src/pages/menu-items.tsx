@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Plus, Pencil, Trash2, X } from 'lucide-react';
+import { useNavigate } from 'react-router';
+import { Plus, Pencil, Trash2, X, ListChecks } from 'lucide-react';
 import { toast } from 'sonner';
 import type { Product } from '@bake-app/shared-types';
 import {
@@ -44,6 +45,7 @@ const emptyForm: ProductFormData = {
 };
 
 export function MenuItemsPage() {
+  const navigate = useNavigate();
   const { data: productsResponse, isLoading } = useProducts({ limit: 500 });
   const { data: categories } = useCategories();
   const { data: recipes } = useRecipes();
@@ -185,8 +187,16 @@ export function MenuItemsPage() {
       label: 'Actions',
       type: 'actions',
       sortable: false,
-      width: '100px',
+      width: '140px',
       actions: [
+        {
+          action: 'options',
+          icon: <ListChecks size={16} />,
+          tooltip: 'Edit Options',
+          color: 'text-[#8b4513] hover:text-[#5d4037]',
+          onClick: (row: Product) =>
+            navigate(`/online-config/product/${row.id}/options`),
+        },
         {
           action: 'edit',
           icon: <Pencil size={16} />,

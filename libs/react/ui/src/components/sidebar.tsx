@@ -7,6 +7,7 @@ export interface SidebarItem {
   icon: React.ReactNode;
   path: string;
   badge?: string;
+  section?: string;
 }
 
 export interface SidebarProps {
@@ -29,29 +30,39 @@ export function Sidebar({ items, onLogout, userName, userRole }: SidebarProps) {
 
       {/* Navigation */}
       <nav className="flex-1 space-y-0.5 overflow-y-auto px-2 py-3">
-        {items.map((item) => (
-          <NavLink
-            key={item.path}
-            to={item.path}
-            className={({ isActive }) =>
-              cn(
-                'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium',
-                'transition-all duration-150',
-                isActive
+        {items.map((item, idx) => {
+          const prevSection = idx > 0 ? items[idx - 1].section : undefined;
+          const showSection = item.section && item.section !== prevSection;
+          return (
+            <div key={item.path}>
+              {showSection && (
+                <div className="mb-1 mt-4 px-3 text-[10px] font-semibold uppercase tracking-widest text-white/40 first:mt-0">
+                  {item.section}
+                </div>
+              )}
+              <NavLink
+                to={item.path}
+                className={({ isActive }) =>
+                  cn(
+                    'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium',
+                    'transition-all duration-150',
+                    isActive
                   ? 'bg-[#8b4513] text-white shadow-sm'
                   : 'text-white/70 hover:bg-white/10 hover:text-white',
-              )
-            }
-          >
-            <span className="flex-shrink-0">{item.icon}</span>
-            <span className="flex-1 truncate">{item.label}</span>
-            {item.badge && (
-              <span className="rounded-full bg-white/20 px-1.5 py-0.5 text-xs font-medium">
-                {item.badge}
-              </span>
-            )}
-          </NavLink>
-        ))}
+                )
+              }
+            >
+              <span className="flex-shrink-0">{item.icon}</span>
+              <span className="flex-1 truncate">{item.label}</span>
+              {item.badge && (
+                <span className="rounded-full bg-white/20 px-1.5 py-0.5 text-xs font-medium">
+                  {item.badge}
+                </span>
+              )}
+            </NavLink>
+            </div>
+          );
+        })}
       </nav>
 
       {/* User & Logout */}

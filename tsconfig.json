@@ -21,11 +21,13 @@
       "@bake-app/admin-dashboard/*": ["apps/admin-dashboard/src/*"],
       "@bake-app/kitchen-screen/*": ["apps/kitchen-screen/src/*"],
       "@bake-app/hub-app/*": ["apps/hub-app/src/*"],
+      "@bake-app/ordering-app/*": ["apps/ordering-app/src/*"],
       "@bake-app/shared-types": ["libs/shared-types/src/index.ts"],
       "@bake-app/react/auth": ["libs/react/auth/src/index.ts"],
       "@bake-app/react/api-client": ["libs/react/api-client/src/index.ts"],
       "@bake-app/react/store": ["libs/react/store/src/index.ts"],
-      "@bake-app/react/ui": ["libs/react/ui/src/index.ts"]
+      "@bake-app/react/ui": ["libs/react/ui/src/index.ts"],
+      "@bake-app/react/customer-auth": ["libs/react/customer-auth/src/index.ts"]
     }
   },
   "exclude": ["node_modules", "tmp"]

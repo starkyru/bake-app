@@ -16,6 +16,10 @@ import {
   TrendingUp,
   Settings,
   X,
+  ShoppingBag,
+  Cake,
+  Globe,
+  Settings2,
 } from 'lucide-react';
 
 const sidebarItems: SidebarItem[] = [
@@ -30,6 +34,11 @@ const sidebarItems: SidebarItem[] = [
   { label: 'Finance', icon: <DollarSign className="h-4 w-4" />, path: '/finance' },
   { label: 'Sales', icon: <TrendingUp className="h-4 w-4" />, path: '/sales' },
   { label: 'Settings', icon: <Settings className="h-4 w-4" />, path: '/settings' },
+  { label: 'Online Orders', icon: <ShoppingBag className="h-4 w-4" />, path: '/online-orders', section: 'Online Ordering' },
+  { label: 'Custom Requests', icon: <Cake className="h-4 w-4" />, path: '/custom-requests', section: 'Online Ordering' },
+  { label: 'Customers', icon: <Users className="h-4 w-4" />, path: '/customers', section: 'Online Ordering' },
+  { label: 'Online Config', icon: <Settings2 className="h-4 w-4" />, path: '/online-config', section: 'Online Ordering' },
+  { label: 'Storefront', icon: <Globe className="h-4 w-4" />, path: '/storefront', section: 'Online Ordering' },
 ];
 
 export function AdminShell() {

@@ -8,6 +8,10 @@ export const DOMAIN_EVENTS = {
   INVENTORY_LOW_STOCK: 'inventory.lowStock',
   PRODUCTION_TASK_UPDATED: 'production.taskUpdated',
   NOTIFICATION_CREATED: 'notification.created',
+  ONLINE_ORDER_CREATED: 'onlineOrder.created',
+  ONLINE_ORDER_APPROVAL_NEEDED: 'onlineOrder.approvalNeeded',
+  ONLINE_ORDER_APPROVED: 'onlineOrder.approved',
+  ONLINE_ORDER_STATUS_CHANGED: 'onlineOrder.statusChanged',
 } as const;
 
 export const WS_EVENTS = {
@@ -19,6 +23,10 @@ export const WS_EVENTS = {
   INVENTORY_STOCK_ALERT: 'inventory:stockAlert',
   PRODUCTION_TASK_UPDATED: 'production:taskUpdated',
   NOTIFICATION_NEW: 'notification:new',
+  ONLINE_ORDER_NEW: 'onlineOrder:new',
+  ONLINE_ORDER_APPROVAL_NEEDED: 'onlineOrder:approvalNeeded',
+  ONLINE_ORDER_APPROVED: 'onlineOrder:approved',
+  ONLINE_ORDER_STATUS_CHANGED: 'onlineOrder:statusChanged',
 } as const;
 
 export const WS_ROOMS = {
