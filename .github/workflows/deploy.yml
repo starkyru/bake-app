@@ -32,7 +32,6 @@ jobs:
       - run: npx vite build --config apps/kitchen-screen/vite.config.ts
       - run: npx vite build --config apps/hub-app/vite.config.ts
       - run: npx vite build --config apps/ordering-app/vite.config.ts
-      - run: ls -R dist/apps/ | head -30
       - uses: actions/upload-artifact@v4
         with:
           name: frontend-dist
@@ -48,9 +47,6 @@ jobs:
           name: frontend-dist
           path: dist/apps/
 
-      - name: Debug artifact contents
-        run: ls -R dist/apps/ | head -30
-
       - name: Install SSH key
         uses: shimataro/ssh-key-action@v2
         with:
@@ -63,15 +59,15 @@ jobs:
               StrictHostKeyChecking no
 
       - name: Ensure remote directories exist
-        run: ssh vps 'sudo mkdir -p /var/www/bake-app/{pos-app,admin-dashboard,kitchen-screen,hub-app,ordering-app} && sudo chown -R ilia:ilia /var/www/bake-app'
+        run: ssh vps 'mkdir -p ~/apps/bake-app-static/{pos-app,admin-dashboard,kitchen-screen,hub-app,ordering-app}'
 
       - name: Deploy frontend assets
         run: |
-          rsync -azP --delete dist/apps/pos-app/ vps:/var/www/bake-app/pos-app/
-          rsync -azP --delete dist/apps/admin-dashboard/ vps:/var/www/bake-app/admin-dashboard/
-          rsync -azP --delete dist/apps/kitchen-screen/ vps:/var/www/bake-app/kitchen-screen/
-          rsync -azP --delete dist/apps/hub-app/ vps:/var/www/bake-app/hub-app/
-          rsync -azP --delete dist/apps/ordering-app/ vps:/var/www/bake-app/ordering-app/
+          rsync -azP --delete dist/apps/pos-app/ vps:~/apps/bake-app-static/pos-app/
+          rsync -azP --delete dist/apps/admin-dashboard/ vps:~/apps/bake-app-static/admin-dashboard/
+          rsync -azP --delete dist/apps/kitchen-screen/ vps:~/apps/bake-app-static/kitchen-screen/
+          rsync -azP --delete dist/apps/hub-app/ vps:~/apps/bake-app-static/hub-app/
+          rsync -azP --delete dist/apps/ordering-app/ vps:~/apps/bake-app-static/ordering-app/
 
       - name: Deploy API
         run: |
@@ -79,11 +75,11 @@ jobs:
             set -e
             export NVM_DIR="$HOME/.nvm"
             [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
-            cd /opt/bake-app
+            cd ~/apps/bake-app
             git fetch origin main
             git reset --hard origin/main
             npm ci --omit=dev
-            npx nest build apps/api
+            npx nest build
             pm2 restart bake-api
           EOF
 
