@@ -63,7 +63,7 @@ jobs:
               StrictHostKeyChecking no
 
       - name: Ensure remote directories exist
-        run: ssh vps 'mkdir -p /var/www/bake-app/{pos-app,admin-dashboard,kitchen-screen,hub-app,ordering-app}'
+        run: ssh vps 'sudo mkdir -p /var/www/bake-app/{pos-app,admin-dashboard,kitchen-screen,hub-app,ordering-app} && sudo chown -R ilia:ilia /var/www/bake-app'
 
       - name: Deploy frontend assets
         run: |
