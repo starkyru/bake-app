@@ -24,6 +24,7 @@ export default defineConfig({
       ),
       '@bake-app/react/store': path.resolve(__dirname, '../../libs/react/store/src/index.ts'),
       '@bake-app/react/ui': path.resolve(__dirname, '../../libs/react/ui/src/index.ts'),
+      '@bake-app/react/customer-auth': path.resolve(__dirname, '../../libs/react/customer-auth/src/index.ts'),
     },
   },
 });

@@ -12,6 +12,7 @@ export default defineConfig({
       '@bake-app/react/api-client': resolve(__dirname, '../../libs/react/api-client/src/index.ts'),
       '@bake-app/react/store': resolve(__dirname, '../../libs/react/store/src/index.ts'),
       '@bake-app/react/ui': resolve(__dirname, '../../libs/react/ui/src/index.ts'),
+      '@bake-app/react/customer-auth': resolve(__dirname, '../../libs/react/customer-auth/src/index.ts'),
     },
   },
   server: {

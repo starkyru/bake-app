@@ -32,7 +32,7 @@
               {
                 "sourceTag": "scope:kitchen",
                 "onlyDependOnLibsWithTags": ["scope:shared"]
-              },
+              }
             ]
           }
         ]
