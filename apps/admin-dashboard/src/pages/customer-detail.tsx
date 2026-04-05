@@ -18,7 +18,7 @@ export function CustomerDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { data: customer, isLoading } = useOnlineCustomer(id!) as { data: any; isLoading: boolean };
-  const { data: orders, isLoading: ordersLoading } = useCustomerOrders(id!) as { data: any[]; isLoading: boolean };
+  const { data: orders, isLoading: ordersLoading } = useCustomerOrders(id!);
 
   const orderColumns: TableColumn[] = [
     {
