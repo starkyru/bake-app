@@ -18,7 +18,7 @@
     "serve:hub": "npx vite --config apps/hub-app/vite.config.ts",
     "serve:mobile": "cd apps/mobile-app && expo start",
     "serve:ordering": "nx serve ordering-app",
-    "prepare": "husky"
+    "prepare": "husky || true"
   },
   "private": true,
   "dependencies": {
