@@ -14,7 +14,7 @@ import { ROLE_ROOM_MAP, WS_ROOMS } from './ws-events.constants';
 
 @WebSocketGateway({
   cors: {
-    origin: (process.env.CORS_ORIGIN || '').split(',').filter(Boolean).concat([
+    origin: (process.env.CORS_ORIGINS || process.env.CORS_ORIGIN || '').split(',').map(s => s.trim()).filter(Boolean).concat([
       'http://localhost:4200',
       'http://localhost:4201',
       'http://localhost:4202',

@@ -25,7 +25,8 @@ export interface CustomerUser {
 }
 
 interface LoginResponse {
-  access_token: string;
+  accessToken?: string;
+  access_token?: string;
   [key: string]: unknown;
 }
 
@@ -105,7 +106,11 @@ export function CustomerAuthProvider({ children }: { children: ReactNode }) {
           '/v1/storefront/auth/login',
           { email, password },
         );
-        handleToken(data.access_token);
+        const jwt = data.accessToken || data.access_token;
+        if (!jwt) {
+          throw new Error('No access token in response');
+        }
+        handleToken(jwt);
       } finally {
         setIsLoading(false);
       }
@@ -116,7 +121,7 @@ export function CustomerAuthProvider({ children }: { children: ReactNode }) {
   const loginWithPhone = useCallback(async (phone: string): Promise<OtpResponse> => {
     setIsLoading(true);
     try {
-      await customerApiClient.post('/v1/storefront/auth/phone', { phone });
+      await customerApiClient.post('/v1/storefront/auth/phone-verify/send', { phone });
       return { requiresOtp: true };
     } finally {
       setIsLoading(false);
@@ -128,10 +133,14 @@ export function CustomerAuthProvider({ children }: { children: ReactNode }) {
       setIsLoading(true);
       try {
         const data = await customerApiClient.post<LoginResponse>(
-          '/v1/storefront/auth/phone/verify',
+          '/v1/storefront/auth/phone-verify/confirm',
           { phone, code },
         );
-        handleToken(data.access_token);
+        const jwt = data.accessToken || data.access_token;
+        if (!jwt) {
+          throw new Error('No access token in response');
+        }
+        handleToken(jwt);
       } finally {
         setIsLoading(false);
       }
@@ -144,10 +153,14 @@ export function CustomerAuthProvider({ children }: { children: ReactNode }) {
       setIsLoading(true);
       try {
         const data = await customerApiClient.post<LoginResponse>(
-          `/v1/storefront/auth/social/${provider}`,
-          { token: socialToken },
+          '/v1/storefront/auth/social-login',
+          { provider, token: socialToken },
         );
-        handleToken(data.access_token);
+        const jwt = data.accessToken || data.access_token;
+        if (!jwt) {
+          throw new Error('No access token in response');
+        }
+        handleToken(jwt);
       } finally {
         setIsLoading(false);
       }
@@ -163,7 +176,11 @@ export function CustomerAuthProvider({ children }: { children: ReactNode }) {
           '/v1/storefront/auth/register',
           registerData,
         );
-        handleToken(data.access_token);
+        const jwt = data.accessToken || data.access_token;
+        if (!jwt) {
+          throw new Error('No access token in response');
+        }
+        handleToken(jwt);
       } finally {
         setIsLoading(false);
       }
@@ -179,7 +196,11 @@ export function CustomerAuthProvider({ children }: { children: ReactNode }) {
           '/v1/storefront/auth/guest',
           { email, phone },
         );
-        handleToken(data.access_token);
+        const jwt = data.accessToken || data.access_token;
+        if (!jwt) {
+          throw new Error('No access token in response');
+        }
+        handleToken(jwt);
       } finally {
         setIsLoading(false);
       }

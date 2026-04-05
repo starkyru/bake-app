@@ -101,6 +101,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const data: LoginResponse = await response.json();
     const jwt = data.accessToken || data.access_token;
 
+    if (!jwt) {
+      throw new Error('No access token in response');
+    }
+
     localStorage.setItem('token', jwt);
     setSharedCookie(jwt);
     setToken(jwt);

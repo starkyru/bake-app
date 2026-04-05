@@ -1,4 +1,4 @@
-import { IsOptional, IsInt, Min, Max } from 'class-validator';
+import { IsOptional, IsInt, Min, Max, Matches, IsIn } from 'class-validator';
 import { Type } from 'class-transformer';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 
@@ -22,11 +22,15 @@ export class PaginationDto {
   @IsOptional()
   search?: string;
 
-  @ApiPropertyOptional()
+  @ApiPropertyOptional({ description: 'Column name to sort by (alphanumeric and underscores only)' })
   @IsOptional()
+  @Matches(/^[a-zA-Z_][a-zA-Z0-9_]*$/, {
+    message: 'sortBy must be a valid column name (alphanumeric and underscores only)',
+  })
   sortBy?: string;
 
   @ApiPropertyOptional({ enum: ['ASC', 'DESC'], default: 'ASC' })
   @IsOptional()
+  @IsIn(['ASC', 'DESC'], { message: 'sortOrder must be either ASC or DESC' })
   sortOrder?: 'ASC' | 'DESC' = 'ASC';
 }

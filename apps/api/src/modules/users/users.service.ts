@@ -70,22 +70,25 @@ export class UsersService {
       const existing = await this.usersRepository.findOne({ where: { email: dto.email } });
       if (existing) throw new ConflictException('Email already exists');
     }
+
+    // Build update fields — passwordHash requires special handling since select: false
+    const updates: Partial<User> = {};
     if (dto.password) {
-      user.passwordHash = await bcrypt.hash(dto.password, 10);
+      updates.passwordHash = await bcrypt.hash(dto.password, 10);
     }
-    Object.assign(user, {
-      ...(dto.firstName && { firstName: dto.firstName }),
-      ...(dto.lastName && { lastName: dto.lastName }),
-      ...(dto.email && { email: dto.email }),
-      ...(dto.phone !== undefined && { phone: dto.phone }),
-      ...(dto.roleId && {
-        role: /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(dto.roleId)
-          ? await this.rolesService.findOne(dto.roleId)
-          : await this.rolesService.findByName(dto.roleId),
-      }),
-      ...(dto.locationId !== undefined && { locationId: dto.locationId }),
-      ...(dto.isActive !== undefined && { isActive: dto.isActive }),
-    });
+    if (dto.firstName) updates.firstName = dto.firstName;
+    if (dto.lastName) updates.lastName = dto.lastName;
+    if (dto.email) updates.email = dto.email;
+    if (dto.phone !== undefined) updates.phone = dto.phone;
+    if (dto.locationId !== undefined) updates.locationId = dto.locationId;
+    if (dto.isActive !== undefined) updates.isActive = dto.isActive;
+    if (dto.roleId) {
+      updates.role = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(dto.roleId)
+        ? await this.rolesService.findOne(dto.roleId)
+        : await this.rolesService.findByName(dto.roleId);
+    }
+
+    Object.assign(user, updates);
     return this.usersRepository.save(user);
   }
 

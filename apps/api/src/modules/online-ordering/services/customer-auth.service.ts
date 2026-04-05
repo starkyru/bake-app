@@ -188,31 +188,17 @@ export class CustomerAuthService {
     });
     await this.customersRepository.save(customer);
 
-    const payload = {
-      sub: customer.id,
-      email: customer.email,
-      phone: customer.phone,
-      type: 'customer',
-    };
-
-    const accessToken = this.jwtService.sign(payload, { expiresIn: '2h' });
-
-    return {
-      accessToken,
-      customer: {
-        id: customer.id,
-        email: customer.email,
-        phone: customer.phone,
-        isGuest: true,
-      },
-    };
+    return this.generateTokens(customer);
   }
 
-  generateTokens(customer: Customer) {
+  private generateTokens(customer: Customer) {
     const payload = {
       sub: customer.id,
       email: customer.email,
       phone: customer.phone,
+      firstName: customer.firstName,
+      lastName: customer.lastName,
+      isGuest: customer.isGuest,
       type: 'customer',
     };
 

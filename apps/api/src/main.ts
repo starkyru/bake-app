@@ -1,5 +1,5 @@
-import { NestFactory } from '@nestjs/core';
-import { ValidationPipe } from '@nestjs/common';
+import { NestFactory, Reflector } from '@nestjs/core';
+import { ClassSerializerInterceptor, ValidationPipe } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { IoAdapter } from '@nestjs/platform-socket.io';
 import * as express from 'express';
@@ -23,6 +23,9 @@ async function bootstrap() {
 
   // Exception filter
   app.useGlobalFilters(new AllExceptionsFilter());
+
+  // Serialization — enables @Exclude() decorators on entities
+  app.useGlobalInterceptors(new ClassSerializerInterceptor(app.get(Reflector)));
 
   // Validation
   app.useGlobalPipes(new ValidationPipe({

@@ -158,7 +158,7 @@ Return ONLY valid JSON, no markdown, no explanation.`,
       },
     ]);
 
-    return JSON.parse(response);
+    return this.parseAiJson(response);
   }
 
   async generateFromImage(imageBase64: string, mimeType = 'image/jpeg'): Promise<Partial<CreateRecipeDto>> {
@@ -204,7 +204,17 @@ Return ONLY valid JSON, no markdown, no explanation.`,
       },
     ]);
 
-    return JSON.parse(response);
+    return this.parseAiJson(response);
+  }
+
+  private parseAiJson(response: string): Partial<CreateRecipeDto> {
+    try {
+      // Strip markdown code fences if AI wraps the JSON
+      const cleaned = response.replace(/^```(?:json)?\s*\n?/i, '').replace(/\n?```\s*$/i, '').trim();
+      return JSON.parse(cleaned);
+    } catch {
+      throw new BadRequestException('AI returned invalid JSON. Please try again.');
+    }
   }
 
   private async callAnthropic(messages: any[]): Promise<string> {
