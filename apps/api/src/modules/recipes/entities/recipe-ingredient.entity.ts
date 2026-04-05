@@ -21,9 +21,6 @@ export class RecipeIngredient extends BaseEntity {
   @Column({ name: 'ingredient_name', nullable: true })
   ingredientName: string;
 
-  @Column({ name: 'cost_per_unit', type: 'decimal', precision: 10, scale: 2, default: 0 })
-  costPerUnit: number;
-
   @ManyToOne(() => Recipe, recipe => recipe.ingredients, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'recipe_id' })
   recipe: Recipe;

@@ -20,7 +20,6 @@ import {
 import {
   PageContainer,
   LoadingSpinner,
-  CurrencyDisplay,
 } from '@bake-app/react/ui';
 
 const UNIT_OPTIONS = ['g', 'kg', 'ml', 'L', 'pcs', 'oz', 'lb', 'tbsp', 'tsp'];
@@ -37,7 +36,6 @@ interface RecipeIngredientRow {
   ingredientName: string;
   quantity: string;
   unit: string;
-  costPerUnit: number;
 }
 
 interface RecipeLinkRow {
@@ -98,7 +96,6 @@ export function RecipeEditorPage() {
           ingredientName: ri.ingredientName ?? '',
           quantity: String(ri.quantity),
           unit: ri.unit,
-          costPerUnit: ri.costPerUnit,
         })),
       );
       setLinkRows(
@@ -111,12 +108,6 @@ export function RecipeEditorPage() {
     }
   }, [existingRecipe, isNew]);
 
-  const totalCost = useMemo(() => {
-    return ingredientRows.reduce((sum, row) => {
-      const qty = parseFloat(row.quantity) || 0;
-      return sum + qty * row.costPerUnit;
-    }, 0);
-  }, [ingredientRows]);
 
   const filteredIngredients = useMemo(() => {
     if (!allIngredients) return [];
@@ -137,7 +128,6 @@ export function RecipeEditorPage() {
         ingredientName: '',
         quantity: '',
         unit: 'g',
-        costPerUnit: 0,
       },
     ]);
   };
@@ -155,7 +145,6 @@ export function RecipeEditorPage() {
               ingredientId: ingredient.id,
               ingredientName: ingredient.name,
               unit: ingredient.unit,
-              costPerUnit: ingredient.costPerUnit,
             }
           : row,
       ),
@@ -211,7 +200,6 @@ export function RecipeEditorPage() {
         ingredientId: r.ingredientId,
         quantity: parseFloat(r.quantity) || 0,
         unit: r.unit,
-        costPerUnit: r.costPerUnit,
       }));
 
     const links: Partial<RecipeLink>[] = linkRows
@@ -409,16 +397,11 @@ export function RecipeEditorPage() {
                     <th className="pb-2 text-xs font-semibold uppercase tracking-wider text-[#5d4037] w-24">
                       Unit
                     </th>
-                    <th className="pb-2 text-xs font-semibold uppercase tracking-wider text-[#5d4037] w-28">
-                      Cost
-                    </th>
                     <th className="pb-2 w-12" />
                   </tr>
                 </thead>
                 <tbody>
                   {ingredientRows.map((row, idx) => {
-                    const rowCost =
-                      (parseFloat(row.quantity) || 0) * row.costPerUnit;
                     return (
                       <tr key={idx} className="border-b border-gray-50">
                         <td className="py-2 pr-2">
@@ -529,9 +512,6 @@ export function RecipeEditorPage() {
                             ))}
                           </select>
                         </td>
-                        <td className="py-2 pr-2">
-                          <CurrencyDisplay amount={rowCost} size="sm" />
-                        </td>
                         <td className="py-2">
                           <button
                             type="button"
@@ -548,13 +528,6 @@ export function RecipeEditorPage() {
                 </tbody>
               </table>
 
-              {/* Total Cost */}
-              <div className="mt-3 flex items-center justify-end gap-3 border-t border-gray-100 pt-3">
-                <span className="text-sm font-medium text-[#5d4037]">
-                  Total Cost:
-                </span>
-                <CurrencyDisplay amount={totalCost} size="md" />
-              </div>
             </div>
           )}
         </div>

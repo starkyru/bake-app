@@ -59,7 +59,6 @@ export class RecipesService {
       links: dto.links?.map(l => this.linkRepo.create(this.processLink(l))),
     });
     const saved = await this.recipeRepo.save(recipe);
-    await this.calculateCost(saved.id);
     return this.findOne(saved.id);
   }
 
@@ -69,7 +68,7 @@ export class RecipesService {
     await this.versionRepo.save(this.versionRepo.create({
       recipeId: id,
       versionNumber: recipe.currentVersion,
-      ingredientsSnapshot: recipe.ingredients.map(i => ({ ingredientId: i.ingredientId, ingredientName: i.ingredientName, quantity: i.quantity, unit: i.unit, costPerUnit: i.costPerUnit })),
+      ingredientsSnapshot: recipe.ingredients.map(i => ({ ingredientId: i.ingredientId, ingredientName: i.ingredientName, quantity: i.quantity, unit: i.unit })),
       instructionsSnapshot: recipe.instructions,
       changedById: userId,
     }));
@@ -94,7 +93,6 @@ export class RecipesService {
       currentVersion: recipe.currentVersion + 1,
     });
     await this.recipeRepo.save(recipe);
-    await this.calculateCost(id);
     return this.findOne(id);
   }
 
@@ -106,9 +104,7 @@ export class RecipesService {
 
   async getCost(id: string) {
     const recipe = await this.findOne(id);
-    const totalCost = recipe.ingredients.reduce((sum, i) => sum + Number(i.quantity) * Number(i.costPerUnit), 0);
-    const costPerUnit = recipe.yieldQuantity > 0 ? totalCost / Number(recipe.yieldQuantity) : 0;
-    return { totalCost, costPerUnit, yieldQuantity: recipe.yieldQuantity, yieldUnit: recipe.yieldUnit, ingredients: recipe.ingredients };
+    return { yieldQuantity: recipe.yieldQuantity, yieldUnit: recipe.yieldUnit, ingredients: recipe.ingredients };
   }
 
   async scaleRecipe(id: string, scaleFactor: number) {
@@ -143,7 +139,6 @@ Please fetch and parse the recipe from this URL and return a JSON object with th
       "ingredientName": "Ingredient Name",
       "quantity": number,
       "unit": "g or kg or ml or l or pcs or tbsp or tsp",
-      "costPerUnit": 0
     }
   ],
   "links": [
@@ -193,7 +188,6 @@ Return a JSON object with the following structure:
       "ingredientName": "Ingredient Name",
       "quantity": number,
       "unit": "g or kg or ml or l or pcs or tbsp or tsp",
-      "costPerUnit": 0
     }
   ]
 }
@@ -254,11 +248,4 @@ Return ONLY valid JSON, no markdown, no explanation.`,
     };
   }
 
-  private async calculateCost(id: string): Promise<void> {
-    const recipe = await this.recipeRepo.findOne({ where: { id }, relations: ['ingredients'] });
-    if (!recipe) return;
-    const totalCost = recipe.ingredients.reduce((sum, i) => sum + Number(i.quantity) * Number(i.costPerUnit), 0);
-    recipe.costPerUnit = recipe.yieldQuantity > 0 ? totalCost / Number(recipe.yieldQuantity) : 0;
-    await this.recipeRepo.save(recipe);
-  }
 }

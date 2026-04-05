@@ -384,7 +384,6 @@ export async function seed(dataSource: DataSource): Promise<void> {
       category: 'beverage',
       yieldQuantity: 1,
       yieldUnit: 'cup',
-      costPerUnit: 1.60,
       instructions: '1. Pull espresso shot. 2. Steam milk to 65C. 3. Pour steamed milk over espresso. 4. Create latte art.',
       ingredients: [
         { name: 'Coffee Beans', quantity: 0.018, unit: 'kg' },
@@ -396,7 +395,6 @@ export async function seed(dataSource: DataSource): Promise<void> {
       category: 'pastry',
       yieldQuantity: 12,
       yieldUnit: 'pcs',
-      costPerUnit: 1.10,
       instructions: '1. Make dough with flour, sugar, salt, yeast, milk, butter. 2. Laminate dough (3 folds). 3. Shape into crescents. 4. Proof 2 hours. 5. Bake at 200C for 15 min.',
       ingredients: [
         { name: 'All-Purpose Flour', quantity: 0.5, unit: 'kg' },
@@ -413,7 +411,6 @@ export async function seed(dataSource: DataSource): Promise<void> {
       category: 'bread',
       yieldQuantity: 2,
       yieldUnit: 'loaf',
-      costPerUnit: 2.20,
       instructions: '1. Mix flour, water, salt, starter. 2. Bulk ferment 4-6 hours with stretch and fold. 3. Shape. 4. Cold proof overnight. 5. Bake in dutch oven at 230C for 40 min.',
       ingredients: [
         { name: 'All-Purpose Flour', quantity: 1.0, unit: 'kg' },
@@ -426,7 +423,6 @@ export async function seed(dataSource: DataSource): Promise<void> {
       category: 'dessert',
       yieldQuantity: 12,
       yieldUnit: 'slice',
-      costPerUnit: 2.00,
       instructions: '1. Mix dry ingredients. 2. Cream butter and sugar. 3. Add eggs and vanilla. 4. Alternate dry mix and milk. 5. Bake at 175C for 30 min. 6. Frost with ganache.',
       ingredients: [
         { name: 'All-Purpose Flour', quantity: 0.3, unit: 'kg' },
@@ -445,7 +441,6 @@ export async function seed(dataSource: DataSource): Promise<void> {
       category: 'dessert',
       yieldQuantity: 12,
       yieldUnit: 'slice',
-      costPerUnit: 2.20,
       instructions: '1. Crush biscuits for crust, mix with melted butter, press into pan. 2. Beat cream cheese, sugar, eggs, vanilla. 3. Pour over crust. 4. Bake at 160C for 50 min. 5. Chill 4+ hours.',
       ingredients: [
         { name: 'Cream Cheese', quantity: 0.9, unit: 'kg' },
@@ -475,7 +470,6 @@ export async function seed(dataSource: DataSource): Promise<void> {
           category: rData.category,
           yieldQuantity: rData.yieldQuantity,
           yieldUnit: rData.yieldUnit,
-          costPerUnit: rData.costPerUnit,
           instructions: rData.instructions,
           productId: linkedProduct?.id || null,
           isActive: true,
@@ -495,7 +489,6 @@ export async function seed(dataSource: DataSource): Promise<void> {
               ingredientName: ri.name,
               quantity: ri.quantity,
               unit: ri.unit,
-              costPerUnit: ing.costPerUnit,
             }),
           );
         }

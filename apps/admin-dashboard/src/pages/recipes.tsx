@@ -110,8 +110,8 @@ export function RecipesPage() {
       await createProduct.mutateAsync({
         name: recipe.name,
         type: 'produced',
-        price: recipe.costPerUnit * 2.5, // default markup
-        costPrice: recipe.costPerUnit,
+        price: 0,
+        costPrice: 0,
         recipeId: recipe.id,
         isActive: true,
       });
@@ -148,12 +148,6 @@ export function RecipesPage() {
           {value} {row.yieldUnit}
         </span>
       ),
-    },
-    {
-      key: 'costPerUnit',
-      label: 'Cost / Unit',
-      type: 'currency',
-      sortable: true,
     },
     {
       key: 'currentVersion',

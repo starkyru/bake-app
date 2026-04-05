@@ -31,11 +31,6 @@ class RecipeIngredientDto {
   @IsString()
   unit: string;
 
-  @ApiPropertyOptional({ example: 0.5 })
-  @IsOptional()
-  @Type(() => Number)
-  @IsNumber()
-  costPerUnit?: number;
 }
 
 class RecipeLinkDto {

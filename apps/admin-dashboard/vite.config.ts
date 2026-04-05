@@ -14,7 +14,7 @@ export default defineConfig({
     port: 4201,
     proxy: {
       '/api': {
-        target: process.env.API_URL || 'http://localhost:3000',
+        target: process.env.API_URL || 'https://api.bake.ilia.to',
         changeOrigin: true,
       },
     },

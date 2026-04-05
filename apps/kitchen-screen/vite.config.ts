@@ -24,11 +24,11 @@ export default defineConfig({
     port: 4202,
     proxy: {
       '/api': {
-        target: process.env['API_URL'] || 'http://localhost:3000',
+        target: process.env['API_URL'] || 'https://api.bake.ilia.to',
         changeOrigin: true,
       },
       '/socket.io': {
-        target: process.env['API_URL'] || 'http://localhost:3000',
+        target: process.env['API_URL'] || 'https://api.bake.ilia.to',
         ws: true,
       },
     },

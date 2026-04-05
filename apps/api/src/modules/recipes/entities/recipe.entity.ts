@@ -18,9 +18,6 @@ export class Recipe extends BaseEntity {
   @Column({ name: 'yield_unit', default: 'pcs' })
   yieldUnit: string;
 
-  @Column({ name: 'cost_per_unit', type: 'decimal', precision: 10, scale: 2, default: 0 })
-  costPerUnit: number;
-
   @Column({ name: 'current_version', default: 1 })
   currentVersion: number;
 

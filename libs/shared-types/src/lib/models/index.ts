@@ -205,7 +205,6 @@ export interface Recipe {
   category?: string;
   yieldQuantity: number;
   yieldUnit: string;
-  costPerUnit: number;
   currentVersion: number;
   instructions?: string;
   productId?: string;
@@ -220,7 +219,6 @@ export interface RecipeIngredient {
   ingredientName?: string;
   quantity: number;
   unit: string;
-  costPerUnit: number;
 }
 
 export interface RecipeLink {
