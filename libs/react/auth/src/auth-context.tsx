@@ -27,7 +27,8 @@ interface AuthUser {
 }
 
 interface LoginResponse {
-  access_token: string;
+  access_token?: string;
+  accessToken?: string;
   [key: string]: unknown;
 }
 
@@ -98,7 +99,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     const data: LoginResponse = await response.json();
-    const jwt = data.access_token;
+    const jwt = data.accessToken || data.access_token;
 
     localStorage.setItem('token', jwt);
     setSharedCookie(jwt);
