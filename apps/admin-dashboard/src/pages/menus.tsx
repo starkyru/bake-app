@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router';
-import { Plus, Eye, Pencil, Trash2, X } from 'lucide-react';
+import { Plus, Pencil, Trash2, X } from 'lucide-react';
 import { toast } from 'sonner';
 import type { Menu } from '@bake-app/shared-types';
 import {
@@ -105,7 +105,20 @@ export function MenusPage() {
   };
 
   const columns: TableColumn[] = [
-    { key: 'name', label: 'Name', sortable: true },
+    {
+      key: 'name',
+      label: 'Name',
+      sortable: true,
+      render: (value: string, row: Menu) => (
+        <button
+          type="button"
+          onClick={() => navigate(`/menu/${row.id}`)}
+          className="text-sm font-medium text-[#8b4513] hover:underline"
+        >
+          {value}
+        </button>
+      ),
+    },
     {
       key: 'description',
       label: 'Description',
@@ -144,18 +157,12 @@ export function MenusPage() {
       label: 'Actions',
       type: 'actions',
       sortable: false,
-      width: '120px',
+      width: '100px',
       actions: [
-        {
-          action: 'view',
-          icon: <Eye size={16} />,
-          tooltip: 'View details',
-          onClick: (row: Menu) => navigate(`/menu/${row.id}`),
-        },
         {
           action: 'edit',
           icon: <Pencil size={16} />,
-          tooltip: 'Edit',
+          tooltip: 'Edit name/description',
           onClick: (row: Menu) => openEdit(row),
         },
         {

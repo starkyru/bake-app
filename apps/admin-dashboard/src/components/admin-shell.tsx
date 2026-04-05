@@ -26,7 +26,7 @@ const sidebarItems: SidebarItem[] = [
   { label: 'Dashboard', icon: <LayoutDashboard className="h-4 w-4" />, path: '/dashboard' },
   { label: 'Users', icon: <Users className="h-4 w-4" />, path: '/users' },
   { label: 'Menus', icon: <BookOpen className="h-4 w-4" />, path: '/menu' },
-  { label: 'Menu Items', icon: <Tag className="h-4 w-4" />, path: '/menu/items' },
+  { label: 'Products', icon: <Tag className="h-4 w-4" />, path: '/products' },
   { label: 'Ingredients', icon: <Leaf className="h-4 w-4" />, path: '/ingredients' },
   { label: 'Recipes', icon: <BookOpenCheck className="h-4 w-4" />, path: '/recipes' },
   { label: 'Inventory', icon: <Package className="h-4 w-4" />, path: '/inventory' },
@@ -54,14 +54,16 @@ export function AdminShell() {
   return (
     <div className="flex h-screen overflow-hidden bg-[#faf3e8]">
       {/* Desktop sidebar */}
-      <div className="hidden md:flex">
-        <Sidebar
-          items={sidebarItems}
-          onLogout={handleLogout}
-          userName={user?.name}
-          userRole={user?.role}
-        />
-      </div>
+      {sidebarOpen && (
+        <div className="hidden md:flex">
+          <Sidebar
+            items={sidebarItems}
+            onLogout={handleLogout}
+            userName={user?.name}
+            userRole={user?.role}
+          />
+        </div>
+      )}
 
       {/* Mobile sidebar overlay */}
       {sidebarOpen && (

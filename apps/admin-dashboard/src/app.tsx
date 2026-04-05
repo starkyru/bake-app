@@ -40,7 +40,7 @@ const router = createBrowserRouter([
           { path: '/dashboard', element: <DashboardPage /> },
           { path: '/users', element: <UsersPage /> },
           { path: '/menu', element: <MenusPage /> },
-          { path: '/menu/items', element: <MenuItemsPage /> },
+          { path: '/products', element: <MenuItemsPage /> },
           { path: '/menu/:id', element: <MenuDetailPage /> },
           { path: '/ingredients', element: <IngredientsPage /> },
           { path: '/recipes', element: <RecipesPage /> },
