@@ -4,6 +4,10 @@ import path from 'path';
 
 export default defineConfig({
   root: __dirname,
+  build: {
+    outDir: '../../dist/apps/pos-app',
+    emptyOutDir: true,
+  },
   plugins: [react()],
   server: {
     port: 4200,

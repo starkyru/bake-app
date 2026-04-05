@@ -5,6 +5,10 @@ import { resolve } from 'path';
 export default defineConfig({
   plugins: [react()],
   root: __dirname,
+  build: {
+    outDir: '../../dist/apps/kitchen-screen',
+    emptyOutDir: true,
+  },
   resolve: {
     alias: {
       '@bake-app/shared-types': resolve(__dirname, '../../libs/shared-types/src/index.ts'),
