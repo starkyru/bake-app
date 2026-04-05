@@ -32,6 +32,7 @@ jobs:
       - run: npx vite build --config apps/kitchen-screen/vite.config.ts
       - run: npx vite build --config apps/hub-app/vite.config.ts
       - run: npx vite build --config apps/ordering-app/vite.config.ts
+      - run: ls -R dist/apps/ | head -30
       - uses: actions/upload-artifact@v4
         with:
           name: frontend-dist
@@ -47,6 +48,9 @@ jobs:
           name: frontend-dist
           path: dist/apps/
 
+      - name: Debug artifact contents
+        run: ls -R dist/apps/ | head -30
+
       - name: Install SSH key
         uses: shimataro/ssh-key-action@v2
         with:
@@ -57,6 +61,9 @@ jobs:
               HostName ${{ secrets.VPS_HOST }}
               User ilia
               StrictHostKeyChecking no
+
+      - name: Ensure remote directories exist
+        run: ssh vps 'mkdir -p /var/www/bake-app/{pos-app,admin-dashboard,kitchen-screen,hub-app,ordering-app}'
 
       - name: Deploy frontend assets
         run: |
