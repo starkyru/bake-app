@@ -9,6 +9,7 @@
     "start:dev": "nest start --watch --exec \"node --loader ts-node/esm\" --ext ts",
     "build": "nest build apps/api",
     "build:prod": "nest build apps/api -- --webpack",
+    "db:sync": "node scripts/db-sync.js",
     "test": "jest",
     "lint": "eslint",
     "serve:api": "nest start --watch",

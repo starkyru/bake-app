@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { Plus, Trash2, Pencil, Save, X, Truck } from 'lucide-react';
+import { useState, useEffect, useMemo } from 'react';
+import { Plus, Trash2, Pencil, Save, Truck, Search } from 'lucide-react';
 import { toast } from 'sonner';
 import {
   useLocations,
@@ -19,6 +19,7 @@ import {
   LoadingSpinner,
   EmptyState,
   CurrencyDisplay,
+  Modal,
   useConfirmation,
 } from '@bake-app/react/ui';
 
@@ -71,6 +72,9 @@ export function LocationOnlineConfigPage() {
   });
   const [saving, setSaving] = useState(false);
   const [showMenuPicker, setShowMenuPicker] = useState(false);
+  const [menuSearch, setMenuSearch] = useState('');
+  const [selectedMenuIds, setSelectedMenuIds] = useState<Set<string>>(new Set());
+  const [assigningMenus, setAssigningMenus] = useState(false);
   const [zoneDialogOpen, setZoneDialogOpen] = useState(false);
   const [editingZone, setEditingZone] = useState<any>(null);
   const [zoneForm, setZoneForm] = useState<DeliveryZoneForm>(emptyZoneForm);
@@ -127,13 +131,34 @@ export function LocationOnlineConfigPage() {
     }));
   };
 
-  const handleAssignMenu = async (menuId: string) => {
+  const openMenuPicker = () => {
+    setMenuSearch('');
+    setSelectedMenuIds(new Set());
+    setShowMenuPicker(true);
+  };
+
+  const toggleMenuSelection = (menuId: string) => {
+    setSelectedMenuIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(menuId)) next.delete(menuId);
+      else next.add(menuId);
+      return next;
+    });
+  };
+
+  const handleAssignSelectedMenus = async () => {
+    if (selectedMenuIds.size === 0) return;
+    setAssigningMenus(true);
     try {
-      await assignMenu.mutateAsync({ locationId: selectedLocationId, menuId });
-      toast.success('Menu assigned');
+      for (const menuId of selectedMenuIds) {
+        await assignMenu.mutateAsync({ locationId: selectedLocationId, menuId });
+      }
+      toast.success(`${selectedMenuIds.size} menu${selectedMenuIds.size > 1 ? 's' : ''} assigned`);
       setShowMenuPicker(false);
     } catch {
-      toast.error('Failed to assign menu');
+      toast.error('Failed to assign menus');
+    } finally {
+      setAssigningMenus(false);
     }
   };
 
@@ -233,23 +258,30 @@ export function LocationOnlineConfigPage() {
   const availableMenus = (allMenus ?? []).filter(
     (m: any) => !assignedMenuIds.has(m.id),
   );
+  const filteredAvailableMenus = useMemo(() => {
+    if (!menuSearch.trim()) return availableMenus;
+    const q = menuSearch.toLowerCase();
+    return availableMenus.filter((m: any) => m.name?.toLowerCase().includes(q));
+  }, [availableMenus, menuSearch]);
 
   return (
     <PageContainer title="Online Config" subtitle="Configure online ordering by location">
-      {/* Location Selector */}
-      <div className="mb-6">
-        <select
-          value={selectedLocationId}
-          onChange={(e) => setSelectedLocationId(e.target.value)}
-          className="rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-[#3e2723] shadow-sm focus:border-[#8b4513] focus:outline-none focus:ring-1 focus:ring-[#8b4513]/30"
-        >
-          {locations.map((loc: any) => (
-            <option key={loc.id} value={loc.id}>
-              {loc.name}
-            </option>
-          ))}
-        </select>
-      </div>
+      {/* Location Selector — hidden when only one location */}
+      {locations.length > 1 && (
+        <div className="mb-6">
+          <select
+            value={selectedLocationId}
+            onChange={(e) => setSelectedLocationId(e.target.value)}
+            className="rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-[#3e2723] shadow-sm focus:border-[#8b4513] focus:outline-none focus:ring-1 focus:ring-[#8b4513]/30"
+          >
+            {locations.map((loc: any) => (
+              <option key={loc.id} value={loc.id}>
+                {loc.name}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
 
       {configLoading ? (
         <LoadingSpinner message="Loading config..." />
@@ -369,7 +401,7 @@ export function LocationOnlineConfigPage() {
               <h3 className="text-sm font-semibold text-[#3e2723]">Assigned Menus</h3>
               <button
                 type="button"
-                onClick={() => setShowMenuPicker(true)}
+                onClick={openMenuPicker}
                 className="flex items-center gap-1.5 rounded-lg bg-[#8b4513] px-3 py-1.5 text-xs font-medium text-white transition-all hover:bg-[#5d4037] active:scale-95"
               >
                 <Plus size={14} />
@@ -511,141 +543,155 @@ export function LocationOnlineConfigPage() {
       {ConfirmationDialog}
 
       {/* Menu Picker Dialog */}
-      {showMenuPicker && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"
-          onClick={() => setShowMenuPicker(false)}
-        >
-          <div
-            className="relative mx-4 flex max-h-[60vh] w-full max-w-md flex-col rounded-xl bg-white shadow-lg"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-center justify-between border-b border-gray-100 p-4">
-              <h2 className="text-lg font-semibold text-[#3e2723]">Add Menu</h2>
-              <button
-                type="button"
-                onClick={() => setShowMenuPicker(false)}
-                className="rounded-lg p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600"
-              >
-                <X size={16} />
-              </button>
-            </div>
-            <div className="flex-1 overflow-y-auto p-2">
-              {availableMenus.length === 0 ? (
-                <p className="py-8 text-center text-sm text-gray-400">
-                  All menus are already assigned
-                </p>
-              ) : (
-                availableMenus.map((menu: any) => (
-                  <button
-                    key={menu.id}
-                    type="button"
-                    onClick={() => handleAssignMenu(menu.id)}
-                    className="flex w-full items-center justify-between rounded-lg px-3 py-2.5 text-left transition-colors hover:bg-[#faf3e8]/60"
-                  >
-                    <span className="text-sm font-medium text-[#3e2723]">{menu.name}</span>
-                  </button>
-                ))
-              )}
-            </div>
-          </div>
+      <Modal
+        open={showMenuPicker}
+        onClose={() => setShowMenuPicker(false)}
+        title="Add Menus"
+        footer={
+          <>
+            <button
+              type="button"
+              onClick={() => setShowMenuPicker(false)}
+              className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 transition-all hover:bg-gray-50"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={handleAssignSelectedMenus}
+              disabled={selectedMenuIds.size === 0 || assigningMenus}
+              className="rounded-lg bg-[#8b4513] px-4 py-2 text-sm font-medium text-white transition-all hover:bg-[#5d4037] active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {assigningMenus
+                ? 'Assigning...'
+                : `Add${selectedMenuIds.size > 0 ? ` (${selectedMenuIds.size})` : ''}`}
+            </button>
+          </>
+        }
+      >
+        {/* Search */}
+        <div className="relative mb-3">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+          <input
+            type="text"
+            value={menuSearch}
+            onChange={(e) => setMenuSearch(e.target.value)}
+            placeholder="Search menus..."
+            className="w-full rounded-lg border border-gray-200 bg-gray-50 py-2 pl-9 pr-3 text-sm focus:border-[#8b4513] focus:bg-white focus:outline-none focus:ring-1 focus:ring-[#8b4513]/30"
+            autoFocus
+          />
         </div>
-      )}
+
+        {availableMenus.length === 0 ? (
+          <p className="py-8 text-center text-sm text-gray-400">
+            All menus are already assigned
+          </p>
+        ) : filteredAvailableMenus.length === 0 ? (
+          <p className="py-8 text-center text-sm text-gray-400">
+            No menus match your search
+          </p>
+        ) : (
+          <div className="space-y-1">
+            {filteredAvailableMenus.map((menu: any) => (
+              <label
+                key={menu.id}
+                className="flex cursor-pointer items-center gap-3 rounded-lg px-3 py-2.5 transition-colors hover:bg-[#faf3e8]/60"
+              >
+                <input
+                  type="checkbox"
+                  checked={selectedMenuIds.has(menu.id)}
+                  onChange={() => toggleMenuSelection(menu.id)}
+                  className="h-4 w-4 rounded border-gray-300 text-[#8b4513] accent-[#8b4513]"
+                />
+                <span className="text-sm font-medium text-[#3e2723]">{menu.name}</span>
+                {menu.description && (
+                  <span className="ml-auto text-xs text-gray-400 truncate max-w-[180px]">
+                    {menu.description}
+                  </span>
+                )}
+              </label>
+            ))}
+          </div>
+        )}
+      </Modal>
 
       {/* Zone Dialog */}
-      {zoneDialogOpen && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"
-          onClick={() => setZoneDialogOpen(false)}
-        >
-          <div
-            className="relative mx-4 w-full max-w-md rounded-xl bg-white p-6 shadow-lg"
-            onClick={(e) => e.stopPropagation()}
-          >
+      <Modal
+        open={zoneDialogOpen}
+        onClose={() => setZoneDialogOpen(false)}
+        title={editingZone ? 'Edit Delivery Zone' : 'Add Delivery Zone'}
+        footer={
+          <>
             <button
               type="button"
               onClick={() => setZoneDialogOpen(false)}
-              className="absolute right-3 top-3 rounded-lg p-1 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600"
+              className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 transition-all hover:bg-gray-50"
             >
-              <X size={16} />
+              Cancel
             </button>
-            <h2 className="text-lg font-semibold text-[#3e2723]">
-              {editingZone ? 'Edit Delivery Zone' : 'Add Delivery Zone'}
-            </h2>
-            <form onSubmit={handleSaveZone} className="mt-4 space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-[#5d4037]">Zone Name *</label>
-                <input
-                  type="text"
-                  required
-                  value={zoneForm.name}
-                  onChange={(e) => setZoneForm((f) => ({ ...f, name: e.target.value }))}
-                  className="mt-1 w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm focus:border-[#8b4513] focus:bg-white focus:outline-none focus:ring-1 focus:ring-[#8b4513]/30"
-                  placeholder="e.g. Downtown"
-                />
-              </div>
-              <div className="grid grid-cols-3 gap-3">
-                <div>
-                  <label className="block text-sm font-medium text-[#5d4037]">Fee</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    value={zoneForm.fee}
-                    onChange={(e) => setZoneForm((f) => ({ ...f, fee: e.target.value }))}
-                    className="mt-1 w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm font-mono focus:border-[#8b4513] focus:bg-white focus:outline-none focus:ring-1 focus:ring-[#8b4513]/30"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-[#5d4037]">Min. Order</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    value={zoneForm.minimumOrder}
-                    onChange={(e) =>
-                      setZoneForm((f) => ({ ...f, minimumOrder: e.target.value }))
-                    }
-                    className="mt-1 w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm font-mono focus:border-[#8b4513] focus:bg-white focus:outline-none focus:ring-1 focus:ring-[#8b4513]/30"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-[#5d4037]">Est. Min</label>
-                  <input
-                    type="number"
-                    min="1"
-                    value={zoneForm.estimatedMinutes}
-                    onChange={(e) =>
-                      setZoneForm((f) => ({ ...f, estimatedMinutes: e.target.value }))
-                    }
-                    className="mt-1 w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm font-mono focus:border-[#8b4513] focus:bg-white focus:outline-none focus:ring-1 focus:ring-[#8b4513]/30"
-                  />
-                </div>
-              </div>
-              <div className="flex justify-end gap-3 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setZoneDialogOpen(false)}
-                  className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 transition-all hover:bg-gray-50"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={createZone.isPending || updateZone.isPending}
-                  className="rounded-lg bg-[#8b4513] px-4 py-2 text-sm font-medium text-white transition-all hover:bg-[#5d4037] active:scale-95 disabled:opacity-50"
-                >
-                  {(createZone.isPending || updateZone.isPending)
-                    ? 'Saving...'
-                    : editingZone
-                      ? 'Update'
-                      : 'Create'}
-                </button>
-              </div>
-            </form>
+            <button
+              type="submit"
+              form="zone-form"
+              disabled={createZone.isPending || updateZone.isPending}
+              className="rounded-lg bg-[#8b4513] px-4 py-2 text-sm font-medium text-white transition-all hover:bg-[#5d4037] active:scale-95 disabled:opacity-50"
+            >
+              {(createZone.isPending || updateZone.isPending)
+                ? 'Saving...'
+                : editingZone
+                  ? 'Update'
+                  : 'Create'}
+            </button>
+          </>
+        }
+      >
+        <form id="zone-form" onSubmit={handleSaveZone} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-[#5d4037]">Zone Name *</label>
+            <input
+              type="text"
+              required
+              value={zoneForm.name}
+              onChange={(e) => setZoneForm((f) => ({ ...f, name: e.target.value }))}
+              className="mt-1 w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm focus:border-[#8b4513] focus:bg-white focus:outline-none focus:ring-1 focus:ring-[#8b4513]/30"
+              placeholder="e.g. Downtown"
+            />
           </div>
-        </div>
-      )}
+          <div className="grid grid-cols-3 gap-3">
+            <div>
+              <label className="block text-sm font-medium text-[#5d4037]">Fee</label>
+              <input
+                type="number"
+                step="0.01"
+                min="0"
+                value={zoneForm.fee}
+                onChange={(e) => setZoneForm((f) => ({ ...f, fee: e.target.value }))}
+                className="mt-1 w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm font-mono focus:border-[#8b4513] focus:bg-white focus:outline-none focus:ring-1 focus:ring-[#8b4513]/30"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-[#5d4037]">Min. Order</label>
+              <input
+                type="number"
+                step="0.01"
+                min="0"
+                value={zoneForm.minimumOrder}
+                onChange={(e) => setZoneForm((f) => ({ ...f, minimumOrder: e.target.value }))}
+                className="mt-1 w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm font-mono focus:border-[#8b4513] focus:bg-white focus:outline-none focus:ring-1 focus:ring-[#8b4513]/30"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-[#5d4037]">Est. Min</label>
+              <input
+                type="number"
+                min="1"
+                value={zoneForm.estimatedMinutes}
+                onChange={(e) => setZoneForm((f) => ({ ...f, estimatedMinutes: e.target.value }))}
+                className="mt-1 w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm font-mono focus:border-[#8b4513] focus:bg-white focus:outline-none focus:ring-1 focus:ring-[#8b4513]/30"
+              />
+            </div>
+          </div>
+        </form>
+      </Modal>
     </PageContainer>
   );
 }

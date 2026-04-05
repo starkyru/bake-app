@@ -35,6 +35,9 @@ export type { LoadingSpinnerProps } from './components/loading-spinner';
 export { ConfirmationDialog, useConfirmation } from './components/confirmation-dialog';
 export type { ConfirmationDialogProps } from './components/confirmation-dialog';
 
+export { Modal } from './components/modal';
+export type { ModalProps } from './components/modal';
+
 export { Breadcrumbs } from './components/breadcrumbs';
 export type { BreadcrumbsProps, BreadcrumbItem } from './components/breadcrumbs';
 
