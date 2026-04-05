@@ -27,10 +27,11 @@ jobs:
           node-version: 20
           cache: npm
       - run: npm ci
-      - run: npx ng build pos-app --configuration=production
-      - run: npx ng build admin-dashboard --configuration=production
-      - run: npx ng build kitchen-screen --configuration=production
-      - run: npx ng build hub-app --configuration=production
+      - run: npx vite build --config apps/pos-app/vite.config.ts
+      - run: npx vite build --config apps/admin-dashboard/vite.config.ts
+      - run: npx vite build --config apps/kitchen-screen/vite.config.ts
+      - run: npx vite build --config apps/hub-app/vite.config.ts
+      - run: npx vite build --config apps/ordering-app/vite.config.ts
       - uses: actions/upload-artifact@v4
         with:
           name: frontend-dist
@@ -63,6 +64,7 @@ jobs:
           rsync -azP --delete dist/apps/admin-dashboard/ vps:/var/www/bake-app/admin-dashboard/
           rsync -azP --delete dist/apps/kitchen-screen/ vps:/var/www/bake-app/kitchen-screen/
           rsync -azP --delete dist/apps/hub-app/ vps:/var/www/bake-app/hub-app/
+          rsync -azP --delete dist/apps/ordering-app/ vps:/var/www/bake-app/ordering-app/
 
       - name: Deploy API
         run: |
