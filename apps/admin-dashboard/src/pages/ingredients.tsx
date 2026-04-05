@@ -32,7 +32,6 @@ const UNIT_OPTIONS = [
 interface IngredientFormData {
   name: string;
   unit: string;
-  costPerUnit: string;
   minStockLevel: string;
   categoryId: string;
   description: string;
@@ -41,7 +40,6 @@ interface IngredientFormData {
 const emptyForm: IngredientFormData = {
   name: '',
   unit: 'g',
-  costPerUnit: '',
   minStockLevel: '',
   categoryId: '',
   description: '',
@@ -74,7 +72,6 @@ export function IngredientsPage() {
     setForm({
       name: ingredient.name,
       unit: ingredient.unit,
-      costPerUnit: String(ingredient.costPerUnit),
       minStockLevel: String(ingredient.minStockLevel),
       categoryId: ingredient.categoryId ?? '',
       description: ingredient.description ?? '',
@@ -95,7 +92,6 @@ export function IngredientsPage() {
     const payload: Partial<Ingredient> = {
       name: form.name.trim(),
       unit: form.unit,
-      costPerUnit: parseFloat(form.costPerUnit) || 0,
       minStockLevel: parseFloat(form.minStockLevel) || 0,
       categoryId: form.categoryId || undefined,
       description: form.description.trim() || undefined,
@@ -144,7 +140,6 @@ export function IngredientsPage() {
         </span>
       ),
     },
-    { key: 'costPerUnit', label: 'Cost / Unit', type: 'currency', sortable: true },
     {
       key: 'minStockLevel',
       label: 'Min Stock',
@@ -282,24 +277,6 @@ export function IngredientsPage() {
                       </option>
                     ))}
                   </select>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-[#5d4037]">
-                    Cost per Unit *
-                  </label>
-                  <input
-                    type="number"
-                    step="0.001"
-                    min="0"
-                    value={form.costPerUnit}
-                    onChange={(e) =>
-                      setForm((f) => ({ ...f, costPerUnit: e.target.value }))
-                    }
-                    required
-                    className="mt-1 w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm focus:border-[#8b4513] focus:bg-white focus:outline-none focus:ring-1 focus:ring-[#8b4513]/30"
-                    placeholder="0.00"
-                  />
                 </div>
 
                 <div>

@@ -35,9 +35,10 @@ export class InventoryService {
   // Ingredients
   async findAllIngredients(query: PaginationDto, category?: string): Promise<PaginatedResponseDto<Ingredient>> {
     const { page, limit, search } = query;
-    const qb = this.ingredientRepo.createQueryBuilder('i');
+    const qb = this.ingredientRepo.createQueryBuilder('i')
+      .leftJoinAndSelect('i.ingredientCategory', 'ic');
     if (search) qb.where('i.name ILIKE :search', { search: `%${search}%` });
-    if (category) qb.andWhere('i.category = :category', { category });
+    if (category) qb.andWhere('i.categoryId = :category', { category });
     qb.orderBy('i.name', 'ASC');
     const [data, total] = await qb.skip((page - 1) * limit).take(limit).getManyAndCount();
     return new PaginatedResponseDto(data, total, page, limit);

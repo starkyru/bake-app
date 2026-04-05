@@ -119,14 +119,17 @@ Apps cannot import from each other. Apps import only from `libs/` (shared scope)
 
 ## Database
 
-PostgreSQL with 30 TypeORM entities. See `docs/db-schema.html` for interactive ER diagram. Key entity groups:
+PostgreSQL with 46 TypeORM entities. See `docs/db-schema.html` for interactive ER diagram. Key entity groups:
 - **Auth**: User, Role, Permission, RolePermission, UserPermission, RefreshToken
-- **POS**: Order, OrderItem, Payment, Product, Category, Menu, MenuProduct
+- **POS**: Order, OrderItem, Payment, Product, Category, Menu, MenuProduct, ProductOptionGroup, ProductOption
 - **Inventory**: Ingredient, IngredientCategory, InventoryItem, InventoryItemPackage, InventoryShipment, InventoryMovement, Location
 - **Recipes**: Recipe, RecipeIngredient, RecipeLink, RecipeVersion
 - **Production**: ProductionPlan, ProductionTask
 - **Finance**: FinanceTransaction, ExpenseRecord
-- **Other**: Notification, Setting
+- **Online Ordering**: Customer, CustomerAddress, LocationConfig, LocationMenu, MenuSchedule, MenuTag, MenuConfig, DeliveryZone, OrderItemOption, CustomOrderRequest, CustomerNotificationSubscription, PushSubscription, StorefrontConfig, StorefrontPaymentConfig
+- **System**: Notification, Setting
+
+Schema is managed via `node scripts/db-sync.js` (runs TypeORM synchronize against compiled entities). This runs automatically during CI/CD deploy.
 
 All entities inherit from BaseEntity (UUID id, createdAt, updatedAt). Monetary values use `decimal(10,2)` or `decimal(12,2)`. Soft deletes via `isActive: boolean` flag.
 

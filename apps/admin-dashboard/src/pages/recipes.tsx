@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { Plus, Pencil, Trash2, ShoppingBag, Sparkles, Globe, Image } from 'lucide-react';
 import { toast } from 'sonner';
@@ -29,6 +29,20 @@ export function RecipesPage() {
   const generateFromUrl = useGenerateRecipeFromUrl();
   const generateFromImage = useGenerateRecipeFromImage();
   const { confirm, ConfirmationDialog } = useConfirmation();
+
+  const [selectedCategory, setSelectedCategory] = useState<string>('');
+
+  const categories = useMemo(() => {
+    if (!recipes) return [];
+    const unique = [...new Set(recipes.map((r: Recipe) => r.category).filter(Boolean))] as string[];
+    return unique.sort();
+  }, [recipes]);
+
+  const filteredRecipes = useMemo(() => {
+    if (!recipes) return [];
+    if (!selectedCategory) return recipes;
+    return recipes.filter((r: Recipe) => r.category === selectedCategory);
+  }, [recipes, selectedCategory]);
 
   const [aiDialogOpen, setAiDialogOpen] = useState(false);
   const [aiMode, setAiMode] = useState<'url' | 'image'>('url');
@@ -232,10 +246,37 @@ export function RecipesPage() {
       ) : (
         <DataTable
           columns={columns}
-          data={recipes ?? []}
+          data={filteredRecipes}
           searchable
           searchPlaceholder="Search recipes..."
           pageSize={25}
+          toolbarExtra={
+            categories.length > 0 ? (
+              <div className="flex items-center gap-2">
+                <select
+                  value={selectedCategory}
+                  onChange={(e) => setSelectedCategory(e.target.value)}
+                  className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-700 focus:border-[#8b4513] focus:outline-none focus:ring-1 focus:ring-[#8b4513]/30"
+                >
+                  <option value="">All Categories</option>
+                  {categories.map((cat) => (
+                    <option key={cat} value={cat}>
+                      {cat.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())}
+                    </option>
+                  ))}
+                </select>
+                {selectedCategory && (
+                  <button
+                    type="button"
+                    onClick={() => setSelectedCategory('')}
+                    className="text-xs text-gray-400 hover:text-gray-600"
+                  >
+                    Clear
+                  </button>
+                )}
+              </div>
+            ) : undefined
+          }
         />
       )}
 

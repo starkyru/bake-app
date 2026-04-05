@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { ArrowDown, ArrowUp, ArrowUpDown, ChevronLeft, ChevronRight, Search } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { StatusBadge } from './status-badge';
@@ -32,6 +32,7 @@ export interface DataTableProps<T> {
   searchable?: boolean;
   searchPlaceholder?: string;
   pageSize?: number;
+  toolbarExtra?: React.ReactNode;
 }
 
 type SortDirection = 'asc' | 'desc';
@@ -45,6 +46,30 @@ function renderCellValue(
   value: any,
   row: any,
 ): React.ReactNode {
+  if (column.type === 'actions') {
+    return (
+      <div className="flex items-center gap-1">
+        {column.actions?.map((action) => (
+          <button
+            key={action.action}
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              action.onClick(row);
+            }}
+            title={action.tooltip}
+            className={cn(
+              'rounded-lg p-1.5 transition-all duration-150 hover:bg-gray-100',
+              action.color ?? 'text-gray-500 hover:text-[#3e2723]',
+            )}
+          >
+            {action.icon}
+          </button>
+        ))}
+      </div>
+    );
+  }
+
   if (column.render) {
     return column.render(value, row);
   }
@@ -76,29 +101,6 @@ function renderCellValue(
         </span>
       );
 
-    case 'actions':
-      return (
-        <div className="flex items-center gap-1">
-          {column.actions?.map((action) => (
-            <button
-              key={action.action}
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                action.onClick(row);
-              }}
-              title={action.tooltip}
-              className={cn(
-                'rounded-lg p-1.5 transition-all duration-150 hover:bg-gray-100',
-                action.color ?? 'text-gray-500 hover:text-[#3e2723]',
-              )}
-            >
-              {action.icon}
-            </button>
-          ))}
-        </div>
-      );
-
     default:
       return <span className="text-sm text-gray-700">{String(value)}</span>;
   }
@@ -112,12 +114,19 @@ export function DataTable<T extends Record<string, any>>({
   searchable = false,
   searchPlaceholder = 'Search...',
   pageSize: initialPageSize = 10,
+  toolbarExtra,
 }: DataTableProps<T>) {
   const [search, setSearch] = useState('');
   const [sortKey, setSortKey] = useState<string | null>(null);
   const [sortDir, setSortDir] = useState<SortDirection>('asc');
   const [page, setPage] = useState(0);
   const [pageSize, setPageSize] = useState(initialPageSize);
+
+  // Reset page when data changes (e.g. external filter)
+  const dataLength = data.length;
+  useEffect(() => {
+    setPage(0);
+  }, [dataLength]);
 
   // Filter
   const filtered = useMemo(() => {
@@ -197,23 +206,26 @@ export function DataTable<T extends Record<string, any>>({
 
   return (
     <div className="overflow-hidden rounded-xl border border-[#8b4513]/10 bg-white shadow-sm">
-      {/* Search bar */}
-      {searchable && (
-        <div className="border-b border-gray-100 px-4 py-3">
-          <div className="relative max-w-sm">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-            <input
-              type="text"
-              value={search}
-              onChange={(e) => handleSearch(e.target.value)}
-              placeholder={searchPlaceholder}
-              className={cn(
-                'w-full rounded-lg border border-gray-200 bg-gray-50 py-2 pl-9 pr-3 text-sm',
-                'placeholder:text-gray-400 focus:border-[#8b4513] focus:bg-white focus:outline-none focus:ring-1 focus:ring-[#8b4513]/30',
-                'transition-all duration-150',
-              )}
-            />
-          </div>
+      {/* Toolbar */}
+      {(searchable || toolbarExtra) && (
+        <div className="flex flex-wrap items-center gap-3 border-b border-gray-100 px-4 py-3">
+          {searchable && (
+            <div className="relative max-w-sm">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+              <input
+                type="text"
+                value={search}
+                onChange={(e) => handleSearch(e.target.value)}
+                placeholder={searchPlaceholder}
+                className={cn(
+                  'w-full rounded-lg border border-gray-200 bg-gray-50 py-2 pl-9 pr-3 text-sm',
+                  'placeholder:text-gray-400 focus:border-[#8b4513] focus:bg-white focus:outline-none focus:ring-1 focus:ring-[#8b4513]/30',
+                  'transition-all duration-150',
+                )}
+              />
+            </div>
+          )}
+          {toolbarExtra}
         </div>
       )}
 

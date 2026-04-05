@@ -212,9 +212,9 @@
       <h1>Bake App Database Schema</h1>
       <span class="subtitle">PostgreSQL &middot; TypeORM</span>
       <div class="stats-row">
-        <span class="stat-pill"><strong>30</strong> entities</span>
-        <span class="stat-pill"><strong>13</strong> modules</span>
-        <span class="stat-pill"><strong>62</strong> relations</span>
+        <span class="stat-pill"><strong>46</strong> entities</span>
+        <span class="stat-pill"><strong>15</strong> modules</span>
+        <span class="stat-pill"><strong>88</strong> relations</span>
       </div>
     </div>
     <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap">
@@ -226,6 +226,8 @@
         <div class="legend-item"><div class="legend-dot" style="background:#ef5350"></div>Production</div>
         <div class="legend-item"><div class="legend-dot" style="background:#26c6da"></div>Finance</div>
         <div class="legend-item"><div class="legend-dot" style="background:#78909c"></div>System</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#ec407a"></div>Online Ordering</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#7e57c2"></div>Payments</div>
       </div>
       <div class="zoom-controls">
         <button id="zoom-out" title="Zoom out (-)">-</button>
@@ -357,6 +359,8 @@ erDiagram
         string order_number UK "unique"
         string type "default dine_in"
         string status "default pending"
+        string source "default pos"
+        string fulfillment_type "nullable"
         decimal subtotal "precision 10-2"
         decimal tax "precision 10-2"
         decimal total "precision 10-2"
@@ -364,6 +368,14 @@ erDiagram
         string notes "nullable"
         uuid user_id "nullable"
         uuid location_id "nullable"
+        uuid customer_id FK "nullable"
+        date scheduled_date "nullable"
+        string scheduled_time_slot "nullable"
+        uuid delivery_address_id "nullable"
+        jsonb delivery_address "nullable"
+        boolean requires_approval "default false"
+        timestamp approved_at "nullable"
+        uuid approved_by "nullable"
         timestamp created_at
         timestamp updated_at
     }
@@ -385,6 +397,9 @@ erDiagram
         decimal amount "precision 10-2"
         string method "default cash"
         string status "default completed"
+        string provider "nullable"
+        string online_transaction_id "nullable"
+        string provider_reference "nullable"
         uuid order_id FK
         timestamp created_at
         timestamp updated_at
@@ -612,6 +627,219 @@ erDiagram
         timestamp updated_at
     }
 
+    %% ============ PRODUCT OPTIONS ============
+
+    product_option_groups {
+        uuid id PK
+        uuid product_id FK
+        string name
+        string type "default single"
+        boolean is_required "default false"
+        int sort_order "default 0"
+        int max_selections "nullable"
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    product_options {
+        uuid id PK
+        uuid group_id FK
+        string name
+        decimal price_modifier "precision 10-2 default 0"
+        boolean is_default "default false"
+        boolean is_active "default true"
+        int sort_order "default 0"
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    %% ============ ONLINE ORDERING ============
+
+    customers {
+        uuid id PK
+        string email "nullable unique"
+        string phone "nullable"
+        string password_hash "nullable"
+        string first_name
+        string last_name
+        string auth_provider "default local"
+        string social_id "nullable"
+        boolean is_email_verified "default false"
+        boolean is_phone_verified "default false"
+        jsonb notification_prefs
+        jsonb dietary_preferences "nullable"
+        jsonb allergies "nullable"
+        boolean is_guest "default false"
+        boolean is_active "default true"
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    customer_addresses {
+        uuid id PK
+        uuid customer_id FK
+        string label
+        string street
+        string city
+        string state "nullable"
+        string zip
+        decimal lat "precision 10-7 nullable"
+        decimal lng "precision 10-7 nullable"
+        boolean is_default "default false"
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    location_configs {
+        uuid id PK
+        uuid location_id FK "unique"
+        boolean enabled_for_online_ordering "default false"
+        boolean preorder_enabled "default false"
+        int preorder_days_ahead "default 7"
+        boolean delivery_enabled "default false"
+        boolean pickup_enabled "default true"
+        boolean shipping_enabled "default false"
+        boolean dine_in_qr_enabled "default false"
+        jsonb fulfillment_slots "default []"
+        decimal tax_rate "precision 5-4 default 0.12"
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    location_menus {
+        uuid id PK
+        uuid location_id FK
+        uuid menu_id FK
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    menu_schedules {
+        uuid id PK
+        uuid menu_id FK
+        smallint day_of_week "nullable"
+        time start_time
+        time end_time
+        date specific_date "nullable"
+        boolean is_active "default true"
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    menu_tags {
+        uuid id PK
+        string name UK "unique"
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    menu_configs {
+        uuid id PK
+        uuid menu_id FK "unique"
+        boolean merge_with_others "default true"
+        boolean standalone "default false"
+        boolean preorder_enabled "default false"
+        int preorder_days_ahead "default 0"
+        boolean requires_approval "default false"
+        int prep_time_minutes "default 30"
+        int lead_time_hours "default 0"
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    delivery_zones {
+        uuid id PK
+        uuid location_id FK
+        string name
+        jsonb polygon "nullable"
+        decimal radius_km "precision 6-2 nullable"
+        decimal delivery_fee "precision 10-2 default 0"
+        decimal minimum_order "precision 10-2 default 0"
+        int estimated_minutes "default 45"
+        boolean is_active "default true"
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    order_item_options {
+        uuid id PK
+        uuid order_item_id FK
+        string option_group_name
+        string option_name
+        decimal price_modifier "precision 10-2"
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    custom_order_requests {
+        uuid id PK
+        uuid customer_id FK
+        uuid location_id FK
+        string occasion "nullable"
+        string serving_size "nullable"
+        string inscription_text "nullable"
+        text decoration_notes "nullable"
+        string theme_colors "nullable"
+        jsonb reference_image_urls "default []"
+        string status "default submitted"
+        decimal quoted_price "precision 10-2 nullable"
+        decimal deposit "precision 10-2 nullable"
+        text staff_notes "nullable"
+        date requested_date "nullable"
+        uuid assigned_user_id "nullable"
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    customer_notification_subscriptions {
+        uuid id PK
+        uuid customer_id FK
+        uuid menu_id "nullable"
+        uuid location_id "nullable"
+        string type
+        jsonb channels
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    push_subscriptions {
+        uuid id PK
+        uuid customer_id FK
+        text endpoint
+        string p256dh
+        string auth
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    storefront_configs {
+        uuid id PK
+        uuid location_id FK "nullable unique"
+        string theme_preset "default warm"
+        string logo_url "nullable"
+        string hero_image_url "nullable"
+        string business_name "nullable"
+        string tagline "nullable"
+        string primary_color "nullable"
+        string accent_color "nullable"
+        string custom_domain "nullable unique"
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    storefront_payment_configs {
+        uuid id PK
+        uuid location_id FK "nullable"
+        string provider
+        string public_key
+        string secret_key_encrypted
+        string webhook_secret "nullable"
+        boolean is_active "default false"
+        boolean is_sandbox "default true"
+        timestamp created_at
+        timestamp updated_at
+    }
+
     %% ============ RELATIONSHIPS ============
 
     roles ||--o{ users : "has many"
@@ -646,6 +874,34 @@ erDiagram
     ingredients ||--o{ recipe_ingredients : "used in"
 
     production_plans ||--o{ production_tasks : "has tasks"
+
+    %% Product Options
+    products ||--o{ product_option_groups : "has option groups"
+    product_option_groups ||--o{ product_options : "has options"
+
+    %% Online Ordering - Customers
+    customers ||--o{ customer_addresses : "has addresses"
+    customers ||--o{ orders : "places"
+    customers ||--o{ custom_order_requests : "requests"
+    customers ||--o{ customer_notification_subscriptions : "subscribes"
+    customers ||--o{ push_subscriptions : "has push subs"
+
+    %% Online Ordering - Location Config
+    locations ||--o| location_configs : "has config"
+    locations ||--o{ location_menus : "has menus"
+    locations ||--o{ delivery_zones : "has zones"
+    locations ||--o{ custom_order_requests : "receives"
+    locations ||--o| storefront_configs : "has storefront"
+    locations ||--o{ storefront_payment_configs : "has payments"
+
+    %% Online Ordering - Menu Config
+    menus ||--o{ location_menus : "assigned to"
+    menus ||--o{ menu_schedules : "has schedules"
+    menus ||--o| menu_configs : "has config"
+    menus }o--o{ menu_tags : "tagged with"
+
+    %% Online Ordering - Order extensions
+    order_items ||--o{ order_item_options : "has options"
       </div>
     </div>
   </div>
