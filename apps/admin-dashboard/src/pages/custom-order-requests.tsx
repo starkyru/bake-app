@@ -30,7 +30,7 @@ export function CustomOrderRequestsPage() {
   const [activeTab, setActiveTab] = useState<StatusTab>('all');
   const { data: requests, isLoading } = useCustomOrderRequests({
     status: activeTab === 'all' ? undefined : activeTab,
-  }) as { data: any[]; isLoading: boolean };
+  });
 
   const columns: TableColumn[] = [
     {

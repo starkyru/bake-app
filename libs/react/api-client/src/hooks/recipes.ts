@@ -80,7 +80,7 @@ export function useScaleRecipe() {
       ...data
     }: {
       id: string;
-      targetYield: number;
+      scaleFactor: number;
     }) => apiClient.post<Recipe>(`/v1/recipes/${id}/scale`, data),
   });
 }
@@ -99,7 +99,7 @@ export function useGenerateRecipeFromUrl() {
 export function useGenerateRecipeFromImage() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (data: { image: string }) =>
+    mutationFn: (data: { imageBase64: string; mimeType?: string }) =>
       apiClient.post<Recipe>('/v1/recipes/generate/from-image', data),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: recipeKeys.lists() });

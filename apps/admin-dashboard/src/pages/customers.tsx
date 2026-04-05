@@ -15,7 +15,7 @@ import {
 export function CustomersPage() {
   const navigate = useNavigate();
   const [search, setSearch] = useState('');
-  const { data: customers, isLoading } = useOnlineCustomers({ search }) as { data: any[]; isLoading: boolean };
+  const { data: customers, isLoading } = useOnlineCustomers({ search });
 
   const columns: TableColumn[] = [
     {

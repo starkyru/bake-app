@@ -12,7 +12,10 @@ export const adminOnlineOrderKeys = {
 export function useAdminOnlineOrders(query?: Record<string, unknown>) {
   return useQuery({
     queryKey: adminOnlineOrderKeys.list(query),
-    queryFn: () => apiClient.get('/v1/admin/online-orders', query),
+    queryFn: async () => {
+      const res = await apiClient.get<any>('/v1/admin/online-orders', query);
+      return Array.isArray(res) ? res : (res?.data ?? []);
+    },
   });
 }
 

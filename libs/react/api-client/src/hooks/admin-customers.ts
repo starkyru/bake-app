@@ -14,7 +14,10 @@ export const adminCustomerKeys = {
 export function useAdminCustomers(query?: Record<string, unknown>) {
   return useQuery({
     queryKey: adminCustomerKeys.list(query),
-    queryFn: () => apiClient.get('/v1/admin/customers', query),
+    queryFn: async () => {
+      const res = await apiClient.get<any>('/v1/admin/customers', query);
+      return Array.isArray(res) ? res : (res?.data ?? []);
+    },
   });
 }
 
@@ -29,7 +32,12 @@ export function useAdminCustomerDetail(id: string) {
 export function useCustomerLookup(query: string) {
   return useQuery({
     queryKey: adminCustomerKeys.lookup(query),
-    queryFn: () => apiClient.get('/v1/admin/customers/lookup', { query }),
+    queryFn: () => {
+      // Backend accepts phone or email as separate query params
+      const isEmail = query.includes('@');
+      const params = isEmail ? { email: query } : { phone: query };
+      return apiClient.get('/v1/admin/customers/lookup', params);
+    },
     enabled: !!query && query.length >= 2,
   });
 }
@@ -39,9 +47,14 @@ export const useOnlineCustomers = useAdminCustomers;
 export const useOnlineCustomer = useAdminCustomerDetail;
 
 export function useCustomerOrders(customerId: string) {
+  // Customer orders are included in the detail response as `recentOrders`
+  // There is no separate /orders endpoint — use useAdminCustomerDetail instead
   return useQuery({
     queryKey: [...adminCustomerKeys.detail(customerId), 'orders'] as const,
-    queryFn: () => apiClient.get(`/v1/admin/customers/${customerId}/orders`),
+    queryFn: async () => {
+      const detail = await apiClient.get<any>(`/v1/admin/customers/${customerId}`);
+      return detail?.recentOrders ?? [];
+    },
     enabled: !!customerId,
   });
 }

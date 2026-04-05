@@ -33,7 +33,7 @@ export function OnlineOrdersPage() {
   const [activeTab, setActiveTab] = useState<StatusTab>('all');
   const { data: orders, isLoading } = useAdminOnlineOrders({
     status: activeTab === 'all' ? undefined : activeTab,
-  }) as { data: any[]; isLoading: boolean };
+  });
   const approveOrder = useApproveOrder();
   const rejectOrder = useRejectOrder();
   const { confirm, ConfirmationDialog } = useConfirmation();

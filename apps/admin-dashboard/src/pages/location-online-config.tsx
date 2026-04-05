@@ -23,11 +23,11 @@ import {
 } from '@bake-app/react/ui';
 
 const FULFILLMENT_METHODS = [
-  { key: 'pickup', label: 'Pickup' },
-  { key: 'delivery', label: 'Delivery' },
-  { key: 'shipping', label: 'Shipping' },
-  { key: 'dineInQr', label: 'Dine-in QR' },
-];
+  { key: 'pickupEnabled', label: 'Pickup' },
+  { key: 'deliveryEnabled', label: 'Delivery' },
+  { key: 'shippingEnabled', label: 'Shipping' },
+  { key: 'dineInQrEnabled', label: 'Dine-in QR' },
+] as const;
 
 interface DeliveryZoneForm {
   name: string;
@@ -60,8 +60,11 @@ export function LocationOnlineConfigPage() {
   const { confirm, ConfirmationDialog } = useConfirmation();
 
   const [configForm, setConfigForm] = useState({
-    onlineOrderingEnabled: false,
-    fulfillmentMethods: [] as string[],
+    enabledForOnlineOrdering: false,
+    pickupEnabled: false,
+    deliveryEnabled: false,
+    shippingEnabled: false,
+    dineInQrEnabled: false,
     preorderEnabled: false,
     preorderDaysAhead: 7,
     taxRate: '',
@@ -83,8 +86,11 @@ export function LocationOnlineConfigPage() {
   useEffect(() => {
     if (config) {
       setConfigForm({
-        onlineOrderingEnabled: config.onlineOrderingEnabled ?? false,
-        fulfillmentMethods: config.fulfillmentMethods ?? [],
+        enabledForOnlineOrdering: config.enabledForOnlineOrdering ?? false,
+        pickupEnabled: config.pickupEnabled ?? false,
+        deliveryEnabled: config.deliveryEnabled ?? false,
+        shippingEnabled: config.shippingEnabled ?? false,
+        dineInQrEnabled: config.dineInQrEnabled ?? false,
         preorderEnabled: config.preorderEnabled ?? false,
         preorderDaysAhead: config.preorderDaysAhead ?? 7,
         taxRate: config.taxRate?.toString() ?? '',
@@ -97,8 +103,11 @@ export function LocationOnlineConfigPage() {
     try {
       await updateConfig.mutateAsync({
         locationId: selectedLocationId,
-        onlineOrderingEnabled: configForm.onlineOrderingEnabled,
-        fulfillmentMethods: configForm.fulfillmentMethods,
+        enabledForOnlineOrdering: configForm.enabledForOnlineOrdering,
+        pickupEnabled: configForm.pickupEnabled,
+        deliveryEnabled: configForm.deliveryEnabled,
+        shippingEnabled: configForm.shippingEnabled,
+        dineInQrEnabled: configForm.dineInQrEnabled,
         preorderEnabled: configForm.preorderEnabled,
         preorderDaysAhead: configForm.preorderDaysAhead,
         taxRate: configForm.taxRate ? parseFloat(configForm.taxRate) : undefined,
@@ -111,12 +120,10 @@ export function LocationOnlineConfigPage() {
     }
   };
 
-  const toggleFulfillment = (method: string) => {
+  const toggleFulfillment = (key: string) => {
     setConfigForm((f) => ({
       ...f,
-      fulfillmentMethods: f.fulfillmentMethods.includes(method)
-        ? f.fulfillmentMethods.filter((m) => m !== method)
-        : [...f.fulfillmentMethods, method],
+      [key]: !f[key as keyof typeof f],
     }));
   };
 
@@ -255,11 +262,11 @@ export function LocationOnlineConfigPage() {
               <label className="flex items-center gap-3 cursor-pointer">
                 <input
                   type="checkbox"
-                  checked={configForm.onlineOrderingEnabled}
+                  checked={configForm.enabledForOnlineOrdering}
                   onChange={(e) =>
                     setConfigForm((f) => ({
                       ...f,
-                      onlineOrderingEnabled: e.target.checked,
+                      enabledForOnlineOrdering: e.target.checked,
                     }))
                   }
                   className="h-4 w-4 rounded border-gray-300 text-[#8b4513] accent-[#8b4513]"
@@ -278,7 +285,7 @@ export function LocationOnlineConfigPage() {
                     <label key={fm.key} className="flex items-center gap-2 cursor-pointer">
                       <input
                         type="checkbox"
-                        checked={configForm.fulfillmentMethods.includes(fm.key)}
+                        checked={!!configForm[fm.key]}
                         onChange={() => toggleFulfillment(fm.key)}
                         className="h-4 w-4 rounded border-gray-300 text-[#8b4513] accent-[#8b4513]"
                       />
@@ -415,7 +422,7 @@ export function LocationOnlineConfigPage() {
           </div>
 
           {/* Delivery Zones */}
-          {configForm.fulfillmentMethods.includes('delivery') && (
+          {configForm.deliveryEnabled && (
             <div className="rounded-xl border border-[#8b4513]/10 bg-white p-6 shadow-sm">
               <div className="mb-4 flex items-center justify-between">
                 <h3 className="flex items-center gap-2 text-sm font-semibold text-[#3e2723]">

@@ -54,7 +54,7 @@ export function FinancePage() {
   const { data: expenses, isLoading: expensesLoading } =
     useExpenses(dateRange);
   const { data: transactions, isLoading: transactionsLoading } =
-    useFinanceTransactions({ ...dateRange, limit: 50 });
+    useFinanceTransactions(dateRange);
   const createExpense = useCreateExpense();
 
   const [showExpenseDialog, setShowExpenseDialog] = useState(false);
@@ -66,8 +66,8 @@ export function FinancePage() {
   });
 
   const summaryData = (summary as any) ?? {};
-  const transactionList = (transactions as any)?.data ?? ((transactions as unknown) as any[]) ?? [];
-  const expenseList = (expenses as any)?.data ?? (expenses as any[]) ?? [];
+  const transactionList = (transactions as any[]) ?? [];
+  const expenseList = (expenses as any[]) ?? [];
 
   const totalRevenue = summaryData.totalRevenue ?? 0;
   const totalExpenses = summaryData.totalExpenses ?? 0;

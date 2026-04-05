@@ -1,7 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '../api-client';
 import type { Notification } from '@bake-app/shared-types';
-import type { PaginatedResponse } from '../types';
 
 export const notificationKeys = {
   all: ['notifications'] as const,
@@ -11,14 +10,12 @@ export const notificationKeys = {
 };
 
 export function useNotifications(params?: {
-  page?: number;
-  limit?: number;
-  isRead?: boolean;
+  unreadOnly?: boolean;
 }) {
   return useQuery({
     queryKey: notificationKeys.list(params),
     queryFn: () =>
-      apiClient.get<PaginatedResponse<Notification>>(
+      apiClient.get<Notification[]>(
         '/v1/notifications',
         params,
       ),

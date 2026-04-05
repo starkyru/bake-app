@@ -37,3 +37,6 @@ export type { ConfirmationDialogProps } from './components/confirmation-dialog';
 
 export { Breadcrumbs } from './components/breadcrumbs';
 export type { BreadcrumbsProps, BreadcrumbItem } from './components/breadcrumbs';
+
+export { ErrorBoundary } from './components/error-boundary';
+export type { ErrorBoundaryProps } from './components/error-boundary';
