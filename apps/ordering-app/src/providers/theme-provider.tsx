@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
-import { useStorefrontConfig } from '@bake-app/react/api-client';
+import { useQuery } from '@tanstack/react-query';
 
 interface ThemeContextType {
   theme: string;
@@ -22,7 +22,20 @@ export function useTheme() {
 }
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
-  const { data: config } = useStorefrontConfig();
+  const { data: config } = useQuery({
+    queryKey: ['storefront-config-public'],
+    queryFn: async () => {
+      try {
+        const res = await fetch('/api/v1/storefront/config');
+        if (!res.ok) return null;
+        return res.json();
+      } catch {
+        return null;
+      }
+    },
+    retry: false,
+    staleTime: 10 * 60 * 1000,
+  });
   const [theme, setTheme] = useState('warm');
   const [businessName, setBusinessName] = useState('Tulip Bakery');
   const [tagline, setTagline] = useState('Freshly baked, made with love');
