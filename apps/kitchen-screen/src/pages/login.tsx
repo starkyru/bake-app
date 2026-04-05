@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import { useNavigate } from 'react-router';
 import { useAuth } from '@bake-app/react/auth';
 import { ChefHat } from 'lucide-react';
@@ -11,11 +11,11 @@ export function LoginPage() {
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
 
-  // Redirect if already authenticated
-  if (isAuthenticated) {
-    navigate('/queue', { replace: true });
-    return null;
-  }
+  useEffect(() => {
+    if (isAuthenticated) {
+      navigate('/queue', { replace: true });
+    }
+  }, [isAuthenticated, navigate]);
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
@@ -23,7 +23,6 @@ export function LoginPage() {
     setSaving(true);
     try {
       await login(email, password);
-      navigate('/queue');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Login failed');
     } finally {

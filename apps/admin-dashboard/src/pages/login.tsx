@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import { useNavigate } from 'react-router';
 import { useAuth } from '@bake-app/react/auth';
 import { Croissant, Mail, Lock, Eye, EyeOff, AlertCircle, Loader2 } from 'lucide-react';
@@ -13,11 +13,11 @@ export function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
 
-  // Redirect if already authenticated
-  if (isAuthenticated) {
-    navigate('/dashboard', { replace: true });
-    return null;
-  }
+  useEffect(() => {
+    if (isAuthenticated) {
+      navigate('/dashboard', { replace: true });
+    }
+  }, [isAuthenticated, navigate]);
 
   const isFormValid = email.trim() !== '' && password.trim() !== '';
 
@@ -30,7 +30,6 @@ export function LoginPage() {
 
     try {
       await login(email, password);
-      navigate('/dashboard');
     } catch (err) {
       setErrorMessage(
         err instanceof Error ? err.message : 'Login failed. Please check your credentials.',
