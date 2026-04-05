@@ -12,7 +12,10 @@ export const ingredientKeys = {
 export function useIngredients(params?: { category?: string }) {
   return useQuery({
     queryKey: ingredientKeys.list(params),
-    queryFn: () => apiClient.get<Ingredient[]>('/v1/ingredients', params),
+    queryFn: async () => {
+      const res = await apiClient.get<any>('/v1/ingredients', params);
+      return Array.isArray(res) ? res : (res?.data ?? []);
+    },
   });
 }
 

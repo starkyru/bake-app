@@ -14,7 +14,10 @@ export const recipeKeys = {
 export function useRecipes() {
   return useQuery({
     queryKey: recipeKeys.list(),
-    queryFn: () => apiClient.get<Recipe[]>('/v1/recipes'),
+    queryFn: async () => {
+      const res = await apiClient.get<any>('/v1/recipes');
+      return Array.isArray(res) ? res : (res?.data ?? []);
+    },
   });
 }
 

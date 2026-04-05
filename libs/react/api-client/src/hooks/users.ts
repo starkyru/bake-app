@@ -13,7 +13,10 @@ export const userKeys = {
 export function useUsers() {
   return useQuery({
     queryKey: userKeys.list(),
-    queryFn: () => apiClient.get<User[]>('/v1/users'),
+    queryFn: async () => {
+      const res = await apiClient.get<any>('/v1/users');
+      return Array.isArray(res) ? res : (res?.data ?? []);
+    },
   });
 }
 
