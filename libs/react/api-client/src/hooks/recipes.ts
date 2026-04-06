@@ -62,13 +62,24 @@ export function useDeleteRecipe() {
   });
 }
 
+export interface RecipeCostResult {
+  yieldQuantity: number;
+  yieldUnit: string;
+  ingredientsCost: number;
+  ingredients: {
+    ingredientId: string;
+    ingredientName: string;
+    quantity: number;
+    unit: string;
+    costPerUnit: number;
+    lineCost: number;
+  }[];
+}
+
 export function useRecipeCost(id: string) {
   return useQuery({
     queryKey: recipeKeys.cost(id),
-    queryFn: () =>
-      apiClient.get<{ totalCost: number; costPerUnit: number }>(
-        `/v1/recipes/${id}/cost`,
-      ),
+    queryFn: () => apiClient.get<RecipeCostResult>(`/v1/recipes/${id}/cost`),
     enabled: !!id,
   });
 }

@@ -145,21 +145,21 @@ const products = [
 
 // --- Ingredient seed data ---
 const ingredients = [
-  { name: 'Coffee Beans', unit: 'kg', costPerUnit: 25.00, minStockLevel: 5, category: 'beverage' },
-  { name: 'Whole Milk', unit: 'l', costPerUnit: 1.50, minStockLevel: 20, category: 'dairy' },
-  { name: 'All-Purpose Flour', unit: 'kg', costPerUnit: 1.20, minStockLevel: 25, category: 'dry' },
-  { name: 'Unsalted Butter', unit: 'kg', costPerUnit: 8.00, minStockLevel: 5, category: 'dairy' },
-  { name: 'Granulated Sugar', unit: 'kg', costPerUnit: 1.50, minStockLevel: 10, category: 'dry' },
-  { name: 'Eggs', unit: 'pcs', costPerUnit: 0.30, minStockLevel: 60, category: 'dairy' },
-  { name: 'Dark Chocolate', unit: 'kg', costPerUnit: 12.00, minStockLevel: 3, category: 'dry' },
-  { name: 'Heavy Cream', unit: 'l', costPerUnit: 4.00, minStockLevel: 5, category: 'dairy' },
-  { name: 'Active Dry Yeast', unit: 'kg', costPerUnit: 15.00, minStockLevel: 1, category: 'dry' },
-  { name: 'Salt', unit: 'kg', costPerUnit: 0.80, minStockLevel: 3, category: 'dry' },
-  { name: 'Vanilla Extract', unit: 'l', costPerUnit: 35.00, minStockLevel: 0.5, category: 'flavoring' },
-  { name: 'Cream Cheese', unit: 'kg', costPerUnit: 7.00, minStockLevel: 3, category: 'dairy' },
-  { name: 'Cocoa Powder', unit: 'kg', costPerUnit: 10.00, minStockLevel: 2, category: 'dry' },
-  { name: 'Olive Oil', unit: 'l', costPerUnit: 8.00, minStockLevel: 2, category: 'oil' },
-  { name: 'Cinnamon', unit: 'kg', costPerUnit: 20.00, minStockLevel: 0.5, category: 'spice' },
+  { name: 'Coffee Beans', unit: 'kg', minStockLevel: 5, category: 'beverage' },
+  { name: 'Whole Milk', unit: 'l', minStockLevel: 20, category: 'dairy' },
+  { name: 'All-Purpose Flour', unit: 'kg', minStockLevel: 25, category: 'dry' },
+  { name: 'Unsalted Butter', unit: 'kg', minStockLevel: 5, category: 'dairy' },
+  { name: 'Granulated Sugar', unit: 'kg', minStockLevel: 10, category: 'dry' },
+  { name: 'Eggs', unit: 'pcs', minStockLevel: 60, category: 'dairy' },
+  { name: 'Dark Chocolate', unit: 'kg', minStockLevel: 3, category: 'dry' },
+  { name: 'Heavy Cream', unit: 'l', minStockLevel: 5, category: 'dairy' },
+  { name: 'Active Dry Yeast', unit: 'kg', minStockLevel: 1, category: 'dry' },
+  { name: 'Salt', unit: 'kg', minStockLevel: 3, category: 'dry' },
+  { name: 'Vanilla Extract', unit: 'l', minStockLevel: 0.5, category: 'flavoring' },
+  { name: 'Cream Cheese', unit: 'kg', minStockLevel: 3, category: 'dairy' },
+  { name: 'Cocoa Powder', unit: 'kg', minStockLevel: 2, category: 'dry' },
+  { name: 'Olive Oil', unit: 'l', minStockLevel: 2, category: 'oil' },
+  { name: 'Cinnamon', unit: 'kg', minStockLevel: 0.5, category: 'spice' },
 ];
 
 // --- Default settings ---
@@ -316,7 +316,6 @@ export async function seed(dataSource: DataSource): Promise<void> {
         ingredientRepo.create({
           name: ing.name,
           unit: ing.unit,
-          costPerUnit: ing.costPerUnit,
           minStockLevel: ing.minStockLevel,
           category: ing.category,
           isActive: true,

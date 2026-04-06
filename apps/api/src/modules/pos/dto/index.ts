@@ -60,15 +60,13 @@ export class CreateProductDto {
   @IsString()
   description?: string;
 
-  @ApiPropertyOptional()
-  @IsOptional()
+  @ApiProperty()
   @IsUUID()
-  categoryId?: string;
+  categoryId: string;
 
-  @ApiPropertyOptional()
-  @IsOptional()
+  @ApiProperty()
   @IsUUID()
-  recipeId?: string;
+  recipeId: string;
 
   @ApiPropertyOptional()
   @IsOptional()

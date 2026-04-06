@@ -16,6 +16,7 @@ import {
   useCreateRecipe,
   useUpdateRecipe,
   useIngredients,
+  useRecipeCost,
 } from '@bake-app/react/api-client';
 import {
   PageContainer,
@@ -59,7 +60,8 @@ export function RecipeEditorPage() {
   const { data: existingRecipe, isLoading: recipeLoading } = useRecipe(
     isNew ? '' : id!,
   );
-  const { data: allIngredients } = useIngredients();
+  const { data: allIngredients } = useIngredients() as { data: Ingredient[] | undefined };
+  const { data: recipeCost } = useRecipeCost(isNew ? '' : id!);
   const createRecipe = useCreateRecipe();
   const updateRecipe = useUpdateRecipe();
 
@@ -528,6 +530,45 @@ export function RecipeEditorPage() {
                 </tbody>
               </table>
 
+            </div>
+          )}
+
+          {/* Cost Estimate (FIFO from inventory) */}
+          {recipeCost && recipeCost.ingredients.length > 0 && (
+            <div className="mt-4 rounded-lg border border-amber-200 bg-amber-50 p-4">
+              <h4 className="mb-2 text-sm font-medium text-[#5d4037]">
+                Batch Cost Estimate
+                <span className="ml-2 text-xs font-normal text-gray-400">
+                  based on current inventory (FIFO)
+                </span>
+              </h4>
+              <div className="space-y-1 text-sm">
+                {recipeCost.ingredients.map((line, i) => (
+                  <div key={i} className="flex justify-between text-gray-600">
+                    <span>
+                      {line.ingredientName}{' '}
+                      <span className="text-xs text-gray-400">
+                        ({line.quantity} {line.unit} x ${line.costPerUnit.toFixed(2)})
+                      </span>
+                    </span>
+                    <span className="font-mono">${line.lineCost.toFixed(2)}</span>
+                  </div>
+                ))}
+                <div className="flex justify-between border-t border-amber-300 pt-1 font-medium text-[#3e2723]">
+                  <span>Total ingredients cost</span>
+                  <span className="font-mono">${recipeCost.ingredientsCost.toFixed(2)}</span>
+                </div>
+                {recipeCost.yieldQuantity > 0 && (
+                  <div className="flex justify-between text-xs text-gray-500">
+                    <span>
+                      Per unit ({recipeCost.yieldQuantity} {recipeCost.yieldUnit})
+                    </span>
+                    <span className="font-mono">
+                      ${(recipeCost.ingredientsCost / recipeCost.yieldQuantity).toFixed(2)}
+                    </span>
+                  </div>
+                )}
+              </div>
             </div>
           )}
         </div>

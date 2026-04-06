@@ -121,7 +121,6 @@ export interface Ingredient {
   name: string;
   unit: string;
   description?: string;
-  costPerUnit: number;
   minStockLevel: number;
   calories?: number;
   category?: string;

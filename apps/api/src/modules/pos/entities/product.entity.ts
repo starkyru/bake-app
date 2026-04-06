@@ -31,18 +31,18 @@ export class Product extends BaseEntity {
   @Column({ name: 'is_active', default: true })
   isActive: boolean;
 
-  @ManyToOne(() => Category, { nullable: true })
+  @ManyToOne(() => Category, { nullable: false })
   @JoinColumn({ name: 'category_id' })
   category: Category;
 
-  @Column({ name: 'category_id', nullable: true })
+  @Column({ name: 'category_id' })
   categoryId: string;
 
-  @ManyToOne(() => Recipe, { nullable: true, eager: false })
+  @ManyToOne(() => Recipe, { nullable: false, eager: false })
   @JoinColumn({ name: 'recipe_id' })
   recipe: Recipe;
 
-  @Column({ name: 'recipe_id', nullable: true })
+  @Column({ name: 'recipe_id' })
   recipeId: string;
 
   @ManyToOne(() => Ingredient, { nullable: true, eager: false })

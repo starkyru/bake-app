@@ -131,6 +131,8 @@ PostgreSQL with 46 TypeORM entities. See `docs/db-schema.html` for interactive E
 
 Schema is managed via `node scripts/db-sync.js` (runs TypeORM synchronize against compiled entities). This runs automatically during CI/CD deploy.
 
+**Important:** Whenever entity files are added or modified (columns, relations, new entities), regenerate `docs/db-schema.html` to keep the ER diagram in sync.
+
 All entities inherit from BaseEntity (UUID id, createdAt, updatedAt). Monetary values use `decimal(10,2)` or `decimal(12,2)`. Soft deletes via `isActive: boolean` flag.
 
 ## Deployment

@@ -13,9 +13,6 @@ export class Ingredient extends BaseEntity {
   @Column({ nullable: true })
   description: string;
 
-  @Column({ name: 'cost_per_unit', type: 'decimal', precision: 10, scale: 2, default: 0 })
-  costPerUnit: number;
-
   @Column({ name: 'min_stock_level', type: 'decimal', precision: 10, scale: 2, default: 0 })
   minStockLevel: number;
 

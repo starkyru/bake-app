@@ -328,8 +328,8 @@ erDiagram
         decimal cost_price "precision 10-2"
         string description "nullable"
         boolean is_active "default true"
-        uuid category_id FK "nullable"
-        uuid recipe_id FK "nullable"
+        uuid category_id FK
+        uuid recipe_id FK
         uuid ingredient_id FK "nullable"
         timestamp created_at
         timestamp updated_at
@@ -499,7 +499,6 @@ erDiagram
         string category "nullable"
         decimal yield_quantity "precision 10-2"
         string yield_unit "default pcs"
-        decimal cost_per_unit "precision 10-2"
         int current_version "default 1"
         string instructions "nullable"
         uuid product_id "nullable"
@@ -514,7 +513,6 @@ erDiagram
         string unit "default g"
         uuid ingredient_id FK "nullable"
         string ingredient_name "nullable"
-        decimal cost_per_unit "precision 10-2"
         uuid recipe_id FK
         timestamp created_at
         timestamp updated_at

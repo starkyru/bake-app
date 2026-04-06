@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router';
-import { Plus, Pencil, Trash2, ShoppingBag, Sparkles, Globe, Image } from 'lucide-react';
+import { Plus, Pencil, Trash2, ShoppingBag, Sparkles, Globe, Image, Leaf } from 'lucide-react';
 import { toast } from 'sonner';
 import type { Recipe } from '@bake-app/shared-types';
 import {
@@ -222,6 +222,14 @@ export function RecipesPage() {
       subtitle="Manage your bakery recipes"
       actions={
         <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => navigate('/recipes/ingredients')}
+            className="flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-700 transition-all hover:bg-gray-50 active:scale-95"
+          >
+            <Leaf size={16} />
+            Ingredients
+          </button>
           <button
             type="button"
             onClick={openAiDialog}

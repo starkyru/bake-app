@@ -76,6 +76,7 @@ export {
   useGenerateRecipeFromUrl,
   useGenerateRecipeFromImage,
 } from './hooks/recipes';
+export type { RecipeCostResult } from './hooks/recipes';
 
 // Hooks - Inventory
 export {

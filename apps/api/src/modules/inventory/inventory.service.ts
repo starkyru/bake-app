@@ -257,12 +257,6 @@ export class InventoryService {
       });
     }
 
-    // Update ingredient cost from latest shipment
-    if (dto.unitCost && dto.packageCount > 0 && item.ingredient) {
-      item.ingredient.costPerUnit = dto.unitCost;
-      await this.ingredientRepo.save(item.ingredient);
-    }
-
     await this.checkLowStock(item);
 
     return shipment;

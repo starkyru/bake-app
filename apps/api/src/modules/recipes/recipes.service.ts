@@ -7,6 +7,7 @@ import { Recipe } from './entities/recipe.entity';
 import { RecipeIngredient } from './entities/recipe-ingredient.entity';
 import { RecipeLink } from './entities/recipe-link.entity';
 import { RecipeVersion } from './entities/recipe-version.entity';
+import { InventoryMovement } from '../inventory/entities/inventory-movement.entity';
 import { CreateRecipeDto, UpdateRecipeDto } from './dto';
 import { PaginationDto } from '../../common/dto/pagination.dto';
 import { PaginatedResponseDto } from '../../common/dto/paginated-response.dto';
@@ -20,6 +21,7 @@ export class RecipesService {
     @InjectRepository(RecipeIngredient) private ingredientRepo: Repository<RecipeIngredient>,
     @InjectRepository(RecipeLink) private linkRepo: Repository<RecipeLink>,
     @InjectRepository(RecipeVersion) private versionRepo: Repository<RecipeVersion>,
+    @InjectRepository(InventoryMovement) private movementRepo: Repository<InventoryMovement>,
     private configService: ConfigService,
   ) {
     this.anthropic = new Anthropic({
@@ -104,7 +106,85 @@ export class RecipesService {
 
   async getCost(id: string) {
     const recipe = await this.findOne(id);
-    return { yieldQuantity: recipe.yieldQuantity, yieldUnit: recipe.yieldUnit, ingredients: recipe.ingredients };
+
+    // Get unique ingredient IDs from recipe
+    const ingredientIds = recipe.ingredients
+      .map(ri => ri.ingredientId)
+      .filter(Boolean);
+
+    // Fetch all delivery movements for these ingredients, ordered by date (FIFO)
+    const movements = ingredientIds.length > 0
+      ? await this.movementRepo
+          .createQueryBuilder('m')
+          .where('m.ingredientId IN (:...ids)', { ids: ingredientIds })
+          .andWhere('m.unitCost IS NOT NULL')
+          .orderBy('m.createdAt', 'ASC')
+          .getMany()
+      : [];
+
+    // Build FIFO cost per ingredient: remaining stock buckets from deliveries
+    // after consuming write-offs/usage from oldest first
+    const fifoCostMap = new Map<string, number>();
+    const grouped = new Map<string, typeof movements>();
+    for (const m of movements) {
+      if (!grouped.has(m.ingredientId)) grouped.set(m.ingredientId, []);
+      grouped.get(m.ingredientId)!.push(m);
+    }
+
+    for (const [ingId, mvts] of grouped) {
+      const deliveries: { qty: number; cost: number }[] = [];
+      let consumed = 0;
+
+      for (const m of mvts) {
+        const qty = Number(m.quantity);
+        if (m.type === 'delivery') {
+          deliveries.push({ qty, cost: Number(m.unitCost) });
+        } else {
+          consumed += qty;
+        }
+      }
+
+      // FIFO: consume from oldest deliveries first
+      let remaining = consumed;
+      for (const d of deliveries) {
+        if (remaining <= 0) break;
+        const take = Math.min(remaining, d.qty);
+        d.qty -= take;
+        remaining -= take;
+      }
+
+      // Weighted average cost from remaining stock
+      let totalQty = 0;
+      let totalCost = 0;
+      for (const d of deliveries) {
+        if (d.qty > 0) {
+          totalQty += d.qty;
+          totalCost += d.qty * d.cost;
+        }
+      }
+
+      fifoCostMap.set(ingId, totalQty > 0 ? totalCost / totalQty : 0);
+    }
+
+    const ingredients = recipe.ingredients.map(ri => {
+      const costPerUnit = fifoCostMap.get(ri.ingredientId) ?? 0;
+      const lineCost = Number(ri.quantity) * costPerUnit;
+      return {
+        ingredientId: ri.ingredientId,
+        ingredientName: ri.ingredientName,
+        quantity: Number(ri.quantity),
+        unit: ri.unit,
+        costPerUnit,
+        lineCost,
+      };
+    });
+    const ingredientsCost = ingredients.reduce((sum, i) => sum + i.lineCost, 0);
+    return {
+      yieldQuantity: Number(recipe.yieldQuantity),
+      yieldUnit: recipe.yieldUnit,
+      ingredientsCost,
+      ingredients,
+    };
   }
 
   async scaleRecipe(id: string, scaleFactor: number) {

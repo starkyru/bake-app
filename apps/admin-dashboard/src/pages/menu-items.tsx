@@ -10,6 +10,7 @@ import {
   useDeleteProduct,
   useCategories,
   useRecipes,
+  useRecipeCost,
 } from '@bake-app/react/api-client';
 import {
   PageContainer,
@@ -54,9 +55,10 @@ export function MenuItemsPage() {
   const deleteProduct = useDeleteProduct();
   const { confirm, ConfirmationDialog } = useConfirmation();
 
+  const [form, setForm] = useState<ProductFormData>(emptyForm);
+  const { data: recipeCost } = useRecipeCost(form.recipeId);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
-  const [form, setForm] = useState<ProductFormData>(emptyForm);
   const [saving, setSaving] = useState(false);
 
   const products = productsResponse?.data ?? [];
@@ -99,8 +101,8 @@ export function MenuItemsPage() {
       type: form.type,
       price: parseFloat(form.price) || 0,
       costPrice: parseFloat(form.costPrice) || 0,
-      categoryId: form.categoryId || undefined,
-      recipeId: form.recipeId || undefined,
+      categoryId: form.categoryId,
+      recipeId: form.recipeId,
       description: form.description.trim() || undefined,
       isActive: form.isActive,
     };
@@ -159,7 +161,7 @@ export function MenuItemsPage() {
         </span>
       ),
     },
-    { key: 'price', label: 'Price', type: 'currency', sortable: true },
+    { key: 'price', label: 'Sell Price', type: 'currency', sortable: true },
     {
       key: 'category.name',
       label: 'Category',
@@ -311,7 +313,7 @@ export function MenuItemsPage() {
 
                 <div>
                   <label className="block text-sm font-medium text-[#5d4037]">
-                    Price *
+                    Sell Price *
                   </label>
                   <input
                     type="number"
@@ -327,8 +329,9 @@ export function MenuItemsPage() {
 
                 <div>
                   <label className="block text-sm font-medium text-[#5d4037]">
-                    Cost Price
+                    Produce Price
                   </label>
+                  <p className="mb-1 text-xs text-gray-400">Add-on cost (labor, overhead)</p>
                   <input
                     type="number"
                     step="0.01"
@@ -344,16 +347,17 @@ export function MenuItemsPage() {
 
                 <div>
                   <label className="block text-sm font-medium text-[#5d4037]">
-                    Category
+                    Category *
                   </label>
                   <select
                     value={form.categoryId}
                     onChange={(e) =>
                       setForm((f) => ({ ...f, categoryId: e.target.value }))
                     }
+                    required
                     className="mt-1 w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm focus:border-[#8b4513] focus:bg-white focus:outline-none focus:ring-1 focus:ring-[#8b4513]/30"
                   >
-                    <option value="">No category</option>
+                    <option value="">Select category</option>
                     {(categories ?? []).map((cat) => (
                       <option key={cat.id} value={cat.id}>
                         {cat.name}
@@ -364,16 +368,17 @@ export function MenuItemsPage() {
 
                 <div>
                   <label className="block text-sm font-medium text-[#5d4037]">
-                    Recipe
+                    Recipe *
                   </label>
                   <select
                     value={form.recipeId}
                     onChange={(e) =>
                       setForm((f) => ({ ...f, recipeId: e.target.value }))
                     }
+                    required
                     className="mt-1 w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm focus:border-[#8b4513] focus:bg-white focus:outline-none focus:ring-1 focus:ring-[#8b4513]/30"
                   >
-                    <option value="">No recipe</option>
+                    <option value="">Select recipe</option>
                     {(recipes ?? []).map((r) => (
                       <option key={r.id} value={r.id}>
                         {r.name}
@@ -397,6 +402,41 @@ export function MenuItemsPage() {
                   />
                 </div>
               </div>
+
+              {/* Batch Cost Calculation */}
+              {form.recipeId && recipeCost && (
+                <div className="rounded-lg border border-amber-200 bg-amber-50 p-3">
+                  <p className="mb-2 text-sm font-medium text-[#5d4037]">
+                    Next Batch Cost Estimate
+                  </p>
+                  <div className="space-y-1 text-sm">
+                    <div className="flex justify-between text-gray-600">
+                      <span>Ingredients (from inventory)</span>
+                      <span className="font-mono">${recipeCost.ingredientsCost.toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between text-gray-600">
+                      <span>Produce price (add-on)</span>
+                      <span className="font-mono">${(parseFloat(form.costPrice) || 0).toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between border-t border-amber-300 pt-1 font-medium text-[#3e2723]">
+                      <span>
+                        Total ({recipeCost.yieldQuantity} {recipeCost.yieldUnit})
+                      </span>
+                      <span className="font-mono">
+                        ${(recipeCost.ingredientsCost + (parseFloat(form.costPrice) || 0)).toFixed(2)}
+                      </span>
+                    </div>
+                    {recipeCost.yieldQuantity > 0 && (
+                      <div className="flex justify-between text-xs text-gray-500">
+                        <span>Cost per unit</span>
+                        <span className="font-mono">
+                          ${((recipeCost.ingredientsCost + (parseFloat(form.costPrice) || 0)) / recipeCost.yieldQuantity).toFixed(2)}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
 
               <label className="flex items-center gap-2 cursor-pointer">
                 <input
