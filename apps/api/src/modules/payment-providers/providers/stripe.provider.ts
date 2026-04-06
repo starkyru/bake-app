@@ -48,6 +48,7 @@ export class StripeProvider implements PaymentProviderInterface {
   async refund(
     transactionId: string,
     amount?: number,
+    _currency?: string,
   ): Promise<{ refundId: string }> {
     const params: any = { payment_intent: transactionId };
     if (amount !== undefined) {
@@ -60,6 +61,7 @@ export class StripeProvider implements PaymentProviderInterface {
   async handleWebhook(
     rawBody: Buffer,
     signature: string,
+    _headers?: Record<string, string | string[] | undefined>,
   ): Promise<{ event: string; data: Record<string, unknown> }> {
     if (!this.webhookSecret) {
       throw new Error('Webhook secret not configured for Stripe');

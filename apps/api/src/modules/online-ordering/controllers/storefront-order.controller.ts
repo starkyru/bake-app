@@ -34,7 +34,7 @@ export class StorefrontOrderController {
   }
 
   @Get(':id')
-  @UseGuards(OptionalCustomerAuthGuard)
+  @UseGuards(CustomerAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Get an order by ID' })
   async getOrder(
@@ -42,8 +42,7 @@ export class StorefrontOrderController {
     @Req() req: any,
   ) {
     const order = await this.onlineOrderService.findOne(id);
-    // If there's an authenticated customer, verify they own this order
-    if (req.user && order.customerId && order.customerId !== req.user.id) {
+    if (order.customerId !== req.user.id) {
       // Return 404 rather than 403 to avoid leaking order existence
       throw new NotFoundException('Order not found');
     }

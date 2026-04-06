@@ -29,6 +29,9 @@ export class PaymentWebhookController {
     if (!signature) {
       throw new BadRequestException('Missing Stripe signature');
     }
+    if (!Buffer.isBuffer(req.rawBody)) {
+      throw new BadRequestException('Missing raw request body');
+    }
     try {
       const provider = await this.providerFactory.getProvider(null, 'stripe');
       const result = await provider.handleWebhook(req.rawBody, signature);
@@ -47,12 +50,15 @@ export class PaymentWebhookController {
     @Req() req: any,
     @Headers('paypal-auth-algo') authAlgo: string,
   ) {
+    if (!authAlgo) {
+      throw new BadRequestException('Missing PayPal signature algorithm');
+    }
     try {
       const provider = await this.providerFactory.getProvider(null, 'paypal');
       const rawBody = Buffer.isBuffer(req.rawBody)
         ? req.rawBody
         : Buffer.from(JSON.stringify(req.body));
-      const result = await provider.handleWebhook(rawBody, authAlgo || '');
+      const result = await provider.handleWebhook(rawBody, authAlgo, req.headers);
       this.logger.log(`PayPal webhook: ${result.event}`);
       this.eventEmitter.emit(`payment.webhook.${result.event}`, result.data);
       return { received: true };

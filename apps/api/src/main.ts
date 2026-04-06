@@ -7,6 +7,8 @@ import helmet from 'helmet';
 import { AppModule } from './app.module';
 import { AllExceptionsFilter } from './common/filters/http-exception.filter';
 
+type RawBodyRequest = express.Request & { rawBody?: Buffer };
+
 async function bootstrap() {
   if (!process.env.JWT_SECRET) {
     throw new Error('JWT_SECRET environment variable is required');
@@ -18,8 +20,19 @@ async function bootstrap() {
   app.use(helmet());
 
   // Request body size limits
-  app.use(express.json({ limit: '10mb' }));
-  app.use(express.urlencoded({ limit: '10mb', extended: true }));
+  app.use(express.json({
+    limit: '10mb',
+    verify: (req, _res, buf) => {
+      (req as RawBodyRequest).rawBody = Buffer.from(buf);
+    },
+  }));
+  app.use(express.urlencoded({
+    limit: '10mb',
+    extended: true,
+    verify: (req, _res, buf) => {
+      (req as RawBodyRequest).rawBody = Buffer.from(buf);
+    },
+  }));
 
   // Exception filter
   app.useGlobalFilters(new AllExceptionsFilter());

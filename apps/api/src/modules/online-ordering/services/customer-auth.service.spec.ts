@@ -14,6 +14,7 @@ describe('CustomerAuthService', () => {
   let customerRepo: Record<string, jest.Mock>;
   let queryBuilder: Record<string, jest.Mock>;
   let jwtService: { sign: jest.Mock };
+  let configService: { get: jest.Mock };
 
   const mockCustomer: Partial<Customer> = {
     id: 'cust-1',
@@ -31,6 +32,7 @@ describe('CustomerAuthService', () => {
     queryBuilder = {
       addSelect: jest.fn().mockReturnThis(),
       where: jest.fn().mockReturnThis(),
+      andWhere: jest.fn().mockReturnThis(),
       getOne: jest.fn(),
     };
 
@@ -45,12 +47,16 @@ describe('CustomerAuthService', () => {
       sign: jest.fn().mockReturnValue('mock-jwt-token'),
     };
 
+    configService = {
+      get: jest.fn(),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         CustomerAuthService,
         { provide: getRepositoryToken(Customer), useValue: customerRepo },
         { provide: JwtService, useValue: jwtService },
-        { provide: ConfigService, useValue: { get: jest.fn() } },
+        { provide: ConfigService, useValue: configService },
       ],
     }).compile();
 
@@ -147,19 +153,24 @@ describe('CustomerAuthService', () => {
 
   describe('socialLogin', () => {
     it('should create new customer for new social ID', async () => {
-      customerRepo.findOne.mockResolvedValue(null);
-
-      const result = await service.socialLogin({
+      queryBuilder.getOne.mockResolvedValue(null);
+      jest.spyOn(service as any, 'verifySocialToken').mockResolvedValue({
         provider: 'google',
-        token: 'google-id-123',
+        subject: 'google-sub-123',
         email: 'social@example.com',
+        emailVerified: true,
         firstName: 'Social',
         lastName: 'User',
       });
 
+      const result = await service.socialLogin({
+        provider: 'google',
+        token: 'google-id-123',
+      });
+
       expect(customerRepo.create).toHaveBeenCalledWith(
         expect.objectContaining({
-          socialId: 'google-id-123',
+          socialId: 'google-sub-123',
           authProvider: 'google',
         }),
       );
@@ -167,7 +178,13 @@ describe('CustomerAuthService', () => {
     });
 
     it('should return existing customer for known social ID', async () => {
-      customerRepo.findOne.mockResolvedValue(mockCustomer);
+      queryBuilder.getOne.mockResolvedValue(mockCustomer);
+      jest.spyOn(service as any, 'verifySocialToken').mockResolvedValue({
+        provider: 'google',
+        subject: 'google-sub-123',
+        email: 'test@example.com',
+        emailVerified: true,
+      });
 
       const result = await service.socialLogin({
         provider: 'google',
@@ -180,18 +197,23 @@ describe('CustomerAuthService', () => {
 
     it('should link social account to existing email customer', async () => {
       // First call (socialId lookup) returns null, second (email lookup) returns customer
-      customerRepo.findOne
+      queryBuilder.getOne
         .mockResolvedValueOnce(null)
         .mockResolvedValueOnce({ ...mockCustomer });
+      jest.spyOn(service as any, 'verifySocialToken').mockResolvedValue({
+        provider: 'google',
+        subject: 'new-social-sub',
+        email: 'test@example.com',
+        emailVerified: true,
+      });
 
       const result = await service.socialLogin({
         provider: 'google',
         token: 'new-social-id',
-        email: 'test@example.com',
       });
 
       expect(customerRepo.save).toHaveBeenCalledWith(
-        expect.objectContaining({ socialId: 'new-social-id', authProvider: 'google' }),
+        expect.objectContaining({ socialId: 'new-social-sub', authProvider: 'google' }),
       );
       expect(result.customer.id).toBe('cust-1');
     });

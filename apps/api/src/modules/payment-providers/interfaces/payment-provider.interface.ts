@@ -12,10 +12,12 @@ export interface PaymentProviderInterface {
   refund(
     transactionId: string,
     amount?: number,
+    currency?: string,
   ): Promise<{ refundId: string }>;
 
   handleWebhook(
     rawBody: Buffer,
     signature: string,
+    headers?: Record<string, string | string[] | undefined>,
   ): Promise<{ event: string; data: Record<string, unknown> }>;
 }

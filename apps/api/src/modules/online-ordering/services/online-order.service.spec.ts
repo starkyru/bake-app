@@ -368,7 +368,7 @@ describe('OnlineOrderService', () => {
       // subtotal=100, deliveryFee=50, taxableAmount=150, tax=150*0.12=18, total=150+18=168
       expect(orderRepo.create).toHaveBeenCalledWith(
         expect.objectContaining({
-          discount: 50, // deliveryFee stored in discount field
+          discount: 0,
           total: 168,
         }),
       );

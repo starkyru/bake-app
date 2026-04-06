@@ -96,12 +96,13 @@ export class PayPalProvider implements PaymentProviderInterface {
   async refund(
     transactionId: string,
     amount?: number,
+    currency = 'USD',
   ): Promise<{ refundId: string }> {
     const token = await this.getAccessToken();
     const body: any = {};
     if (amount !== undefined) {
       body.amount = {
-        currency_code: 'UAH',
+        currency_code: currency.toUpperCase(),
         value: amount.toFixed(2),
       };
     }
@@ -127,9 +128,25 @@ export class PayPalProvider implements PaymentProviderInterface {
   async handleWebhook(
     rawBody: Buffer,
     signature: string,
+    headers?: Record<string, string | string[] | undefined>,
   ): Promise<{ event: string; data: Record<string, unknown> }> {
     const token = await this.getAccessToken();
     const webhookEvent = JSON.parse(rawBody.toString());
+    const transmissionId = this.getHeader(headers, 'paypal-transmission-id');
+    const transmissionSig = this.getHeader(headers, 'paypal-transmission-sig');
+    const transmissionTime = this.getHeader(headers, 'paypal-transmission-time');
+    const certUrl = this.getHeader(headers, 'paypal-cert-url');
+
+    if (
+      !signature ||
+      !transmissionId ||
+      !transmissionSig ||
+      !transmissionTime ||
+      !certUrl ||
+      !this.webhookId
+    ) {
+      throw new Error('Missing PayPal webhook verification data');
+    }
 
     const verifyRes = await fetch(
       `${this.baseUrl}/v1/notifications/verify-webhook-signature`,
@@ -141,11 +158,11 @@ export class PayPalProvider implements PaymentProviderInterface {
         },
         body: JSON.stringify({
           auth_algo: signature,
-          cert_url: webhookEvent.cert_url || '',
-          transmission_id: webhookEvent.transmission_id || '',
-          transmission_sig: webhookEvent.transmission_sig || '',
-          transmission_time: webhookEvent.transmission_time || '',
-          webhook_id: this.webhookId || '',
+          cert_url: certUrl,
+          transmission_id: transmissionId,
+          transmission_sig: transmissionSig,
+          transmission_time: transmissionTime,
+          webhook_id: this.webhookId,
           webhook_event: webhookEvent,
         }),
       },
@@ -155,9 +172,25 @@ export class PayPalProvider implements PaymentProviderInterface {
       throw new Error('PayPal webhook verification failed');
     }
 
+    const verification = await verifyRes.json() as { verification_status?: string };
+    if (verification.verification_status !== 'SUCCESS') {
+      throw new Error('PayPal webhook signature check failed');
+    }
+
     return {
       event: webhookEvent.event_type,
       data: webhookEvent.resource as Record<string, unknown>,
     };
+  }
+
+  private getHeader(
+    headers: Record<string, string | string[] | undefined> | undefined,
+    name: string,
+  ): string | undefined {
+    const value = headers?.[name];
+    if (Array.isArray(value)) {
+      return value[0];
+    }
+    return value;
   }
 }

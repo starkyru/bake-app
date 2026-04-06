@@ -218,7 +218,7 @@ export class OnlineOrderService {
       subtotal,
       tax,
       total,
-      discount: deliveryFee,
+      discount: 0,
       notes: dto.notes,
       customerId: customerId || undefined,
       locationId: dto.locationId,
@@ -287,7 +287,7 @@ export class OnlineOrderService {
   async findOne(orderId: string): Promise<Order> {
     const order = await this.orderRepo.findOne({
       where: { id: orderId },
-      relations: ['items', 'items.product', 'items.options', 'customer'],
+      relations: ['items', 'items.product', 'items.options'],
     });
     if (!order) throw new NotFoundException('Order not found');
     return order;
@@ -302,12 +302,13 @@ export class OnlineOrderService {
     if (order.status !== 'pending' && order.status !== 'pending_approval') {
       throw new BadRequestException('Only pending orders can be cancelled');
     }
+    const previousStatus = order.status;
     order.status = 'cancelled';
     const saved = await this.orderRepo.save(order);
     this.eventEmitter.emit(DOMAIN_EVENTS.ONLINE_ORDER_STATUS_CHANGED, {
       orderId: saved.id,
       orderNumber: saved.orderNumber,
-      previousStatus: order.status === 'cancelled' ? 'pending' : order.status,
+      previousStatus,
       newStatus: 'cancelled',
     });
     return saved;
@@ -371,13 +372,14 @@ export class OnlineOrderService {
     if (order.status !== 'pending_approval' && order.status !== 'pending') {
       throw new BadRequestException('Order cannot be rejected in current status');
     }
+    const previousStatus = order.status;
     order.status = 'cancelled';
     const saved = await this.orderRepo.save(order);
 
     this.eventEmitter.emit(DOMAIN_EVENTS.ONLINE_ORDER_STATUS_CHANGED, {
       orderId: saved.id,
       orderNumber: saved.orderNumber,
-      previousStatus: order.status,
+      previousStatus,
       newStatus: 'cancelled',
       reason,
       rejectedBy: staffUserId,
