@@ -7,6 +7,8 @@ interface ThemeContextType {
   tagline: string;
   logoUrl: string | null;
   heroImageUrl: string | null;
+  googleAuthEnabled: boolean;
+  appleAuthEnabled: boolean;
 }
 
 const ThemeContext = createContext<ThemeContextType>({
@@ -15,6 +17,8 @@ const ThemeContext = createContext<ThemeContextType>({
   tagline: 'Freshly baked, made with love',
   logoUrl: null,
   heroImageUrl: null,
+  googleAuthEnabled: false,
+  appleAuthEnabled: false,
 });
 
 export function useTheme() {
@@ -41,6 +45,8 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   const [tagline, setTagline] = useState('Freshly baked, made with love');
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
   const [heroImageUrl, setHeroImageUrl] = useState<string | null>(null);
+  const [googleAuthEnabled, setGoogleAuthEnabled] = useState(false);
+  const [appleAuthEnabled, setAppleAuthEnabled] = useState(false);
 
   useEffect(() => {
     const storefrontConfig = config as {
@@ -49,6 +55,8 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
       tagline?: string;
       logoUrl?: string;
       heroImageUrl?: string;
+      googleAuthEnabled?: boolean;
+      appleAuthEnabled?: boolean;
     } | undefined;
 
     if (storefrontConfig) {
@@ -59,13 +67,15 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
       if (storefrontConfig.tagline) setTagline(storefrontConfig.tagline);
       if (storefrontConfig.logoUrl) setLogoUrl(storefrontConfig.logoUrl);
       if (storefrontConfig.heroImageUrl) setHeroImageUrl(storefrontConfig.heroImageUrl);
+      setGoogleAuthEnabled(!!storefrontConfig.googleAuthEnabled);
+      setAppleAuthEnabled(!!storefrontConfig.appleAuthEnabled);
     } else {
       document.documentElement.setAttribute('data-theme', 'warm');
     }
   }, [config]);
 
   return (
-    <ThemeContext value={{ theme, businessName, tagline, logoUrl, heroImageUrl }}>
+    <ThemeContext value={{ theme, businessName, tagline, logoUrl, heroImageUrl, googleAuthEnabled, appleAuthEnabled }}>
       {children}
     </ThemeContext>
   );
