@@ -16,6 +16,7 @@ import { InventoryShipment } from '../inventory/entities/inventory-shipment.enti
 import { convertToBaseUnit, getMetricEquivalent } from '../inventory/unit-conversion';
 import { ProductionPlan } from '../production/entities/production-plan.entity';
 import { ProductionTask } from '../production/entities/production-task.entity';
+import BigNumber from 'bignumber.js';
 import {
   SalesReportQueryDto,
   DateRangeQueryDto,
@@ -74,16 +75,18 @@ export class ReportingService {
 
     const totalRevenue = parseFloat(todayData.revenue) || 0;
     const totalOrders = parseInt(todayData.orderCount, 10) || 0;
-    const avgCheck = totalOrders > 0 ? Math.round((totalRevenue / totalOrders) * 100) / 100 : 0;
+    const avgCheck = totalOrders > 0
+      ? new BigNumber(totalRevenue).div(totalOrders).decimalPlaces(2, BigNumber.ROUND_HALF_UP).toNumber()
+      : 0;
 
     const prevRevenue = parseFloat(lastWeekData.revenue) || 0;
     const prevOrders = parseInt(lastWeekData.orderCount, 10) || 0;
 
     const revenueTrend = prevRevenue > 0
-      ? Math.round(((totalRevenue - prevRevenue) / prevRevenue) * 10000) / 100
+      ? new BigNumber(totalRevenue).minus(prevRevenue).div(prevRevenue).times(100).decimalPlaces(2, BigNumber.ROUND_HALF_UP).toNumber()
       : 0;
     const ordersTrend = prevOrders > 0
-      ? Math.round(((totalOrders - prevOrders) / prevOrders) * 10000) / 100
+      ? new BigNumber(totalOrders).minus(prevOrders).div(prevOrders).times(100).decimalPlaces(2, BigNumber.ROUND_HALF_UP).toNumber()
       : 0;
 
     return { totalRevenue, totalOrders, avgCheck, revenueTrend, ordersTrend };
@@ -213,22 +216,24 @@ export class ReportingService {
     qb.groupBy('t.type').addGroupBy('t.category');
     const rows = await qb.getRawMany();
 
-    let totalRevenue = 0;
-    let totalExpenses = 0;
+    let totalRevenueBN = new BigNumber(0);
+    let totalExpensesBN = new BigNumber(0);
     for (const row of rows) {
-      const amount = parseFloat(row.total) || 0;
-      if (row.type === 'revenue') totalRevenue += amount;
-      else if (row.type === 'expense') totalExpenses += Math.abs(amount);
+      const amount = new BigNumber(row.total || 0);
+      if (row.type === 'revenue') totalRevenueBN = totalRevenueBN.plus(amount);
+      else if (row.type === 'expense') totalExpensesBN = totalExpensesBN.plus(amount.abs());
     }
-    const netProfit = totalRevenue - totalExpenses;
-    const margin = totalRevenue > 0 ? (netProfit / totalRevenue) * 100 : 0;
+    const netProfit = totalRevenueBN.minus(totalExpensesBN);
+    const margin = totalRevenueBN.gt(0)
+      ? netProfit.div(totalRevenueBN).times(100).decimalPlaces(2, BigNumber.ROUND_HALF_UP).toNumber()
+      : 0;
 
     return {
       breakdown: rows,
-      totalRevenue,
-      totalExpenses,
-      netProfit,
-      margin: Math.round(margin * 100) / 100,
+      totalRevenue: totalRevenueBN.toNumber(),
+      totalExpenses: totalExpensesBN.toNumber(),
+      netProfit: netProfit.toNumber(),
+      margin,
     };
   }
 

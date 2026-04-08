@@ -1,4 +1,5 @@
 import { useNavigate } from 'react-router';
+import BigNumber from 'bignumber.js';
 import { ShoppingBag, Trash2, ArrowLeft } from 'lucide-react';
 import {
   useCustomerCartStore,
@@ -22,8 +23,8 @@ export function CartPage() {
   const subtotal = useCustomerCartStore(selectCustomerSubtotal);
   const totalItems = useCustomerCartStore(selectCustomerTotalItems);
 
-  const taxEstimate = subtotal * TAX_RATE;
-  const total = subtotal + taxEstimate;
+  const taxEstimate = new BigNumber(subtotal).times(TAX_RATE).decimalPlaces(2, BigNumber.ROUND_HALF_UP).toNumber();
+  const total = new BigNumber(subtotal).plus(taxEstimate).toNumber();
 
   if (items.length === 0) {
     return (
@@ -86,10 +87,10 @@ export function CartPage() {
       <div className="flex flex-col gap-3">
         {items.map((item) => {
           const optionsPrice = item.selectedOptions.reduce(
-            (sum, o) => sum + o.priceAdjustment,
+            (sum, o) => new BigNumber(sum).plus(o.priceAdjustment).toNumber(),
             0,
           );
-          const itemTotal = (item.product.price + optionsPrice) * item.quantity;
+          const itemTotal = new BigNumber(item.product.price).plus(optionsPrice).times(item.quantity).toNumber();
 
           return (
             <div

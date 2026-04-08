@@ -20,6 +20,7 @@ import { LocationMenu } from '../entities/location-menu.entity';
 import { CreateOnlineOrderDto } from '../dto';
 import { PaginatedResponseDto } from '../../../common/dto/paginated-response.dto';
 import { DOMAIN_EVENTS } from '../../websocket/ws-events.constants';
+import BigNumber from 'bignumber.js';
 
 const FULFILLMENT_CONFIG_MAP: Record<string, string> = {
   pickup: 'pickupEnabled',
@@ -60,7 +61,7 @@ export class OnlineOrderService {
       );
     }
 
-    let subtotal = 0;
+    let subtotal = new BigNumber(0);
     const orderItems: Partial<OrderItem>[] = [];
     const itemOptionsMap: Map<number, Partial<OrderItemOption>[]> = new Map();
     const menuIdsInvolved = new Set<string>();
@@ -80,7 +81,7 @@ export class OnlineOrderService {
         throw new NotFoundException(`Product ${item.productId} not found or inactive`);
       }
 
-      let optionPriceTotal = 0;
+      let optionPriceTotal = new BigNumber(0);
       const itemOptions: Partial<OrderItemOption>[] = [];
 
       if (item.options && item.options.length > 0) {
@@ -110,7 +111,7 @@ export class OnlineOrderService {
             );
           }
 
-          optionPriceTotal += Number(option.priceModifier);
+          optionPriceTotal = optionPriceTotal.plus(option.priceModifier);
           itemOptions.push({
             optionGroupName: group.name,
             optionName: option.name,
@@ -135,21 +136,21 @@ export class OnlineOrderService {
         }
       }
 
-      const unitPrice = Number(product.price) + optionPriceTotal;
-      const itemSubtotal = unitPrice * item.quantity;
-      subtotal += itemSubtotal;
+      const unitPrice = new BigNumber(product.price).plus(optionPriceTotal);
+      const itemSubtotal = unitPrice.times(item.quantity);
+      subtotal = subtotal.plus(itemSubtotal);
 
       orderItems.push({
         productId: item.productId,
         quantity: item.quantity,
-        unitPrice,
-        subtotal: itemSubtotal,
+        unitPrice: unitPrice.toNumber(),
+        subtotal: itemSubtotal.toNumber(),
         notes: item.notes || item.customText,
       });
       itemOptionsMap.set(i, itemOptions);
     }
 
-    let deliveryFee = 0;
+    let deliveryFee = new BigNumber(0);
     if (dto.fulfillmentType === 'delivery') {
       if (!dto.deliveryAddressId) {
         throw new BadRequestException('Delivery address is required for delivery orders');
@@ -170,21 +171,21 @@ export class OnlineOrderService {
         where: { locationId: dto.locationId, isActive: true },
       });
       if (zones.length > 0) {
-        deliveryFee = Number(zones[0].deliveryFee);
-        const minOrder = Number(zones[0].minimumOrder);
-        if (minOrder > 0 && subtotal < minOrder) {
+        deliveryFee = new BigNumber(zones[0].deliveryFee);
+        const minOrder = new BigNumber(zones[0].minimumOrder);
+        if (minOrder.gt(0) && subtotal.lt(minOrder)) {
           throw new BadRequestException(
-            `Minimum order amount for delivery is ${minOrder}`,
+            `Minimum order amount for delivery is ${minOrder.toNumber()}`,
           );
         }
       }
     }
 
-    const taxRate = Number(locationConfig.taxRate) || 0.12;
-    const taxableAmount = subtotal + deliveryFee;
-    const tax = Math.round(taxableAmount * taxRate * 100) / 100;
-    const tip = dto.tip || 0;
-    const total = taxableAmount + tax + tip;
+    const taxRate = new BigNumber(locationConfig.taxRate || 0.12);
+    const taxableAmount = subtotal.plus(deliveryFee);
+    const tax = taxableAmount.times(taxRate).decimalPlaces(2, BigNumber.ROUND_HALF_UP).toNumber();
+    const tip = new BigNumber(dto.tip || 0);
+    const total = taxableAmount.plus(tax).plus(tip).toNumber();
 
     const menuConfigs = await this.menuConfigRepo
       .createQueryBuilder('mc')
@@ -215,7 +216,7 @@ export class OnlineOrderService {
       fulfillmentType: dto.fulfillmentType,
       source: 'online',
       status,
-      subtotal,
+      subtotal: subtotal.toNumber(),
       tax,
       total,
       discount: 0,

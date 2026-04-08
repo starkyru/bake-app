@@ -1,4 +1,5 @@
 import { useParams, useNavigate } from 'react-router';
+import BigNumber from 'bignumber.js';
 import { ArrowLeft, Receipt, CreditCard, Banknote } from 'lucide-react';
 import { useOrder } from '@bake-app/react/api-client';
 import { CurrencyDisplay, StatusBadge, LoadingSpinner } from '@bake-app/react/ui';
@@ -181,7 +182,7 @@ export function OrderDetailPage() {
                 <div>
                   <p className="text-gray-500 mb-0.5">Change</p>
                   <span className="font-mono font-semibold text-green-700">
-                    ${(payment.amount - order.total).toFixed(2)}
+                    ${new BigNumber(payment.amount).minus(order.total).toFixed(2)}
                   </span>
                 </div>
               )}

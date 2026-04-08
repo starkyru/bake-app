@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import BigNumber from 'bignumber.js';
 import {
   ShoppingCart,
   Trash2,
@@ -92,7 +93,7 @@ export function PosPage() {
         productId: item.product.id,
         quantity: item.quantity,
         unitPrice: item.product.price,
-        subtotal: item.product.price * item.quantity,
+        subtotal: new BigNumber(item.product.price).times(item.quantity).toNumber(),
       }));
 
       const order = await createOrder.mutateAsync({

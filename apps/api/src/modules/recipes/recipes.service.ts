@@ -11,6 +11,7 @@ import { InventoryMovement } from '../inventory/entities/inventory-movement.enti
 import { CreateRecipeDto, UpdateRecipeDto } from './dto';
 import { PaginationDto } from '../../common/dto/pagination.dto';
 import { PaginatedResponseDto } from '../../common/dto/paginated-response.dto';
+import BigNumber from 'bignumber.js';
 
 @Injectable()
 export class RecipesService {
@@ -154,21 +155,21 @@ export class RecipesService {
       }
 
       // Weighted average cost from remaining stock
-      let totalQty = 0;
-      let totalCost = 0;
+      let totalQty = new BigNumber(0);
+      let totalCost = new BigNumber(0);
       for (const d of deliveries) {
         if (d.qty > 0) {
-          totalQty += d.qty;
-          totalCost += d.qty * d.cost;
+          totalQty = totalQty.plus(d.qty);
+          totalCost = totalCost.plus(new BigNumber(d.qty).times(d.cost));
         }
       }
 
-      fifoCostMap.set(ingId, totalQty > 0 ? totalCost / totalQty : 0);
+      fifoCostMap.set(ingId, totalQty.gt(0) ? totalCost.div(totalQty).toNumber() : 0);
     }
 
     const ingredients = recipe.ingredients.map(ri => {
       const costPerUnit = fifoCostMap.get(ri.ingredientId) ?? 0;
-      const lineCost = Number(ri.quantity) * costPerUnit;
+      const lineCost = new BigNumber(ri.quantity).times(costPerUnit).toNumber();
       return {
         ingredientId: ri.ingredientId,
         ingredientName: ri.ingredientName,
@@ -178,7 +179,7 @@ export class RecipesService {
         lineCost,
       };
     });
-    const ingredientsCost = ingredients.reduce((sum, i) => sum + i.lineCost, 0);
+    const ingredientsCost = ingredients.reduce((sum, i) => new BigNumber(sum).plus(i.lineCost).toNumber(), 0);
     return {
       yieldQuantity: Number(recipe.yieldQuantity),
       yieldUnit: recipe.yieldUnit,

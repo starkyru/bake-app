@@ -1,4 +1,5 @@
 import { PaymentProviderInterface } from '../interfaces/payment-provider.interface';
+import BigNumber from 'bignumber.js';
 
 export class PayPalProvider implements PaymentProviderInterface {
   private clientId: string;
@@ -50,7 +51,7 @@ export class PayPalProvider implements PaymentProviderInterface {
           {
             amount: {
               currency_code: currency.toUpperCase(),
-              value: amount.toFixed(2),
+              value: new BigNumber(amount).toFixed(2),
             },
             custom_id: metadata.orderId || '',
           },
@@ -103,7 +104,7 @@ export class PayPalProvider implements PaymentProviderInterface {
     if (amount !== undefined) {
       body.amount = {
         currency_code: currency.toUpperCase(),
-        value: amount.toFixed(2),
+        value: new BigNumber(amount).toFixed(2),
       };
     }
     const res = await fetch(

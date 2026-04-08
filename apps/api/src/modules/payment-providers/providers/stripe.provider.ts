@@ -1,4 +1,5 @@
 import { PaymentProviderInterface } from '../interfaces/payment-provider.interface';
+import BigNumber from 'bignumber.js';
 
 let Stripe: any;
 try {
@@ -25,7 +26,7 @@ export class StripeProvider implements PaymentProviderInterface {
     metadata: Record<string, string>,
   ): Promise<{ clientSecret: string; transactionId: string }> {
     const intent = await this.stripe.paymentIntents.create({
-      amount: Math.round(amount * 100),
+      amount: new BigNumber(amount).times(100).integerValue(BigNumber.ROUND_HALF_UP).toNumber(),
       currency: currency.toLowerCase(),
       metadata,
     });
@@ -52,7 +53,7 @@ export class StripeProvider implements PaymentProviderInterface {
   ): Promise<{ refundId: string }> {
     const params: any = { payment_intent: transactionId };
     if (amount !== undefined) {
-      params.amount = Math.round(amount * 100);
+      params.amount = new BigNumber(amount).times(100).integerValue(BigNumber.ROUND_HALF_UP).toNumber();
     }
     const refund = await this.stripe.refunds.create(params);
     return { refundId: refund.id };

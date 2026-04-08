@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import BigNumber from 'bignumber.js';
 import {
   View,
   Text,
@@ -107,7 +108,7 @@ export default function OrderDetailScreen() {
               <Text style={styles.itemQty}>x{item.quantity}</Text>
             </View>
             <Text style={styles.itemPrice}>
-              {(item.price * item.quantity).toFixed(2)} $
+              {new BigNumber(item.price).times(item.quantity).toFixed(2)} $
             </Text>
           </View>
         )}

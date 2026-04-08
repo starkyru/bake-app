@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import BigNumber from 'bignumber.js';
 import { useParams, useNavigate } from 'react-router';
 import { ArrowLeft, ShoppingBag } from 'lucide-react';
 import { useOnlineMenus } from '@bake-app/react/api-client';
@@ -103,15 +104,15 @@ export function ProductDetailPage() {
   // Calculate total price
   const totalPrice = useMemo(() => {
     if (!product) return 0;
-    let optionsTotal = 0;
+    let optionsTotal = new BigNumber(0);
     for (const group of optionGroups) {
       const selected = selections[group.id] ?? [];
       for (const optId of selected) {
         const opt = group.options.find((o) => o.id === optId);
-        if (opt) optionsTotal += opt.priceModifier;
+        if (opt) optionsTotal = optionsTotal.plus(opt.priceModifier);
       }
     }
-    return (product.price + optionsTotal) * quantity;
+    return new BigNumber(product.price).plus(optionsTotal).times(quantity).toNumber();
   }, [product, optionGroups, selections, quantity]);
 
   const handleSingleSelect = (groupId: string, optionId: string) => {

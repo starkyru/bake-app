@@ -13,6 +13,7 @@ import { CreateCategoryDto, UpdateCategoryDto, CreateProductDto, UpdateProductDt
 import { PaginationDto } from '../../common/dto/pagination.dto';
 import { PaginatedResponseDto } from '../../common/dto/paginated-response.dto';
 import { DOMAIN_EVENTS } from '../websocket/ws-events.constants';
+import BigNumber from 'bignumber.js';
 
 @Injectable()
 export class PosService {
@@ -127,37 +128,38 @@ export class PosService {
 
   async createOrder(dto: CreateOrderDto, userId?: string): Promise<Order> {
     const orderNumber = `ORD-${Date.now().toString(36).toUpperCase()}`;
-    let subtotal = 0;
+    let subtotal = new BigNumber(0);
     const orderItems: Partial<OrderItem>[] = [];
 
     for (const item of dto.items) {
       const product = await this.productRepo.findOne({ where: { id: item.productId } });
       if (!product) throw new NotFoundException(`Product ${item.productId} not found`);
-      const itemSubtotal = Number(product.price) * item.quantity;
-      subtotal += itemSubtotal;
+      const unitPrice = new BigNumber(product.price);
+      const itemSubtotal = unitPrice.times(item.quantity);
+      subtotal = subtotal.plus(itemSubtotal);
       orderItems.push({
         productId: item.productId,
         quantity: item.quantity,
-        unitPrice: Number(product.price),
-        subtotal: itemSubtotal,
+        unitPrice: unitPrice.toNumber(),
+        subtotal: itemSubtotal.toNumber(),
         notes: item.notes,
       });
     }
 
-    const discount = dto.discount || 0;
-    const taxRate = 0.12;
-    const taxableAmount = subtotal - discount;
-    const tax = Math.round(taxableAmount * taxRate);
-    const total = taxableAmount + tax;
+    const discount = new BigNumber(dto.discount || 0);
+    const taxRate = new BigNumber(0.12);
+    const taxableAmount = subtotal.minus(discount);
+    const tax = taxableAmount.times(taxRate).decimalPlaces(2, BigNumber.ROUND_HALF_UP).toNumber();
+    const total = taxableAmount.plus(tax).toNumber();
 
     const order = this.orderRepo.create({
       orderNumber,
       type: dto.type || 'dine_in',
       status: 'pending',
-      subtotal,
+      subtotal: subtotal.toNumber(),
       tax,
       total,
-      discount,
+      discount: discount.toNumber(),
       notes: dto.notes,
       userId,
       items: orderItems as OrderItem[],

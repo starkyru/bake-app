@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router';
 import { Plus, Pencil, Trash2, X, ListChecks } from 'lucide-react';
+import BigNumber from 'bignumber.js';
 import { toast } from 'sonner';
 import type { Product } from '@bake-app/shared-types';
 import {
@@ -423,14 +424,14 @@ export function MenuItemsPage() {
                         Total ({recipeCost.yieldQuantity} {recipeCost.yieldUnit})
                       </span>
                       <span className="font-mono">
-                        ${(recipeCost.ingredientsCost + (parseFloat(form.costPrice) || 0)).toFixed(2)}
+                        ${new BigNumber(recipeCost.ingredientsCost).plus(parseFloat(form.costPrice) || 0).toFixed(2)}
                       </span>
                     </div>
                     {recipeCost.yieldQuantity > 0 && (
                       <div className="flex justify-between text-xs text-gray-500">
                         <span>Cost per unit</span>
                         <span className="font-mono">
-                          ${((recipeCost.ingredientsCost + (parseFloat(form.costPrice) || 0)) / recipeCost.yieldQuantity).toFixed(2)}
+                          ${new BigNumber(recipeCost.ingredientsCost).plus(parseFloat(form.costPrice) || 0).div(recipeCost.yieldQuantity).toFixed(2)}
                         </span>
                       </div>
                     )}

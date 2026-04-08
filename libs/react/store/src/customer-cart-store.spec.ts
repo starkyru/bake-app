@@ -218,6 +218,81 @@ describe('useCustomerCartStore', () => {
     });
   });
 
+  describe('selectCustomerSubtotal — BigNumber precision', () => {
+    it('should handle 0.1 + 0.2 price accumulation exactly', () => {
+      useCustomerCartStore.getState().addItem(
+        { id: 'p1', name: 'A', price: 0.1, category: 'test' },
+      );
+      useCustomerCartStore.getState().addItem(
+        { id: 'p2', name: 'B', price: 0.2, category: 'test' },
+      );
+
+      const subtotal = selectCustomerSubtotal(useCustomerCartStore.getState());
+      // Must be exactly 0.3, not 0.30000000000000004
+      expect(subtotal).toBe(0.3);
+    });
+
+    it('should handle 19.99 * 3 without float error', () => {
+      useCustomerCartStore.getState().addItem(
+        { id: 'p1', name: 'Croissant', price: 19.99, category: 'pastry' },
+      );
+      const id = useCustomerCartStore.getState().items[0].id;
+      useCustomerCartStore.getState().incrementItem(id);
+      useCustomerCartStore.getState().incrementItem(id);
+
+      const subtotal = selectCustomerSubtotal(useCustomerCartStore.getState());
+      expect(subtotal).toBe(59.97);
+    });
+
+    it('should handle option price 0.1 + 0.2 modifiers precisely', () => {
+      useCustomerCartStore.getState().addItem(
+        { id: 'p1', name: 'Coffee', price: 5, category: 'drinks' },
+        {
+          selectedOptions: [
+            { groupId: 'g1', groupName: 'Syrup', optionId: 'o1', optionName: 'Vanilla', priceAdjustment: 0.1 },
+            { groupId: 'g1', groupName: 'Syrup', optionId: 'o2', optionName: 'Caramel', priceAdjustment: 0.2 },
+          ],
+        },
+      );
+
+      const subtotal = selectCustomerSubtotal(useCustomerCartStore.getState());
+      // (5 + 0.1 + 0.2) * 1 = 5.3
+      expect(subtotal).toBe(5.3);
+    });
+
+    it('should accumulate many small items without drift', () => {
+      for (let i = 0; i < 10; i++) {
+        useCustomerCartStore.getState().addItem(
+          { id: `p${i}`, name: `Item ${i}`, price: 0.1, category: 'test' },
+        );
+      }
+
+      const subtotal = selectCustomerSubtotal(useCustomerCartStore.getState());
+      expect(subtotal).toBe(1);
+    });
+
+    it('should return number type, not BigNumber', () => {
+      useCustomerCartStore.getState().addItem(mockProduct);
+
+      const subtotal = selectCustomerSubtotal(useCustomerCartStore.getState());
+      expect(typeof subtotal).toBe('number');
+    });
+
+    it('should handle $0.01 * 100 quantity exactly', () => {
+      useCustomerCartStore.getState().addItem(
+        { id: 'p1', name: 'Penny item', price: 0.01, category: 'test' },
+      );
+      const id = useCustomerCartStore.getState().items[0].id;
+      // Increment to quantity 100
+      for (let i = 0; i < 99; i++) {
+        useCustomerCartStore.getState().incrementItem(id);
+      }
+
+      const subtotal = selectCustomerSubtotal(useCustomerCartStore.getState());
+      expect(subtotal).toBe(1);
+    });
+  });
+
   describe('setFulfillment', () => {
     it('should update fulfillment info', () => {
       useCustomerCartStore.getState().setFulfillment({

@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import BigNumber from 'bignumber.js';
 
 export interface SelectedOption {
   groupId: string;
@@ -138,13 +139,15 @@ export const useCustomerCartStore = create<CustomerCartStore>()(
 
 // Computed selectors
 export const selectCustomerSubtotal = (state: CustomerCartStore): number =>
-  state.items.reduce((sum, item) => {
-    const optionsPrice = item.selectedOptions.reduce(
-      (opt, o) => opt + o.priceAdjustment,
-      0,
-    );
-    return sum + (item.product.price + optionsPrice) * item.quantity;
-  }, 0);
+  state.items
+    .reduce((sum, item) => {
+      const optionsPrice = item.selectedOptions.reduce(
+        (opt, o) => opt.plus(o.priceAdjustment),
+        new BigNumber(0),
+      );
+      return sum.plus(new BigNumber(item.product.price).plus(optionsPrice).times(item.quantity));
+    }, new BigNumber(0))
+    .toNumber();
 
 export const selectCustomerTotalItems = (state: CustomerCartStore): number =>
   state.items.reduce((sum, item) => sum + item.quantity, 0);

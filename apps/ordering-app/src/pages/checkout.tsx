@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import BigNumber from 'bignumber.js';
 import { useNavigate } from 'react-router';
 import { Check, MapPin, Clock, CreditCard, ClipboardList, Truck, ShoppingBag, Store } from 'lucide-react';
 import {
@@ -82,9 +83,11 @@ export function CheckoutPage() {
   const availableDates = (datesData as AvailableDateData[] | undefined) ?? [];
 
   const taxRate = locConfig?.taxRate ?? TAX_RATE;
-  const tax = subtotal * (taxRate / 100);
-  const tipAmount = isCustomTip ? parseFloat(customTip) || 0 : subtotal * (tipPercent / 100);
-  const total = subtotal + tax + tipAmount;
+  const tax = new BigNumber(subtotal).times(taxRate).div(100).decimalPlaces(2, BigNumber.ROUND_HALF_UP).toNumber();
+  const tipAmount = isCustomTip
+    ? parseFloat(customTip) || 0
+    : new BigNumber(subtotal).times(tipPercent).div(100).decimalPlaces(2, BigNumber.ROUND_HALF_UP).toNumber();
+  const total = new BigNumber(subtotal).plus(tax).plus(tipAmount).toNumber();
 
   const enabledMethods = useMemo<{ key: FulfillmentMethod; label: string; icon: typeof Truck }[]>(() => {
     const methods: { key: FulfillmentMethod; label: string; icon: typeof Truck }[] = [];

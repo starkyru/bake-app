@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import BigNumber from 'bignumber.js';
 
 export interface CartProduct {
   id: string;
@@ -81,13 +82,15 @@ export const useCartStore = create<CartStore>((set) => ({
 
 // Computed selectors
 export const selectSubtotal = (state: CartStore): number =>
-  state.items.reduce((sum, item) => sum + item.product.price * item.quantity, 0);
+  state.items
+    .reduce((sum, item) => sum.plus(new BigNumber(item.product.price).times(item.quantity)), new BigNumber(0))
+    .toNumber();
 
 export const selectTax = (state: CartStore): number =>
-  Math.round(selectSubtotal(state) * TAX_RATE * 100) / 100;
+  new BigNumber(selectSubtotal(state)).times(TAX_RATE).decimalPlaces(2, BigNumber.ROUND_HALF_UP).toNumber();
 
 export const selectTotal = (state: CartStore): number =>
-  selectSubtotal(state) + selectTax(state);
+  new BigNumber(selectSubtotal(state)).plus(selectTax(state)).toNumber();
 
 export const selectTotalItems = (state: CartStore): number =>
   state.items.reduce((sum, item) => sum + item.quantity, 0);

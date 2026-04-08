@@ -469,6 +469,129 @@ describe('OnlineOrderService', () => {
     });
   });
 
+  describe('createOrder — BigNumber precision', () => {
+    it('should handle 0.1 + 0.2 item prices without float error', async () => {
+      locationConfigRepo.findOne.mockResolvedValue(mockLocationConfig);
+      locationMenuRepo.find.mockResolvedValue([{ menuId: 'menu-1' }]);
+
+      productRepo.findOne
+        .mockResolvedValueOnce({ id: 'p1', name: 'A', price: 0.1, isActive: true, optionGroups: [] })
+        .mockResolvedValueOnce({ id: 'p2', name: 'B', price: 0.2, isActive: true, optionGroups: [] });
+
+      const menuConfigQb = { where: jest.fn().mockReturnThis(), getMany: jest.fn().mockResolvedValue([]) };
+      menuConfigRepo.createQueryBuilder.mockReturnValue(menuConfigQb);
+      orderRepo.findOne.mockResolvedValue({ id: 'order-1', items: [] });
+
+      await service.createOrder('cust-1', {
+        locationId: 'loc-1',
+        fulfillmentType: 'pickup',
+        items: [
+          { productId: 'p1', quantity: 1 },
+          { productId: 'p2', quantity: 1 },
+        ],
+      });
+
+      const created = orderRepo.create.mock.calls[0][0];
+      // 0.1 + 0.2 should be exactly 0.3, not 0.30000000000000004
+      expect(created.subtotal).toBe(0.3);
+    });
+
+    it('should handle tax calculation on tricky amount (33.33 * 0.12)', async () => {
+      locationConfigRepo.findOne.mockResolvedValue(mockLocationConfig);
+      locationMenuRepo.find.mockResolvedValue([{ menuId: 'menu-1' }]);
+
+      productRepo.findOne.mockResolvedValue({
+        id: 'prod-1', name: 'Item', price: 33.33, isActive: true, optionGroups: [],
+      });
+
+      const menuConfigQb = { where: jest.fn().mockReturnThis(), getMany: jest.fn().mockResolvedValue([]) };
+      menuConfigRepo.createQueryBuilder.mockReturnValue(menuConfigQb);
+      orderRepo.findOne.mockResolvedValue({ id: 'order-1', items: [] });
+
+      await service.createOrder('cust-1', {
+        locationId: 'loc-1',
+        fulfillmentType: 'pickup',
+        items: [{ productId: 'prod-1', quantity: 1 }],
+      });
+
+      const created = orderRepo.create.mock.calls[0][0];
+      // 33.33 * 0.12 = 3.9996 -> 4.00
+      expect(created.tax).toBe(4);
+    });
+
+    it('should include tip in total without precision loss', async () => {
+      locationConfigRepo.findOne.mockResolvedValue(mockLocationConfig);
+      locationMenuRepo.find.mockResolvedValue([{ menuId: 'menu-1' }]);
+      productRepo.findOne.mockResolvedValue({
+        id: 'prod-1', name: 'Item', price: 100, isActive: true, optionGroups: [],
+      });
+      const menuConfigQb = { where: jest.fn().mockReturnThis(), getMany: jest.fn().mockResolvedValue([]) };
+      menuConfigRepo.createQueryBuilder.mockReturnValue(menuConfigQb);
+      orderRepo.findOne.mockResolvedValue({ id: 'order-1', items: [] });
+
+      await service.createOrder('cust-1', {
+        locationId: 'loc-1',
+        fulfillmentType: 'pickup',
+        items: [{ productId: 'prod-1', quantity: 1 }],
+        tip: 15.55,
+      });
+
+      const created = orderRepo.create.mock.calls[0][0];
+      // subtotal=100, tax=100*0.12=12, tip=15.55, total=100+12+15.55=127.55
+      expect(created.total).toBe(127.55);
+    });
+
+    it('should produce number types for all monetary fields', async () => {
+      setupBasicCreateOrder();
+
+      await service.createOrder('cust-1', {
+        locationId: 'loc-1',
+        fulfillmentType: 'pickup',
+        items: [{ productId: 'prod-1', quantity: 2 }],
+      });
+
+      const created = orderRepo.create.mock.calls[0][0];
+      expect(typeof created.subtotal).toBe('number');
+      expect(typeof created.tax).toBe('number');
+      expect(typeof created.total).toBe('number');
+    });
+
+    it('should calculate option price modifiers with precision (0.1 modifier)', async () => {
+      locationConfigRepo.findOne.mockResolvedValue(mockLocationConfig);
+      locationMenuRepo.find.mockResolvedValue([{ menuId: 'menu-1' }]);
+      productRepo.findOne.mockResolvedValue({
+        id: 'prod-1', name: 'Coffee', price: 3.50, isActive: true,
+        optionGroups: [{
+          id: 'g1', name: 'Extras', isRequired: false, maxSelections: null,
+          options: [
+            { id: 'o1', name: 'Syrup', priceModifier: 0.1, isActive: true },
+            { id: 'o2', name: 'Cream', priceModifier: 0.2, isActive: true },
+          ],
+        }],
+      });
+      const menuConfigQb = { where: jest.fn().mockReturnThis(), getMany: jest.fn().mockResolvedValue([]) };
+      menuConfigRepo.createQueryBuilder.mockReturnValue(menuConfigQb);
+      orderRepo.findOne.mockResolvedValue({ id: 'order-1', items: [] });
+
+      await service.createOrder('cust-1', {
+        locationId: 'loc-1',
+        fulfillmentType: 'pickup',
+        items: [{
+          productId: 'prod-1', quantity: 2,
+          options: [
+            { optionGroupId: 'g1', optionId: 'o1' },
+            { optionGroupId: 'g1', optionId: 'o2' },
+          ],
+        }],
+      });
+
+      const created = orderRepo.create.mock.calls[0][0];
+      // unitPrice = 3.50 + 0.1 + 0.2 = 3.80
+      // subtotal = 3.80 * 2 = 7.60
+      expect(created.subtotal).toBe(7.6);
+    });
+  });
+
   describe('rejectOrder', () => {
     it('should change status to cancelled', async () => {
       orderRepo.findOne.mockResolvedValue({

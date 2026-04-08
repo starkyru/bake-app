@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import BigNumber from 'bignumber.js';
 import {
   X,
   Banknote,
@@ -38,7 +39,7 @@ export function PaymentDialog({
   if (!open) return null;
 
   const numericAmount = parseFloat(cashAmount) || 0;
-  const change = numericAmount - total;
+  const change = new BigNumber(numericAmount).minus(total).toNumber();
   const isSufficient = numericAmount >= total;
   const isInsufficient = numericAmount > 0 && numericAmount < total;
 

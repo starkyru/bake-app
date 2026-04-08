@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import BigNumber from 'bignumber.js';
 import {
   View,
   Text,
@@ -29,10 +30,12 @@ export default function POSScreen() {
     }
   }
 
-  const cartTotal = cart.reduce(
-    (sum, item) => sum + item.product.price * item.quantity,
-    0
-  );
+  const cartTotal = cart
+    .reduce(
+      (sum, item) => sum.plus(new BigNumber(item.product.price).times(item.quantity)),
+      new BigNumber(0),
+    )
+    .toNumber();
 
   async function handleCheckout() {
     if (cart.length === 0) return;
