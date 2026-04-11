@@ -1,3 +1,5 @@
+import { deleteSharedCookie } from '@bake-app/react/auth';
+
 const BASE_URL = '/api';
 
 class ApiError extends Error {
@@ -32,6 +34,7 @@ async function request<T>(
 
   if (response.status === 401) {
     localStorage.removeItem('token');
+    deleteSharedCookie();
     window.location.href = '/login';
     throw new ApiError(401, 'Unauthorized');
   }
