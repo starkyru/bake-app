@@ -22,13 +22,13 @@ export class InventoryController {
   @RequirePermissions('ingredients:read')
   @ApiOperation({ summary: 'Get all ingredients' })
   findAllIngredients(
-    @Query('page') page?: number,
-    @Query('limit') limit?: number,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
     @Query('search') search?: string,
     @Query('category') category?: string,
   ) {
     return this.inventoryService.findAllIngredients(
-      { page: page ?? 1, limit: limit ?? 20, search } as PaginationDto,
+      { page: Number(page) || 1, limit: Number(limit) || 20, search } as PaginationDto,
       category,
     );
   }

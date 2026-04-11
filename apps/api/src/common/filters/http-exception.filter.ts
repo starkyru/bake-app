@@ -15,6 +15,10 @@ export class AllExceptionsFilter implements ExceptionFilter {
       ? exception.getResponse()
       : 'Internal server error';
 
+    if (status >= 500) {
+      console.error('[UnhandledException]', exception);
+    }
+
     response.status(status).json({
       statusCode: status,
       message: typeof message === 'string' ? message : (message as any).message || message,

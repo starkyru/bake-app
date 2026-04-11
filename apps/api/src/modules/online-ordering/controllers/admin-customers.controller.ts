@@ -16,11 +16,11 @@ export class AdminCustomersController {
   @RequirePermissions('orders:read')
   @ApiOperation({ summary: 'List customers' })
   findAll(
-    @Query('page') page?: number,
-    @Query('limit') limit?: number,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
     @Query('search') search?: string,
   ) {
-    return this.customerService.findAll({ page, limit, search });
+    return this.customerService.findAll({ page: Number(page) || 1, limit: Number(limit) || 20, search });
   }
 
   @Get('lookup')

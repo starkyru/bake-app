@@ -29,10 +29,10 @@ export class AdminCustomOrdersController {
   findAll(
     @Query('status') status?: string,
     @Query('locationId') locationId?: string,
-    @Query('page') page?: number,
-    @Query('limit') limit?: number,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
   ) {
-    return this.customOrderRequestService.findAll({ status, locationId, page, limit });
+    return this.customOrderRequestService.findAll({ status, locationId, page: Number(page) || 1, limit: Number(limit) || 20 });
   }
 
   @Get(':id')
