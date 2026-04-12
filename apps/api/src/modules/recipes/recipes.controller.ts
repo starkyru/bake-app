@@ -94,7 +94,7 @@ export class RecipesController {
   }))
   @ApiConsumes('multipart/form-data')
   @ApiOperation({ summary: 'Upload recipe image' })
-  uploadImage(@Param('id') id: string, @UploadedFile() file: Express.Multer.File) {
+  uploadImage(@Param('id') id: string, @UploadedFile() file: { buffer: Buffer; originalname: string; mimetype: string; size: number }) {
     return this.recipesService.uploadImage(id, file);
   }
 

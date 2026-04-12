@@ -1,4 +1,3 @@
-/// <reference types="multer" />
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { ConfigService } from '@nestjs/config';
@@ -460,7 +459,7 @@ Return ONLY valid JSON, no markdown, no explanation.`,
 
   // ── Recipe Images ──
 
-  async uploadImage(recipeId: string, file: Express.Multer.File): Promise<RecipeImage> {
+  async uploadImage(recipeId: string, file: { buffer: Buffer; originalname: string; mimetype: string; size: number }): Promise<RecipeImage> {
     await this.findOne(recipeId);
     const ext = path.extname(file.originalname) || '.jpg';
     const filename = `${randomUUID()}${ext}`;
