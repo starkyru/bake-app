@@ -56,6 +56,7 @@ export function AdminShell() {
         <Sidebar
           items={sidebarItems}
           onLogout={handleLogout}
+          onToggle={toggleSidebar}
           userName={user?.name}
           userRole={user?.role}
           collapsed={!sidebarOpen}
@@ -93,7 +94,7 @@ export function AdminShell() {
       {/* Main content */}
       <div className="flex flex-1 flex-col overflow-hidden">
         <Header
-          onMenuClick={toggleSidebar}
+          onMobileMenuClick={() => setSidebarOpen(true)}
           userName={user?.name}
           onLogout={handleLogout}
         />

@@ -1,4 +1,4 @@
-import { LogOut } from 'lucide-react';
+import { LogOut, Menu } from 'lucide-react';
 import { NavLink } from 'react-router';
 import { cn } from '../lib/utils';
 
@@ -13,12 +13,13 @@ export interface SidebarItem {
 export interface SidebarProps {
   items: SidebarItem[];
   onLogout: () => void;
+  onToggle?: () => void;
   userName?: string;
   userRole?: string;
   collapsed?: boolean;
 }
 
-export function Sidebar({ items, onLogout, userName, userRole, collapsed }: SidebarProps) {
+export function Sidebar({ items, onLogout, onToggle, userName, userRole, collapsed }: SidebarProps) {
   return (
     <aside
       className={cn(
@@ -33,10 +34,33 @@ export function Sidebar({ items, onLogout, userName, userRole, collapsed }: Side
           collapsed ? 'justify-center px-2' : 'gap-2 px-4',
         )}
       >
-        <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-[#8b4513] text-sm font-bold text-white">
-          B
-        </div>
-        {!collapsed && <span className="text-lg font-bold text-white">Bake App</span>}
+        {collapsed ? (
+          <button
+            type="button"
+            onClick={onToggle}
+            className="flex h-8 w-8 items-center justify-center rounded-lg text-white/70 transition-colors hover:bg-white/10 hover:text-white"
+            aria-label="Expand menu"
+          >
+            <Menu className="h-5 w-5" />
+          </button>
+        ) : (
+          <>
+            <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-[#8b4513] text-sm font-bold text-white">
+              B
+            </div>
+            <span className="flex-1 text-lg font-bold text-white">Bake App</span>
+            {onToggle && (
+              <button
+                type="button"
+                onClick={onToggle}
+                className="rounded-lg p-1 text-white/50 transition-colors hover:bg-white/10 hover:text-white"
+                aria-label="Collapse menu"
+              >
+                <Menu className="h-4 w-4" />
+              </button>
+            )}
+          </>
+        )}
       </div>
 
       {/* Navigation */}
