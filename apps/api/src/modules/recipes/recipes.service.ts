@@ -1,10 +1,15 @@
+/// <reference types="multer" />
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { ConfigService } from '@nestjs/config';
 import { Repository } from 'typeorm';
+import * as fs from 'fs';
+import * as path from 'path';
+import { randomUUID } from 'crypto';
 import Anthropic from '@anthropic-ai/sdk';
 import { Recipe } from './entities/recipe.entity';
 import { RecipeIngredient } from './entities/recipe-ingredient.entity';
+import { RecipeImage } from './entities/recipe-image.entity';
 import { RecipeLink } from './entities/recipe-link.entity';
 import { RecipeVersion } from './entities/recipe-version.entity';
 import { InventoryMovement } from '../inventory/entities/inventory-movement.entity';
@@ -19,9 +24,12 @@ import BigNumber from 'bignumber.js';
 export class RecipesService {
   private anthropic: Anthropic;
 
+  private readonly uploadsDir: string;
+
   constructor(
     @InjectRepository(Recipe) private recipeRepo: Repository<Recipe>,
     @InjectRepository(RecipeIngredient) private ingredientRepo: Repository<RecipeIngredient>,
+    @InjectRepository(RecipeImage) private imageRepo: Repository<RecipeImage>,
     @InjectRepository(RecipeLink) private linkRepo: Repository<RecipeLink>,
     @InjectRepository(RecipeVersion) private versionRepo: Repository<RecipeVersion>,
     @InjectRepository(InventoryMovement) private movementRepo: Repository<InventoryMovement>,
@@ -32,6 +40,8 @@ export class RecipesService {
     this.anthropic = new Anthropic({
       apiKey: this.configService.get('ANTHROPIC_API_KEY'),
     });
+    this.uploadsDir = path.resolve(process.cwd(), 'uploads', 'recipes');
+    fs.mkdirSync(this.uploadsDir, { recursive: true });
   }
 
   async findAll(query: PaginationDto): Promise<PaginatedResponseDto<Recipe>> {
@@ -446,6 +456,46 @@ Return ONLY valid JSON, no markdown, no explanation.`,
       }
       throw new BadRequestException(`AI service error: ${message}`);
     }
+  }
+
+  // ── Recipe Images ──
+
+  async uploadImage(recipeId: string, file: Express.Multer.File): Promise<RecipeImage> {
+    await this.findOne(recipeId);
+    const ext = path.extname(file.originalname) || '.jpg';
+    const filename = `${randomUUID()}${ext}`;
+    const filePath = path.join(this.uploadsDir, filename);
+    fs.writeFileSync(filePath, file.buffer);
+
+    const maxSort = await this.imageRepo
+      .createQueryBuilder('img')
+      .select('COALESCE(MAX(img.sortOrder), -1)', 'max')
+      .where('img.recipeId = :recipeId', { recipeId })
+      .getRawOne();
+
+    const image = this.imageRepo.create({
+      filename,
+      originalName: file.originalname,
+      mimeType: file.mimetype,
+      sizeBytes: file.size,
+      sortOrder: (maxSort?.max ?? -1) + 1,
+      recipeId,
+    });
+    return this.imageRepo.save(image);
+  }
+
+  async deleteImage(recipeId: string, imageId: string): Promise<void> {
+    const image = await this.imageRepo.findOne({ where: { id: imageId, recipeId } });
+    if (!image) throw new NotFoundException('Image not found');
+    const filePath = path.join(this.uploadsDir, image.filename);
+    if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+    await this.imageRepo.remove(image);
+  }
+
+  getImagePath(filename: string): string {
+    const filePath = path.join(this.uploadsDir, filename);
+    if (!fs.existsSync(filePath)) throw new NotFoundException('Image file not found');
+    return filePath;
   }
 
   private processLink(link: { url: string; title?: string; description?: string; isYoutube?: boolean; youtubeVideoId?: string }) {
