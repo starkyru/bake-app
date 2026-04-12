@@ -116,3 +116,28 @@ export function useGenerateRecipeFromText() {
       apiClient.post<any>('/v1/recipes/generate/from-text', data),
   });
 }
+
+export function useUploadRecipeImage() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ recipeId, file }: { recipeId: string; file: File }) => {
+      const formData = new FormData();
+      formData.append('image', file);
+      return apiClient.upload<any>(`/v1/recipes/${recipeId}/images`, formData);
+    },
+    onSuccess: (_data, { recipeId }) => {
+      qc.invalidateQueries({ queryKey: recipeKeys.detail(recipeId) });
+    },
+  });
+}
+
+export function useDeleteRecipeImage() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ recipeId, imageId }: { recipeId: string; imageId: string }) =>
+      apiClient.del(`/v1/recipes/${recipeId}/images/${imageId}`),
+    onSuccess: (_data, { recipeId }) => {
+      qc.invalidateQueries({ queryKey: recipeKeys.detail(recipeId) });
+    },
+  });
+}

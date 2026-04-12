@@ -4,6 +4,7 @@ node_modules/
 **/*.d.ts
 dist/
 tmp/
+uploads/
 .angular/
 .nx/
 coverage/

@@ -1,6 +1,7 @@
 import { Entity, Column, OneToMany } from 'typeorm';
 import { BaseEntity } from '../../../common/entities/base.entity';
 import { RecipeIngredient } from './recipe-ingredient.entity';
+import { RecipeImage } from './recipe-image.entity';
 import { RecipeLink } from './recipe-link.entity';
 import { RecipeVersion } from './recipe-version.entity';
 
@@ -32,6 +33,9 @@ export class Recipe extends BaseEntity {
 
   @OneToMany(() => RecipeIngredient, ri => ri.recipe, { cascade: true, eager: true })
   ingredients: RecipeIngredient[];
+
+  @OneToMany(() => RecipeImage, img => img.recipe, { cascade: true, eager: true })
+  images: RecipeImage[];
 
   @OneToMany(() => RecipeLink, rl => rl.recipe, { cascade: true, eager: true })
   links: RecipeLink[];

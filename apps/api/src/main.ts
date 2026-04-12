@@ -3,6 +3,7 @@ import { ClassSerializerInterceptor, ValidationPipe } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { IoAdapter } from '@nestjs/platform-socket.io';
 import * as express from 'express';
+import * as path from 'path';
 import helmet from 'helmet';
 import { AppModule } from './app.module';
 import { AllExceptionsFilter } from './common/filters/http-exception.filter';
@@ -63,6 +64,9 @@ async function bootstrap() {
     origin: [...new Set(corsOrigins)],
     credentials: true,
   });
+
+  // Static file serving for uploads
+  app.use('/api/uploads', express.static(path.resolve(process.cwd(), 'uploads')));
 
   // WebSocket adapter
   app.useWebSocketAdapter(new IoAdapter(app));

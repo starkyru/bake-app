@@ -492,12 +492,6 @@ Return ONLY valid JSON, no markdown, no explanation.`,
     await this.imageRepo.remove(image);
   }
 
-  getImagePath(filename: string): string {
-    const filePath = path.join(this.uploadsDir, filename);
-    if (!fs.existsSync(filePath)) throw new NotFoundException('Image file not found');
-    return filePath;
-  }
-
   private processLink(link: { url: string; title?: string; description?: string; isYoutube?: boolean; youtubeVideoId?: string }) {
     const youtubeMatch = link.url.match(
       /(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/,

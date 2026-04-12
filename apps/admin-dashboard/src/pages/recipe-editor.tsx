@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router';
 import {
   ArrowLeft,
+  ImagePlus,
   Plus,
   Trash2,
   Save,
@@ -9,9 +10,10 @@ import {
   Video,
   Search,
   Sparkles,
+  X,
 } from 'lucide-react';
 import { toast } from 'sonner';
-import type { RecipeIngredient, RecipeLink, Ingredient } from '@bake-app/shared-types';
+import type { RecipeIngredient, RecipeLink, RecipeImage, Ingredient } from '@bake-app/shared-types';
 import {
   useRecipe,
   useCreateRecipe,
@@ -19,6 +21,8 @@ import {
   useIngredients,
   useIngredientCategories,
   useRecipeCost,
+  useUploadRecipeImage,
+  useDeleteRecipeImage,
 } from '@bake-app/react/api-client';
 import {
   PageContainer,
@@ -155,6 +159,8 @@ export function RecipeEditorPage() {
   const { data: recipeCost } = useRecipeCost(isNew ? '' : id!);
   const createRecipe = useCreateRecipe();
   const updateRecipe = useUpdateRecipe();
+  const uploadImage = useUploadRecipeImage();
+  const deleteImage = useDeleteRecipeImage();
 
   // Form state
   const [name, setName] = useState('');
@@ -840,6 +846,79 @@ export function RecipeEditorPage() {
             </div>
           )}
         </div>
+
+        {/* Images Section */}
+        {!isNew && (
+          <div className="rounded-xl border border-[#8b4513]/10 bg-white p-6 shadow-sm">
+            <div className="flex items-center justify-between">
+              <h3 className="text-base font-semibold text-[#3e2723]">Images</h3>
+              <label className="flex cursor-pointer items-center gap-1.5 rounded-lg border border-[#8b4513]/20 px-3 py-1.5 text-sm font-medium text-[#8b4513] transition-all hover:bg-[#faf3e8]">
+                <ImagePlus size={14} />
+                Upload
+                <input
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  className="hidden"
+                  onChange={(e) => {
+                    const files = e.target.files;
+                    if (!files) return;
+                    Array.from(files).forEach((file) => {
+                      uploadImage.mutate(
+                        { recipeId: id!, file },
+                        {
+                          onSuccess: () => toast.success(`Uploaded ${file.name}`),
+                          onError: () => toast.error(`Failed to upload ${file.name}`),
+                        },
+                      );
+                    });
+                    e.target.value = '';
+                  }}
+                />
+              </label>
+            </div>
+
+            {(!existingRecipe?.images || existingRecipe.images.length === 0) ? (
+              <div className="mt-4 rounded-lg border-2 border-dashed border-gray-200 py-8 text-center text-sm text-gray-400">
+                No images yet. Upload photos of the finished product or preparation steps.
+              </div>
+            ) : (
+              <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+                {(existingRecipe.images as RecipeImage[]).map((img) => (
+                  <div key={img.id} className="group relative overflow-hidden rounded-lg border border-gray-200">
+                    <img
+                      src={`/api/uploads/recipes/${img.filename}`}
+                      alt={img.originalName}
+                      className="aspect-square w-full object-cover"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        deleteImage.mutate(
+                          { recipeId: id!, imageId: img.id },
+                          {
+                            onSuccess: () => toast.success('Image deleted'),
+                            onError: () => toast.error('Failed to delete image'),
+                          },
+                        );
+                      }}
+                      className="absolute right-1 top-1 rounded-full bg-black/50 p-1 text-white opacity-0 transition-opacity group-hover:opacity-100 hover:bg-black/70"
+                      title="Delete image"
+                    >
+                      <X size={14} />
+                    </button>
+                    <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/50 to-transparent p-2 opacity-0 transition-opacity group-hover:opacity-100">
+                      <p className="truncate text-xs text-white">{img.originalName}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+            {uploadImage.isPending && (
+              <div className="mt-2 text-center text-xs text-gray-400">Uploading...</div>
+            )}
+          </div>
+        )}
 
         {/* Links Section */}
         <div className="rounded-xl border border-[#8b4513]/10 bg-white p-6 shadow-sm">

@@ -82,6 +82,32 @@ export const apiClient = {
   del<T>(path: string): Promise<T> {
     return request<T>('DELETE', path);
   },
+
+  async upload<T>(path: string, formData: FormData): Promise<T> {
+    const headers: Record<string, string> = {};
+    const token = localStorage.getItem('token');
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+
+    const response = await fetch(`${BASE_URL}${path}`, {
+      method: 'POST',
+      headers,
+      body: formData,
+    });
+
+    if (response.status === 401) {
+      localStorage.removeItem('token');
+      deleteSharedCookie();
+      window.location.href = '/login';
+      throw new ApiError(401, 'Unauthorized');
+    }
+
+    if (!response.ok) {
+      const errorBody = await response.json().catch(() => ({}));
+      throw new ApiError(response.status, errorBody.message || response.statusText);
+    }
+
+    return response.json();
+  },
 };
 
 export { ApiError };

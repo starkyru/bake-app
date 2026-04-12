@@ -76,6 +76,8 @@ export {
   useGenerateRecipeFromUrl,
   useGenerateRecipeFromImage,
   useGenerateRecipeFromText,
+  useUploadRecipeImage,
+  useDeleteRecipeImage,
 } from './hooks/recipes';
 export type { RecipeCostResult } from './hooks/recipes';
 

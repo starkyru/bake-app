@@ -208,6 +208,7 @@ export interface Recipe {
   productId?: string;
   isActive: boolean;
   ingredients: RecipeIngredient[];
+  images: RecipeImage[];
   links: RecipeLink[];
 }
 
@@ -217,6 +218,15 @@ export interface RecipeIngredient {
   ingredientName?: string;
   quantity: number;
   unit: string;
+}
+
+export interface RecipeImage {
+  id: string;
+  filename: string;
+  originalName: string;
+  mimeType: string;
+  sizeBytes: number;
+  sortOrder: number;
 }
 
 export interface RecipeLink {

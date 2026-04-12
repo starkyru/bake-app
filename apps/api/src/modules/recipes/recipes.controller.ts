@@ -1,5 +1,6 @@
-import { Controller, Get, Post, Put, Delete, Body, Param, Query, UseGuards, Request } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
+import { Controller, Get, Post, Put, Delete, Body, Param, Query, UseGuards, UseInterceptors, UploadedFile, Request } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { ApiTags, ApiOperation, ApiBearerAuth, ApiConsumes } from '@nestjs/swagger';
 import { RecipesService } from './recipes.service';
 import { CreateRecipeDto, UpdateRecipeDto, ScaleRecipeDto, GenerateFromUrlDto, GenerateFromImageDto, GenerateFromTextDto } from './dto';
 import { PaginationDto } from '../../common/dto/pagination.dto';
@@ -78,4 +79,29 @@ export class RecipesController {
   @RequirePermissions('recipes:read')
   @ApiOperation({ summary: 'Get recipe version history' })
   getVersions(@Param('id') id: string) { return this.recipesService.getVersions(id); }
+
+  @Post(':id/images')
+  @RequirePermissions('recipes:update')
+  @UseInterceptors(FileInterceptor('image', {
+    limits: { fileSize: 10 * 1024 * 1024 },
+    fileFilter: (_req, file, cb) => {
+      if (!file.mimetype.startsWith('image/')) {
+        cb(new Error('Only image files are allowed'), false);
+      } else {
+        cb(null, true);
+      }
+    },
+  }))
+  @ApiConsumes('multipart/form-data')
+  @ApiOperation({ summary: 'Upload recipe image' })
+  uploadImage(@Param('id') id: string, @UploadedFile() file: Express.Multer.File) {
+    return this.recipesService.uploadImage(id, file);
+  }
+
+  @Delete(':id/images/:imageId')
+  @RequirePermissions('recipes:update')
+  @ApiOperation({ summary: 'Delete recipe image' })
+  deleteImage(@Param('id') id: string, @Param('imageId') imageId: string) {
+    return this.recipesService.deleteImage(id, imageId);
+  }
 }
