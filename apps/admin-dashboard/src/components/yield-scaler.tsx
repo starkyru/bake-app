@@ -80,7 +80,7 @@ export function YieldScaler({
             value={customScale}
             onChange={(e) => handleCustom(e.target.value)}
             placeholder="Custom"
-            className="w-20 rounded-lg border border-gray-200 bg-gray-50 px-2 py-1.5 text-center text-sm focus:border-[#8b4513] focus:bg-white focus:outline-none focus:ring-1 focus:ring-[#8b4513]/30"
+            className="w-24 rounded-lg border border-gray-200 bg-gray-50 px-2 py-1.5 text-center text-sm focus:border-[#8b4513] focus:bg-white focus:outline-none focus:ring-1 focus:ring-[#8b4513]/30"
           />
         </div>
       </div>
