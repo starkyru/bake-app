@@ -383,7 +383,7 @@ export function RecipeEditorPage() {
         return {
           url: l.url.trim(),
           title: l.title.trim() || undefined,
-          isVideo: !!ytId,
+          isYoutube: !!ytId,
           youtubeVideoId: ytId ?? undefined,
         };
       });
@@ -396,7 +396,6 @@ export function RecipeEditorPage() {
       instructions: instructions.trim() || undefined,
       ingredients,
       links,
-      isActive: true,
     };
 
     try {
