@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router';
-import { Plus, Pencil, Trash2, ShoppingBag, Sparkles, Type, Image, Leaf } from 'lucide-react';
+import { Plus, Pencil, Trash2, ShoppingBag, Sparkles, Type, Image, Leaf, Eye } from 'lucide-react';
 import { toast } from 'sonner';
 import type { Recipe } from '@bake-app/shared-types';
 import {
@@ -188,8 +188,15 @@ export function RecipesPage() {
       label: 'Actions',
       type: 'actions',
       sortable: false,
-      width: '140px',
+      width: '180px',
       actions: [
+        {
+          action: 'view',
+          icon: <Eye size={16} />,
+          tooltip: 'View recipe',
+          color: 'text-emerald-500 hover:text-emerald-700',
+          onClick: (row: Recipe) => navigate(`/recipes/${row.id}/view`),
+        },
         {
           action: 'edit',
           icon: <Pencil size={16} />,

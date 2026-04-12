@@ -10,6 +10,7 @@ import { MenuDetailPage } from './pages/menu-detail';
 import { IngredientsPage } from './pages/ingredients';
 import { RecipesPage } from './pages/recipes';
 import { RecipeEditorPage } from './pages/recipe-editor';
+import { RecipeViewPage } from './pages/recipe-view';
 import { InventoryPage } from './pages/inventory';
 import { InventoryDetailPage } from './pages/inventory-detail';
 import { FinancePage } from './pages/finance';
@@ -45,6 +46,7 @@ const router = createBrowserRouter([
           { path: '/recipes', element: <RecipesPage /> },
           { path: '/recipes/ingredients', element: <IngredientsPage /> },
           { path: '/recipes/:id', element: <RecipeEditorPage /> },
+          { path: '/recipes/:id/view', element: <RecipeViewPage /> },
           { path: '/inventory', element: <InventoryPage /> },
           { path: '/inventory/:id', element: <InventoryDetailPage /> },
           { path: '/finance', element: <FinancePage /> },

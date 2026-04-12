@@ -797,33 +797,46 @@ export function RecipeEditorPage() {
                   based on current inventory (FIFO)
                 </span>
               </h4>
-              <div className="space-y-1 text-sm">
-                {recipeCost.ingredients.map((line, i) => (
-                  <div key={i} className="flex justify-between text-gray-600">
-                    <span>
-                      {line.ingredientName}{' '}
-                      <span className="text-xs text-gray-400">
-                        ({line.quantity} {line.unit} x ${line.costPerUnit.toFixed(2)})
-                      </span>
-                    </span>
-                    <span className="font-mono">${line.lineCost.toFixed(2)}</span>
-                  </div>
-                ))}
-                <div className="flex justify-between border-t border-amber-300 pt-1 font-medium text-[#3e2723]">
-                  <span>Total ingredients cost</span>
-                  <span className="font-mono">${recipeCost.ingredientsCost.toFixed(2)}</span>
-                </div>
-                {recipeCost.yieldQuantity > 0 && (
-                  <div className="flex justify-between text-xs text-gray-500">
-                    <span>
-                      Per unit ({recipeCost.yieldQuantity} {recipeCost.yieldUnit})
-                    </span>
-                    <span className="font-mono">
-                      ${(recipeCost.ingredientsCost / recipeCost.yieldQuantity).toFixed(2)}
-                    </span>
-                  </div>
-                )}
-              </div>
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="text-xs text-gray-400">
+                    <th className="pb-1 text-left font-medium">Ingredient</th>
+                    <th className="pb-1 text-right font-medium">Quantity</th>
+                    <th className="pb-1 text-right font-medium">Unit Cost</th>
+                    <th className="pb-1 text-right font-medium">Cost</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {recipeCost.ingredients.map((line, i) => (
+                    <tr key={i} className="text-gray-600">
+                      <td className="py-0.5">{line.ingredientName}</td>
+                      <td className="py-0.5 text-right font-mono text-xs">
+                        {line.quantity} {line.unit}
+                      </td>
+                      <td className="py-0.5 text-right font-mono text-xs">
+                        ${line.costPerUnit.toFixed(2)}/{line.unit}
+                      </td>
+                      <td className="py-0.5 text-right font-mono">${line.lineCost.toFixed(2)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+                <tfoot>
+                  <tr className="border-t border-amber-300 font-medium text-[#3e2723]">
+                    <td className="pt-1" colSpan={3}>Total ingredients cost</td>
+                    <td className="pt-1 text-right font-mono">${recipeCost.ingredientsCost.toFixed(2)}</td>
+                  </tr>
+                  {recipeCost.yieldQuantity > 0 && (
+                    <tr className="text-xs text-gray-500">
+                      <td colSpan={3}>
+                        Per unit ({recipeCost.yieldQuantity} {recipeCost.yieldUnit})
+                      </td>
+                      <td className="text-right font-mono">
+                        ${(recipeCost.ingredientsCost / recipeCost.yieldQuantity).toFixed(2)}
+                      </td>
+                    </tr>
+                  )}
+                </tfoot>
+              </table>
             </div>
           )}
         </div>

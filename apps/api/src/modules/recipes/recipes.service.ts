@@ -263,6 +263,8 @@ Return a JSON object with the following structure:
 
 IMPORTANT: Include ALL ingredients listed on the page and ONLY those ingredients. Do not add ingredients that are not mentioned. Copy instructions exactly as they appear on the page.
 
+LANGUAGE: All English text must use proper grammar — include articles (a, an, the), prepositions, and conjunctions. For example, write "Add the flour to the bowl" not "Add flour to bowl". This is especially important when translating from other languages.
+
 Return ONLY valid JSON, no markdown, no explanation.`,
       },
     ]);
@@ -293,6 +295,8 @@ Return a JSON object with the following structure:
 }
 
 IMPORTANT: Include ALL ingredients listed in the text and ONLY those ingredients. Do not add ingredients that are not mentioned. Convert all quantities to metric (grams for solids, ml for liquids).
+
+LANGUAGE: All English text must use proper grammar — include articles (a, an, the), prepositions, and conjunctions. For example, write "Add the flour to the bowl" not "Add flour to bowl". This is especially important when translating from other languages.
 
 Return ONLY valid JSON, no markdown, no explanation.`,
       },
@@ -333,6 +337,8 @@ Return a JSON object with the following structure:
 }
 
 IMPORTANT: Extract ALL ingredients visible in the image and ONLY those. Convert all quantities to metric (grams for solids, ml for liquids).
+
+LANGUAGE: All English text must use proper grammar — include articles (a, an, the), prepositions, and conjunctions. For example, write "Add the flour to the bowl" not "Add flour to bowl". This is especially important when translating from other languages.
 
 Return ONLY valid JSON, no markdown, no explanation.`,
           },
