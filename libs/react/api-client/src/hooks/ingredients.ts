@@ -13,7 +13,7 @@ export function useIngredients(params?: { category?: string }) {
   return useQuery({
     queryKey: ingredientKeys.list(params),
     queryFn: async () => {
-      const res = await apiClient.get<any>('/v1/ingredients', params);
+      const res = await apiClient.get<any>('/v1/ingredients', { limit: 1000, ...params });
       return Array.isArray(res) ? res : (res?.data ?? []);
     },
   });
