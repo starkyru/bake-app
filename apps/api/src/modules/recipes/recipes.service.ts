@@ -406,37 +406,84 @@ Return ONLY valid JSON, no markdown, no explanation.`,
   }
 
   private async fetchPageContent(url: string): Promise<string> {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 15000);
+    let res: Response;
     try {
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 15000);
-      const res = await fetch(url, {
+      res = await fetch(url, {
         headers: {
           'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
           'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
           'Accept-Language': 'en-US,en;q=0.9',
+          'Sec-Fetch-Dest': 'document',
+          'Sec-Fetch-Mode': 'navigate',
+          'Sec-Fetch-Site': 'none',
+          'Sec-Fetch-User': '?1',
+          'Upgrade-Insecure-Requests': '1',
         },
         signal: controller.signal,
         redirect: 'follow',
       });
-      clearTimeout(timeout);
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const html = await res.text();
-      // Strip HTML tags and extract text content
-      return html
-        .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
-        .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
-        .replace(/<[^>]+>/g, ' ')
-        .replace(/&nbsp;/g, ' ')
-        .replace(/&amp;/g, '&')
-        .replace(/&lt;/g, '<')
-        .replace(/&gt;/g, '>')
-        .replace(/&#\d+;/g, '')
-        .replace(/\s+/g, ' ')
-        .trim()
-        .slice(0, 50000);
     } catch {
-      throw new BadRequestException('Could not fetch the recipe page. Please check the URL or paste the recipe text instead.');
+      throw new BadRequestException('Could not connect to the recipe page. Please paste the recipe text instead.');
+    } finally {
+      clearTimeout(timeout);
     }
+
+    if (!res.ok) {
+      throw new BadRequestException(
+        `The site blocked our request (HTTP ${res.status}). Please copy the recipe text from the page and paste it instead.`,
+      );
+    }
+
+    const html = await res.text();
+
+    // Try to extract JSON-LD Recipe structured data first (most recipe sites embed this)
+    const jsonLdMatch = html.match(/<script[^>]*type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi);
+    if (jsonLdMatch) {
+      for (const block of jsonLdMatch) {
+        try {
+          const jsonStr = block.replace(/<script[^>]*>/i, '').replace(/<\/script>/i, '').trim();
+          const data = JSON.parse(jsonStr);
+          const recipe = this.findRecipeInJsonLd(data);
+          if (recipe) {
+            return JSON.stringify(recipe);
+          }
+        } catch {
+          // Not valid JSON, skip
+        }
+      }
+    }
+
+    // Fall back to stripping HTML
+    return html
+      .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
+      .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
+      .replace(/<[^>]+>/g, ' ')
+      .replace(/&nbsp;/g, ' ')
+      .replace(/&amp;/g, '&')
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>')
+      .replace(/&#\d+;/g, '')
+      .replace(/\s+/g, ' ')
+      .trim()
+      .slice(0, 50000);
+  }
+
+  private findRecipeInJsonLd(data: any): any | null {
+    if (!data) return null;
+    if (Array.isArray(data)) {
+      for (const item of data) {
+        const found = this.findRecipeInJsonLd(item);
+        if (found) return found;
+      }
+      return null;
+    }
+    if (data['@type'] === 'Recipe') return data;
+    if (data['@graph'] && Array.isArray(data['@graph'])) {
+      return this.findRecipeInJsonLd(data['@graph']);
+    }
+    return null;
   }
 
   private async callAnthropic(messages: any[]): Promise<string> {
