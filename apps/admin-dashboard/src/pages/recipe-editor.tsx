@@ -596,14 +596,14 @@ export function RecipeEditorPage() {
                     <th className="pb-2 text-xs font-semibold uppercase tracking-wider text-[#5d4037]">
                       Ingredient
                     </th>
+                    <th className="pb-2 text-xs font-semibold uppercase tracking-wider text-[#5d4037] w-36">
+                      Note
+                    </th>
                     <th className="pb-2 text-xs font-semibold uppercase tracking-wider text-[#5d4037] w-28">
                       Quantity
                     </th>
                     <th className="pb-2 text-xs font-semibold uppercase tracking-wider text-[#5d4037] w-24">
                       Unit
-                    </th>
-                    <th className="pb-2 text-xs font-semibold uppercase tracking-wider text-[#5d4037] w-36">
-                      Note
                     </th>
                     <th className="pb-2 w-12" />
                   </tr>
@@ -762,6 +762,17 @@ export function RecipeEditorPage() {
                         </td>
                         <td className="py-2 pr-2">
                           <input
+                            type="text"
+                            value={row.note || ''}
+                            onChange={(e) =>
+                              updateIngredientRow(idx, 'note', e.target.value)
+                            }
+                            className="w-full rounded-lg border border-gray-200 bg-gray-50 px-2 py-1.5 text-sm focus:border-[#8b4513] focus:bg-white focus:outline-none focus:ring-1 focus:ring-[#8b4513]/30"
+                            placeholder="e.g. sifted"
+                          />
+                        </td>
+                        <td className="py-2 pr-2">
+                          <input
                             type="number"
                             step="0.01"
                             min="0"
@@ -787,17 +798,6 @@ export function RecipeEditorPage() {
                               </option>
                             ))}
                           </select>
-                        </td>
-                        <td className="py-2 pr-2">
-                          <input
-                            type="text"
-                            value={row.note || ''}
-                            onChange={(e) =>
-                              updateIngredientRow(idx, 'note', e.target.value)
-                            }
-                            className="w-full rounded-lg border border-gray-200 bg-gray-50 px-2 py-1.5 text-sm focus:border-[#8b4513] focus:bg-white focus:outline-none focus:ring-1 focus:ring-[#8b4513]/30"
-                            placeholder="e.g. sifted"
-                          />
                         </td>
                         <td className="py-2">
                           <button
@@ -979,6 +979,19 @@ export function RecipeEditorPage() {
             </div>
           )}
         </div>
+      </div>
+
+      {/* Floating save button */}
+      <div className="fixed bottom-6 right-6 z-50">
+        <button
+          type="button"
+          onClick={handleSave}
+          disabled={saving}
+          className="flex items-center gap-2 rounded-full bg-[#8b4513] px-5 py-3 text-sm font-medium text-white shadow-lg transition-all hover:bg-[#5d4037] active:scale-95 disabled:opacity-50"
+        >
+          <Save size={18} />
+          {saving ? 'Saving...' : 'Save'}
+        </button>
       </div>
     </PageContainer>
   );
