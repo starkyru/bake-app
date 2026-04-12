@@ -109,6 +109,8 @@ function levenshtein(a: string, b: string): number {
   return dp[m][n];
 }
 
+const YIELD_UNIT_OPTIONS = ['pcs', 'kg', 'g', 'L', 'ml', 'loaves', 'cakes', 'servings', 'batches'];
+
 const RECIPE_CATEGORIES = ['bread', 'pastry', 'cake', 'beverage', 'sandwich', 'other'] as const;
 const CATEGORY_OPTIONS = RECIPE_CATEGORIES.map((val) => ({
   value: val,
@@ -527,7 +529,7 @@ export function RecipeEditorPage() {
                   onChange={(e) => setYieldUnit(e.target.value)}
                   className="mt-1 w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm focus:border-[#8b4513] focus:bg-white focus:outline-none focus:ring-1 focus:ring-[#8b4513]/30"
                 >
-                  {UNIT_OPTIONS.map((u) => (
+                  {YIELD_UNIT_OPTIONS.map((u) => (
                     <option key={u} value={u}>
                       {u}
                     </option>
@@ -761,10 +763,7 @@ export function RecipeEditorPage() {
                             }
                             className="w-full rounded-lg border border-gray-200 bg-gray-50 px-2 py-1.5 text-sm focus:border-[#8b4513] focus:bg-white focus:outline-none focus:ring-1 focus:ring-[#8b4513]/30"
                           >
-                            {(row.ingredientId && !row.isNew
-                              ? getCompatibleUnits(row.unit)
-                              : UNIT_OPTIONS
-                            ).map((u) => (
+                            {getCompatibleUnits(row.unit).map((u) => (
                               <option key={u} value={u}>
                                 {u}
                               </option>
