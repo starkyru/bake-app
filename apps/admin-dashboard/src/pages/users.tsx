@@ -8,7 +8,7 @@ import {
   useDeleteUser,
   useRoles,
 } from '@bake-app/react/api-client';
-import { DataTable, Modal, FormInput, FormSelect, Button, useConfirmation } from '@bake-app/react/ui';
+import { DataTable, Modal, FormInput, FormSelect, Button, PageContainer, useConfirmation } from '@bake-app/react/ui';
 import type { TableColumn } from '@bake-app/react/ui';
 import type { User } from '@bake-app/shared-types';
 
@@ -198,20 +198,20 @@ export function UsersPage() {
     (editingUser || form.password.trim() !== '');
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-[#3e2723]">Users</h1>
+    <PageContainer
+      title="Users"
+      subtitle="Manage team members and roles"
+      actions={
         <button
           type="button"
           onClick={openCreateDialog}
-          className="flex items-center gap-2 rounded-lg bg-[#8b4513] px-4 py-2.5 text-sm font-medium text-white
-            transition-colors hover:bg-[#7a3b10]"
+          className="flex items-center gap-2 rounded-lg bg-[#8b4513] px-4 py-2 text-sm font-medium text-white transition-all hover:bg-[#5d4037] active:scale-95"
         >
           <UserPlus className="h-4 w-4" />
           Add User
         </button>
-      </div>
-
+      }
+    >
       <DataTable
         columns={columns}
         data={users as User[]}
@@ -300,6 +300,6 @@ export function UsersPage() {
       </Modal>
 
       {confirmDialog}
-    </div>
+    </PageContainer>
   );
 }
