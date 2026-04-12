@@ -1,7 +1,6 @@
-import { useMemo, useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router';
 import {
-  ArrowLeft,
   Pencil,
   Printer,
   Monitor,
@@ -11,19 +10,20 @@ import {
   ChevronsRight,
   Link as LinkIcon,
   Video,
+  Type,
 } from 'lucide-react';
 import { useRecipe, useRecipeCost } from '@bake-app/react/api-client';
 import { PageContainer, LoadingSpinner } from '@bake-app/react/ui';
 import { useWakeLock } from '../hooks/use-wake-lock';
 import { useInstructionSteps } from '../hooks/use-instruction-steps';
+import { CostEstimate } from '../components/cost-estimate';
+import { YieldScaler } from '../components/yield-scaler';
 
-const SCALE_PRESETS = [0.5, 1, 2];
-
-function formatQuantity(qty: number, scale: number): string {
-  const val = qty * scale;
-  const rounded = Math.round(val * 100) / 100;
-  return String(rounded);
-}
+const FONT_SIZES = [
+  { label: 'S', class: 'text-sm', stepClass: 'text-base' },
+  { label: 'M', class: 'text-base', stepClass: 'text-lg' },
+  { label: 'L', class: 'text-lg', stepClass: 'text-xl' },
+] as const;
 
 export function RecipeViewPage() {
   const { id } = useParams<{ id: string }>();
@@ -33,29 +33,13 @@ export function RecipeViewPage() {
   const { isActive: wakeLockActive, isSupported: wakeLockSupported, toggle: toggleWakeLock } = useWakeLock();
 
   const [scaleFactor, setScaleFactor] = useState(1);
-  const [customScale, setCustomScale] = useState('');
   const [viewMode, setViewMode] = useState<'all' | 'steps'>('all');
   const [currentStep, setCurrentStep] = useState(0);
   const [printMenuOpen, setPrintMenuOpen] = useState(false);
+  const [fontSize, setFontSize] = useState(1);
   const printMenuRef = useRef<HTMLDivElement>(null);
 
   const steps = useInstructionSteps(recipe?.instructions);
-
-  const scaledIngredients = useMemo(() => {
-    if (!recipe?.ingredients) return [];
-    return recipe.ingredients.map((ing) => ({
-      ...ing,
-      scaledQuantity: formatQuantity(Number(ing.quantity), scaleFactor),
-    }));
-  }, [recipe?.ingredients, scaleFactor]);
-
-  const scaledYield = useMemo(() => {
-    if (!recipe) return { quantity: 0, unit: '' };
-    return {
-      quantity: Math.round(Number(recipe.yieldQuantity) * scaleFactor * 100) / 100,
-      unit: recipe.yieldUnit,
-    };
-  }, [recipe, scaleFactor]);
 
   // Close print menu on outside click
   useEffect(() => {
@@ -80,17 +64,6 @@ export function RecipeViewPage() {
     }, 100);
   };
 
-  const handleScalePreset = (factor: number) => {
-    setScaleFactor(factor);
-    setCustomScale('');
-  };
-
-  const handleCustomScale = (value: string) => {
-    setCustomScale(value);
-    const num = parseFloat(value);
-    if (num > 0) setScaleFactor(num);
-  };
-
   if (isLoading) {
     return (
       <PageContainer>
@@ -107,20 +80,15 @@ export function RecipeViewPage() {
     );
   }
 
+  const fontConfig = FONT_SIZES[fontSize];
+
   return (
     <PageContainer
       title={recipe.name}
       subtitle={recipe.category ? recipe.category.charAt(0).toUpperCase() + recipe.category.slice(1) : 'Recipe'}
+      backPath="/recipes"
       actions={
         <div className="flex items-center gap-2" data-no-print>
-          <button
-            type="button"
-            onClick={() => navigate('/recipes')}
-            className="flex items-center gap-2 rounded-lg border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 transition-all hover:bg-gray-50"
-          >
-            <ArrowLeft size={16} />
-            Back
-          </button>
           {wakeLockSupported && (
             <button
               type="button"
@@ -175,133 +143,73 @@ export function RecipeViewPage() {
         </div>
       }
     >
-      <div className="space-y-6">
+      <div className="mx-auto max-w-[800px] space-y-6">
         {/* Yield & Multiplier */}
-        <div className="rounded-xl border border-[#8b4513]/10 bg-white p-6 shadow-sm" data-no-print>
-          <div className="flex flex-wrap items-center gap-4">
-            <div className="mr-4">
-              <span className="text-sm font-medium text-[#5d4037]">Yield: </span>
-              <span className="font-mono text-lg font-semibold text-[#3e2723]">
-                {scaledYield.quantity} {scaledYield.unit}
-              </span>
-              {scaleFactor !== 1 && (
-                <span className="ml-2 text-sm text-gray-400">({scaleFactor}x)</span>
-              )}
-            </div>
-            <div className="flex items-center gap-2">
-              {SCALE_PRESETS.map((preset) => (
-                <button
-                  key={preset}
-                  type="button"
-                  onClick={() => handleScalePreset(preset)}
-                  className={`rounded-lg px-3 py-1.5 text-sm font-medium transition-all ${
-                    scaleFactor === preset && !customScale
-                      ? 'bg-[#8b4513] text-white'
-                      : 'border border-gray-200 bg-white text-gray-700 hover:bg-gray-50'
-                  }`}
-                >
-                  {preset}x
-                </button>
-              ))}
-              <input
-                type="number"
-                step="0.1"
-                min="0.1"
-                value={customScale}
-                onChange={(e) => handleCustomScale(e.target.value)}
-                placeholder="Custom"
-                className="w-20 rounded-lg border border-gray-200 bg-gray-50 px-2 py-1.5 text-center text-sm focus:border-[#8b4513] focus:bg-white focus:outline-none focus:ring-1 focus:ring-[#8b4513]/30"
-              />
-            </div>
-          </div>
-        </div>
+        <YieldScaler
+          yieldQuantity={Number(recipe.yieldQuantity)}
+          yieldUnit={recipe.yieldUnit}
+          scaleFactor={scaleFactor}
+          onScaleChange={setScaleFactor}
+        />
 
-        {/* Ingredients */}
-        <div className="rounded-xl border border-[#8b4513]/10 bg-white p-6 shadow-sm" data-print-section="ingredients">
-          <h3 className="text-base font-semibold text-[#3e2723]">Ingredients</h3>
-          {scaledIngredients.length === 0 ? (
-            <p className="mt-4 text-sm text-gray-400">No ingredients listed.</p>
-          ) : (
-            <div className="mt-4 overflow-x-auto">
-              <table className="w-full text-left">
-                <thead>
-                  <tr className="border-b border-gray-100">
-                    <th className="pb-2 text-xs font-semibold uppercase tracking-wider text-[#5d4037]">Ingredient</th>
-                    <th className="pb-2 text-xs font-semibold uppercase tracking-wider text-[#5d4037] w-28 text-right">Quantity</th>
-                    <th className="pb-2 text-xs font-semibold uppercase tracking-wider text-[#5d4037] w-20">Unit</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {scaledIngredients.map((ing, idx) => (
-                    <tr key={idx} className="border-b border-gray-50">
-                      <td className="py-2.5 text-sm text-[#3e2723]">{ing.ingredientName || ing.ingredientId}</td>
-                      <td className="py-2.5 text-right font-mono text-sm text-[#3e2723]">{ing.scaledQuantity}</td>
-                      <td className="py-2.5 text-sm text-gray-500">{ing.unit}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
-
-        {/* Cost Estimate */}
-        {recipeCost && recipeCost.ingredients.length > 0 && (
-          <div className="rounded-lg border border-amber-200 bg-amber-50 p-4" data-no-print>
-            <h4 className="mb-2 text-sm font-medium text-[#5d4037]">
-              Cost Estimate
-              <span className="ml-2 text-xs font-normal text-gray-400">per batch (FIFO)</span>
-            </h4>
-            <div className="space-y-1 text-sm">
-              {recipeCost.ingredients.map((line, i) => (
-                <div key={i} className="flex justify-between text-gray-600">
-                  <span>
-                    {line.ingredientName}{' '}
-                    <span className="text-xs text-gray-400">
-                      ({formatQuantity(line.quantity, scaleFactor)} {line.unit})
-                    </span>
-                  </span>
-                  <span className="font-mono">
-                    ${(line.lineCost * scaleFactor).toFixed(2)}
-                  </span>
-                </div>
-              ))}
-              <div className="flex justify-between border-t border-amber-300 pt-1 font-medium text-[#3e2723]">
-                <span>Total</span>
-                <span className="font-mono">${(recipeCost.ingredientsCost * scaleFactor).toFixed(2)}</span>
-              </div>
-            </div>
-          </div>
+        {/* Cost Estimate (replaces separate ingredients list) */}
+        {recipeCost && (
+          <CostEstimate
+            recipeCost={recipeCost}
+            scaleFactor={scaleFactor}
+            title="Ingredients & Cost"
+          />
         )}
 
         {/* Instructions */}
         {steps.length > 0 && (
           <div className="rounded-xl border border-[#8b4513]/10 bg-white p-6 shadow-sm" data-print-section="instructions">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between gap-2">
               <h3 className="text-base font-semibold text-[#3e2723]">Instructions</h3>
-              <div className="flex rounded-lg border border-gray-200 p-0.5" data-no-print>
-                <button
-                  type="button"
-                  onClick={() => setViewMode('all')}
-                  className={`rounded-md px-3 py-1 text-xs font-medium transition-all ${
-                    viewMode === 'all'
-                      ? 'bg-[#8b4513] text-white'
-                      : 'text-gray-600 hover:text-gray-900'
-                  }`}
-                >
-                  All Steps
-                </button>
-                <button
-                  type="button"
-                  onClick={() => { setViewMode('steps'); setCurrentStep(0); }}
-                  className={`rounded-md px-3 py-1 text-xs font-medium transition-all ${
-                    viewMode === 'steps'
-                      ? 'bg-[#8b4513] text-white'
-                      : 'text-gray-600 hover:text-gray-900'
-                  }`}
-                >
-                  Step by Step
-                </button>
+              <div className="flex items-center gap-2" data-no-print>
+                {/* Font size toggle */}
+                <div className="flex items-center gap-1 rounded-lg border border-gray-200 p-0.5">
+                  <Type size={12} className="ml-1 text-gray-400" />
+                  {FONT_SIZES.map((fs, i) => (
+                    <button
+                      key={fs.label}
+                      type="button"
+                      onClick={() => setFontSize(i)}
+                      className={`rounded-md px-2 py-1 text-xs font-medium transition-all ${
+                        fontSize === i
+                          ? 'bg-[#8b4513] text-white'
+                          : 'text-gray-600 hover:text-gray-900'
+                      }`}
+                    >
+                      {fs.label}
+                    </button>
+                  ))}
+                </div>
+                {/* View mode toggle */}
+                <div className="flex rounded-lg border border-gray-200 p-0.5">
+                  <button
+                    type="button"
+                    onClick={() => setViewMode('all')}
+                    className={`rounded-md px-3 py-1 text-xs font-medium transition-all ${
+                      viewMode === 'all'
+                        ? 'bg-[#8b4513] text-white'
+                        : 'text-gray-600 hover:text-gray-900'
+                    }`}
+                  >
+                    All Steps
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setViewMode('steps'); setCurrentStep(0); }}
+                    className={`rounded-md px-3 py-1 text-xs font-medium transition-all ${
+                      viewMode === 'steps'
+                        ? 'bg-[#8b4513] text-white'
+                        : 'text-gray-600 hover:text-gray-900'
+                    }`}
+                  >
+                    Step by Step
+                  </button>
+                </div>
               </div>
             </div>
 
@@ -313,7 +221,7 @@ export function RecipeViewPage() {
                       <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[#8b4513]/10 text-xs font-semibold text-[#8b4513]">
                         {idx + 1}
                       </span>
-                      <p className="text-sm leading-relaxed text-[#3e2723]">{step}</p>
+                      <p className={`${fontConfig.class} leading-relaxed text-[#3e2723]`}>{step}</p>
                     </div>
                   ))}
                 </div>
@@ -327,7 +235,7 @@ export function RecipeViewPage() {
                       <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#8b4513] text-sm font-bold text-white">
                         {currentStep + 1}
                       </span>
-                      <p className="text-base leading-relaxed text-[#3e2723]">{steps[currentStep]}</p>
+                      <p className={`${fontConfig.stepClass} leading-relaxed text-[#3e2723]`}>{steps[currentStep]}</p>
                     </div>
                   </div>
                   <div className="mt-4 flex items-center justify-center gap-2" data-no-print>

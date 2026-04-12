@@ -15,13 +15,16 @@ select {
   aside, header, nav, [data-no-print] {
     display: none !important;
   }
+  * {
+    overflow: visible !important;
+  }
+  body, html {
+    height: auto !important;
+    background: white !important;
+  }
   main {
     padding: 0 !important;
     margin: 0 !important;
-    overflow: visible !important;
-  }
-  body {
-    background: white !important;
   }
   body.print-ingredients-only [data-print-section="instructions"] {
     display: none !important;

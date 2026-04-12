@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router';
 import {
-  ArrowLeft,
   ImagePlus,
   Plus,
   Trash2,
@@ -28,6 +27,7 @@ import {
   PageContainer,
   LoadingSpinner,
 } from '@bake-app/react/ui';
+import { CostEstimate } from '../components/cost-estimate';
 
 const UNIT_OPTIONS = ['g', 'kg', 'ml', 'L', 'pcs', 'oz', 'lb', 'tbsp', 'tsp'];
 
@@ -436,16 +436,9 @@ export function RecipeEditorPage() {
       subtitle={
         isNew ? 'Create a new recipe' : 'Edit recipe details and ingredients'
       }
+      backPath="/recipes"
       actions={
         <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={() => navigate('/recipes')}
-            className="flex items-center gap-2 rounded-lg border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 transition-all hover:bg-gray-50"
-          >
-            <ArrowLeft size={16} />
-            Back
-          </button>
           <button
             type="button"
             onClick={handleSave}
@@ -458,7 +451,7 @@ export function RecipeEditorPage() {
         </div>
       }
     >
-      <div className="space-y-6">
+      <div className="mx-auto max-w-[1000px] space-y-6">
         {/* AI-generated notice */}
         {aiRecipeData && (
           <div className="flex items-center gap-2 rounded-lg border border-purple-200 bg-purple-50 px-4 py-3 text-sm text-purple-700">
@@ -525,7 +518,7 @@ export function RecipeEditorPage() {
                   placeholder="10"
                 />
               </div>
-              <div className="w-24">
+              <div className="w-36">
                 <label className="block text-sm font-medium text-[#5d4037]">
                   Unit
                 </label>
@@ -549,10 +542,22 @@ export function RecipeEditorPage() {
               Instructions
             </label>
             <textarea
+              ref={(el) => {
+                if (el) {
+                  el.style.height = 'auto';
+                  el.style.height = Math.min(el.scrollHeight, 500) + 'px';
+                }
+              }}
               value={instructions}
-              onChange={(e) => setInstructions(e.target.value)}
+              onChange={(e) => {
+                setInstructions(e.target.value);
+                const el = e.target;
+                el.style.height = 'auto';
+                el.style.height = Math.min(el.scrollHeight, 500) + 'px';
+              }}
               rows={4}
               className="mt-1 w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm focus:border-[#8b4513] focus:bg-white focus:outline-none focus:ring-1 focus:ring-[#8b4513]/30"
+              style={{ maxHeight: 500, overflow: 'auto' }}
               placeholder="Step-by-step instructions..."
             />
           </div>
@@ -795,56 +800,7 @@ export function RecipeEditorPage() {
           )}
 
           {/* Cost Estimate (FIFO from inventory) */}
-          {recipeCost && recipeCost.ingredients.length > 0 && (
-            <div className="mt-4 rounded-lg border border-amber-200 bg-amber-50 p-4">
-              <h4 className="mb-2 text-sm font-medium text-[#5d4037]">
-                Batch Cost Estimate
-                <span className="ml-2 text-xs font-normal text-gray-400">
-                  based on current inventory (FIFO)
-                </span>
-              </h4>
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="text-xs text-gray-400">
-                    <th className="pb-1 text-left font-medium">Ingredient</th>
-                    <th className="pb-1 text-right font-medium">Quantity</th>
-                    <th className="pb-1 text-right font-medium">Unit Cost</th>
-                    <th className="pb-1 text-right font-medium">Cost</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {recipeCost.ingredients.map((line, i) => (
-                    <tr key={i} className="text-gray-600">
-                      <td className="py-0.5">{line.ingredientName}</td>
-                      <td className="py-0.5 text-right font-mono text-xs">
-                        {line.quantity} {line.unit}
-                      </td>
-                      <td className="py-0.5 text-right font-mono text-xs">
-                        ${line.costPerUnit.toFixed(2)}/{line.unit}
-                      </td>
-                      <td className="py-0.5 text-right font-mono">${line.lineCost.toFixed(2)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-                <tfoot>
-                  <tr className="border-t border-amber-300 font-medium text-[#3e2723]">
-                    <td className="pt-1" colSpan={3}>Total ingredients cost</td>
-                    <td className="pt-1 text-right font-mono">${recipeCost.ingredientsCost.toFixed(2)}</td>
-                  </tr>
-                  {recipeCost.yieldQuantity > 0 && (
-                    <tr className="text-xs text-gray-500">
-                      <td colSpan={3}>
-                        Per unit ({recipeCost.yieldQuantity} {recipeCost.yieldUnit})
-                      </td>
-                      <td className="text-right font-mono">
-                        ${(recipeCost.ingredientsCost / recipeCost.yieldQuantity).toFixed(2)}
-                      </td>
-                    </tr>
-                  )}
-                </tfoot>
-              </table>
-            </div>
-          )}
+          {recipeCost && <div className="mt-4"><CostEstimate recipeCost={recipeCost} /></div>}
         </div>
 
         {/* Images Section */}
