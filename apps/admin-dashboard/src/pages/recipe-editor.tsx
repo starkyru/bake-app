@@ -51,9 +51,23 @@ const UNIT_ALIASES: Record<string, string> = {
   tablespoons: 'tbsp',
   teaspoon: 'tsp',
   teaspoons: 'tsp',
-  cup: 'ml',
-  cups: 'ml',
 };
+
+const UNIT_GROUPS: Record<string, string[]> = {
+  g: ['g', 'kg'],
+  kg: ['g', 'kg'],
+  ml: ['ml', 'L', 'tbsp', 'tsp'],
+  L: ['ml', 'L', 'tbsp', 'tsp'],
+  tbsp: ['ml', 'L', 'tbsp', 'tsp'],
+  tsp: ['ml', 'L', 'tbsp', 'tsp'],
+  oz: ['oz', 'lb', 'g', 'kg'],
+  lb: ['oz', 'lb', 'g', 'kg'],
+  pcs: ['pcs'],
+};
+
+function getCompatibleUnits(baseUnit: string): string[] {
+  return UNIT_GROUPS[baseUnit] || UNIT_OPTIONS;
+}
 
 function normalizeUnit(unit: string): string {
   const lower = unit.toLowerCase().trim();
@@ -602,27 +616,25 @@ export function RecipeEditorPage() {
                                   change
                                 </button>
                               </div>
-                            ) : row.isNew ? (
+                            ) : row.isNew && activeIngredientIdx !== idx ? (
                               <div className="flex flex-col gap-1">
                                 <div className="flex items-center gap-2">
-                                  <span className="text-sm font-medium text-[#3e2723]">
-                                    {row.ingredientName}
-                                  </span>
+                                  <input
+                                    type="text"
+                                    value={row.ingredientName}
+                                    onChange={(e) =>
+                                      updateIngredientRow(idx, 'ingredientName', e.target.value)
+                                    }
+                                    className="rounded border border-transparent bg-transparent px-1 py-0.5 text-sm font-medium text-[#3e2723] hover:border-gray-200 focus:border-[#8b4513] focus:bg-white focus:outline-none focus:ring-1 focus:ring-[#8b4513]/30"
+                                  />
                                   <span className="inline-flex items-center rounded-full bg-green-100 px-1.5 py-0.5 text-[10px] font-semibold text-green-700">
                                     New
                                   </span>
                                   <button
                                     type="button"
                                     onClick={() => {
-                                      setIngredientRows((rows) =>
-                                        rows.map((r, i) =>
-                                          i === idx
-                                            ? { ...r, ingredientId: '', ingredientName: '', isNew: undefined, suggestedCategory: undefined }
-                                            : r,
-                                        ),
-                                      );
                                       setActiveIngredientIdx(idx);
-                                      setIngredientSearch('');
+                                      setIngredientSearch(row.ingredientName);
                                     }}
                                     className="text-xs text-blue-500 hover:text-blue-700"
                                   >
@@ -646,26 +658,40 @@ export function RecipeEditorPage() {
                               </div>
                             ) : (
                               <>
-                                <div className="relative">
-                                  <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-gray-400" />
-                                  <input
-                                    type="text"
-                                    value={
-                                      activeIngredientIdx === idx
-                                        ? ingredientSearch
-                                        : ''
-                                    }
-                                    onChange={(e) => {
-                                      setIngredientSearch(e.target.value);
-                                      setActiveIngredientIdx(idx);
-                                    }}
-                                    onFocus={() => {
-                                      setActiveIngredientIdx(idx);
-                                      setIngredientSearch('');
-                                    }}
-                                    placeholder="Search ingredient..."
-                                    className="w-full rounded-lg border border-gray-200 bg-gray-50 py-1.5 pl-8 pr-3 text-sm focus:border-[#8b4513] focus:bg-white focus:outline-none focus:ring-1 focus:ring-[#8b4513]/30"
-                                  />
+                                <div className="relative flex items-center gap-1">
+                                  <div className="relative flex-1">
+                                    <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-gray-400" />
+                                    <input
+                                      type="text"
+                                      value={
+                                        activeIngredientIdx === idx
+                                          ? ingredientSearch
+                                          : ''
+                                      }
+                                      onChange={(e) => {
+                                        setIngredientSearch(e.target.value);
+                                        setActiveIngredientIdx(idx);
+                                      }}
+                                      onFocus={() => {
+                                        setActiveIngredientIdx(idx);
+                                        if (!ingredientSearch) setIngredientSearch('');
+                                      }}
+                                      placeholder="Search ingredient..."
+                                      className="w-full rounded-lg border border-gray-200 bg-gray-50 py-1.5 pl-8 pr-3 text-sm focus:border-[#8b4513] focus:bg-white focus:outline-none focus:ring-1 focus:ring-[#8b4513]/30"
+                                    />
+                                  </div>
+                                  {row.isNew && (
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        setActiveIngredientIdx(null);
+                                        setIngredientSearch('');
+                                      }}
+                                      className="text-xs text-gray-400 hover:text-gray-600 whitespace-nowrap"
+                                    >
+                                      cancel
+                                    </button>
+                                  )}
                                 </div>
                                 {activeIngredientIdx === idx && (
                                   <div className="absolute z-10 mt-1 max-h-48 w-64 overflow-y-auto rounded-lg border border-gray-200 bg-white shadow-lg">
@@ -735,7 +761,10 @@ export function RecipeEditorPage() {
                             }
                             className="w-full rounded-lg border border-gray-200 bg-gray-50 px-2 py-1.5 text-sm focus:border-[#8b4513] focus:bg-white focus:outline-none focus:ring-1 focus:ring-[#8b4513]/30"
                           >
-                            {UNIT_OPTIONS.map((u) => (
+                            {(row.ingredientId && !row.isNew
+                              ? getCompatibleUnits(row.unit)
+                              : UNIT_OPTIONS
+                            ).map((u) => (
                               <option key={u} value={u}>
                                 {u}
                               </option>

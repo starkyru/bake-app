@@ -221,8 +221,8 @@ export class RecipesService {
     {
       "ingredientId": "ingredient-name-slugified",
       "ingredientName": "Ingredient Name",
-      "quantity": number,
-      "unit": "one of: g, kg, ml, L, pcs, oz, lb, tbsp, tsp",
+      "quantity": number (converted to metric — grams for dry/solid ingredients, ml for liquids. Convert cups: 1 cup flour ≈ 125g, 1 cup sugar ≈ 200g, 1 cup butter ≈ 227g, 1 cup milk ≈ 240ml, 1 cup water ≈ 240ml. If the recipe provides both metric and imperial, use the metric value.),
+      "unit": "one of: g, kg, ml, L, pcs, tbsp, tsp (prefer g for solids, ml for liquids)",
       ${categoriesHint}
     }
   ]`;
@@ -249,7 +249,7 @@ Return a JSON object with the following structure:
   "category": "one of: bread, pastry, cake, beverage, sandwich, other",
   "yieldQuantity": number,
   "yieldUnit": "pcs or kg or loaves or cakes or liters",
-  "instructions": "Step by step instructions as plain text, exactly as written on the page",
+  "instructions": "Step by step instructions, each step on its own line as a numbered list (1. ... 2. ... etc). Preserve the original content.",
   ${ingredientSchema},
   "links": [
     {
@@ -286,9 +286,11 @@ Return a JSON object with the following structure:
   "category": "one of: bread, pastry, cake, beverage, sandwich, other",
   "yieldQuantity": number,
   "yieldUnit": "pcs or kg or loaves or cakes or liters",
-  "instructions": "Step by step instructions as plain text",
+  "instructions": "Step by step instructions, each step on its own line as a numbered list (1. ... 2. ... etc)",
   ${ingredientSchema}
 }
+
+IMPORTANT: Include ALL ingredients listed in the text and ONLY those ingredients. Do not add ingredients that are not mentioned. Convert all quantities to metric (grams for solids, ml for liquids).
 
 Return ONLY valid JSON, no markdown, no explanation.`,
       },
@@ -324,9 +326,11 @@ Return a JSON object with the following structure:
   "category": "one of: bread, pastry, cake, beverage, sandwich, other",
   "yieldQuantity": number,
   "yieldUnit": "pcs or kg or loaves or cakes or liters",
-  "instructions": "Step by step instructions as plain text",
+  "instructions": "Step by step instructions, each step on its own line as a numbered list (1. ... 2. ... etc)",
   ${ingredientSchema}
 }
+
+IMPORTANT: Extract ALL ingredients visible in the image and ONLY those. Convert all quantities to metric (grams for solids, ml for liquids).
 
 Return ONLY valid JSON, no markdown, no explanation.`,
           },
