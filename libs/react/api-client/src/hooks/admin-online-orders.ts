@@ -13,7 +13,7 @@ export function useAdminOnlineOrders(query?: Record<string, unknown>) {
   return useQuery({
     queryKey: adminOnlineOrderKeys.list(query),
     queryFn: async () => {
-      const res = await apiClient.get<any>('/v1/admin/online-orders', query);
+      const res = await apiClient.get<any>('/v1/admin/online-orders', { limit: 1000, ...query });
       return Array.isArray(res) ? res : (res?.data ?? []);
     },
   });

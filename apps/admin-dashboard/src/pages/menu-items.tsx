@@ -62,7 +62,7 @@ export function MenuItemsPage() {
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [saving, setSaving] = useState(false);
 
-  const products = productsResponse?.data ?? [];
+  const products = productsResponse ?? [];
 
   const openCreate = () => {
     setEditingProduct(null);

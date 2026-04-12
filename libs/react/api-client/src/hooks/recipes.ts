@@ -15,7 +15,7 @@ export function useRecipes() {
   return useQuery({
     queryKey: recipeKeys.list(),
     queryFn: async () => {
-      const res = await apiClient.get<any>('/v1/recipes');
+      const res = await apiClient.get<any>('/v1/recipes', { limit: 1000 });
       return Array.isArray(res) ? res : (res?.data ?? []);
     },
   });

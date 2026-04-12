@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '../api-client';
 import type { Order, Payment } from '@bake-app/shared-types';
-import type { PaginatedResponse } from '../types';
+
 
 export const orderKeys = {
   all: ['orders'] as const,
@@ -15,8 +15,10 @@ export const orderKeys = {
 export function useOrders(params?: { limit?: number; page?: number }) {
   return useQuery({
     queryKey: orderKeys.list(params),
-    queryFn: () =>
-      apiClient.get<PaginatedResponse<Order>>('/v1/orders', params),
+    queryFn: async () => {
+      const res = await apiClient.get<any>('/v1/orders', { limit: 1000, ...params });
+      return Array.isArray(res) ? res : (res?.data ?? []);
+    },
   });
 }
 

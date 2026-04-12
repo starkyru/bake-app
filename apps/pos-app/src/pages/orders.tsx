@@ -14,7 +14,7 @@ export function OrdersPage() {
   const navigate = useNavigate();
   const { data: ordersResponse, isLoading } = useOrders({ limit: 50 });
 
-  const orders = ordersResponse?.data ?? [];
+  const orders = ordersResponse ?? [];
 
   const stats = useMemo(() => {
     const total = orders.length;

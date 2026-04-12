@@ -14,7 +14,7 @@ export function useUsers() {
   return useQuery({
     queryKey: userKeys.list(),
     queryFn: async () => {
-      const res = await apiClient.get<any>('/v1/users');
+      const res = await apiClient.get<any>('/v1/users', { limit: 1000 });
       return Array.isArray(res) ? res : (res?.data ?? []);
     },
   });

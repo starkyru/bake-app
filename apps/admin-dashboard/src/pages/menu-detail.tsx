@@ -51,7 +51,7 @@ export function MenuDetailPage() {
     }
   }, [menu]);
 
-  const allProducts = productsResponse?.data ?? [];
+  const allProducts = productsResponse ?? [];
 
   const assignedProductIds = useMemo(() => {
     return new Set(menu?.menuProducts?.map((mp) => mp.productId) ?? []);

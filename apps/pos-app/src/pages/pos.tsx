@@ -69,7 +69,7 @@ export function PosPage() {
   const totalItems = useCartStore(selectTotalItems);
 
   // Filtered products
-  const products = productsResponse?.data ?? [];
+  const products = productsResponse ?? [];
   const activeCategories = categories ?? [];
 
   const filteredProducts = useMemo(() => {

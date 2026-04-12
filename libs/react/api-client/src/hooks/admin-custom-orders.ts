@@ -14,7 +14,7 @@ export function useAdminCustomOrders(query?: Record<string, unknown>) {
   return useQuery({
     queryKey: adminCustomOrderKeys.list(query),
     queryFn: async () => {
-      const res = await apiClient.get<any>('/v1/admin/custom-orders', query);
+      const res = await apiClient.get<any>('/v1/admin/custom-orders', { limit: 1000, ...query });
       return Array.isArray(res) ? res : (res?.data ?? []);
     },
   });

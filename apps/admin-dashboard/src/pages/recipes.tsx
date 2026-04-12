@@ -263,6 +263,7 @@ export function RecipesPage() {
           searchable
           searchPlaceholder="Search recipes..."
           pageSize={25}
+          onRowClick={(row: Recipe) => navigate(`/recipes/${row.id}/view`)}
           toolbarExtra={
             categories.length > 0 ? (
               <div className="flex items-center gap-2">
