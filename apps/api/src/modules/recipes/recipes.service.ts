@@ -1,9 +1,8 @@
-import { Injectable, NotFoundException, BadRequestException, Logger } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { ConfigService } from '@nestjs/config';
 import { Repository } from 'typeorm';
 import Anthropic from '@anthropic-ai/sdk';
-import axios from 'axios';
 import { Recipe } from './entities/recipe.entity';
 import { RecipeIngredient } from './entities/recipe-ingredient.entity';
 import { RecipeLink } from './entities/recipe-link.entity';
@@ -384,13 +383,17 @@ Return ONLY valid JSON, no markdown, no explanation.`,
 
   private async fetchPageContent(url: string): Promise<string> {
     try {
-      const { data } = await axios.get<string>(url, {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 15000);
+      const res = await fetch(url, {
         headers: { 'User-Agent': 'Mozilla/5.0 (compatible; BakeApp/1.0)' },
-        timeout: 15000,
-        maxContentLength: 2 * 1024 * 1024,
+        signal: controller.signal,
       });
+      clearTimeout(timeout);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const html = await res.text();
       // Strip HTML tags and extract text content
-      return data
+      return html
         .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
         .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
         .replace(/<[^>]+>/g, ' ')
