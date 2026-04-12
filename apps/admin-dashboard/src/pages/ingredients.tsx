@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Plus, Pencil, Trash2, X, Filter } from 'lucide-react';
+import { Plus, Pencil, Trash2, X } from 'lucide-react';
 import { toast } from 'sonner';
 import type { Ingredient } from '@bake-app/shared-types';
 import {
@@ -13,6 +13,7 @@ import {
   PageContainer,
   DataTable,
   LoadingSpinner,
+  CategoryFilter,
   useConfirmation,
   type TableColumn,
 } from '@bake-app/react/ui';
@@ -182,23 +183,6 @@ export function IngredientsPage() {
         </button>
       }
     >
-      {/* Category Filter */}
-      <div className="flex items-center gap-2">
-        <Filter size={16} className="text-gray-400" />
-        <select
-          value={categoryFilter}
-          onChange={(e) => setCategoryFilter(e.target.value)}
-          className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm focus:border-[#8b4513] focus:outline-none focus:ring-1 focus:ring-[#8b4513]/30"
-        >
-          <option value="">All Categories</option>
-          {(ingredientCategories ?? []).map((cat) => (
-            <option key={cat.id} value={cat.id}>
-              {cat.name}
-            </option>
-          ))}
-        </select>
-      </div>
-
       {isLoading ? (
         <LoadingSpinner message="Loading ingredients..." />
       ) : (
@@ -208,6 +192,16 @@ export function IngredientsPage() {
           searchable
           searchPlaceholder="Search ingredients..."
           pageSize={25}
+          toolbarExtra={
+            <CategoryFilter
+              value={categoryFilter}
+              onChange={setCategoryFilter}
+              options={(ingredientCategories ?? []).map((cat) => ({
+                value: cat.id,
+                label: cat.name,
+              }))}
+            />
+          }
         />
       )}
 

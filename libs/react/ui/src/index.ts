@@ -44,5 +44,8 @@ export type { BreadcrumbsProps, BreadcrumbItem } from './components/breadcrumbs'
 export { ErrorBoundary } from './components/error-boundary';
 export type { ErrorBoundaryProps } from './components/error-boundary';
 
+export { CategoryFilter } from './components/category-filter';
+export type { CategoryFilterProps, CategoryFilterOption } from './components/category-filter';
+
 export { FormInput, FormSelect, FormTextarea, Button } from './components/form-fields';
 export type { FormInputProps, FormSelectProps, FormTextareaProps, ButtonProps } from './components/form-fields';

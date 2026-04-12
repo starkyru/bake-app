@@ -23,6 +23,7 @@ import {
   StatsCard,
   DataTable,
   LoadingSpinner,
+  CategoryFilter,
   useConfirmation,
   type TableColumn,
 } from '@bake-app/react/ui';
@@ -52,6 +53,7 @@ export function InventoryPage() {
 
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [categoryFilter, setCategoryFilter] = useState('');
   const [form, setForm] = useState({
     title: '',
     ingredientId: '',
@@ -62,6 +64,26 @@ export function InventoryPage() {
   });
 
   const inventoryItems: InventoryItem[] = (items as InventoryItem[]) ?? [];
+
+  const ingredientCategoryOptions = useMemo(() => {
+    const seen = new Map<string, string>();
+    for (const item of inventoryItems) {
+      const cat = (item as any).ingredient?.category;
+      if (cat?.id && cat?.name && !seen.has(cat.id)) {
+        seen.set(cat.id, cat.name);
+      }
+    }
+    return [...seen.entries()]
+      .map(([value, label]) => ({ value, label }))
+      .sort((a, b) => a.label.localeCompare(b.label));
+  }, [inventoryItems]);
+
+  const filteredItems = useMemo(() => {
+    if (!categoryFilter) return inventoryItems;
+    return inventoryItems.filter(
+      (item) => (item as any).ingredient?.category?.id === categoryFilter,
+    );
+  }, [inventoryItems, categoryFilter]);
 
   const stats = useMemo(() => {
     const total = inventoryItems.length;
@@ -244,11 +266,18 @@ export function InventoryPage() {
       ) : (
         <DataTable
           columns={columns}
-          data={inventoryItems}
+          data={filteredItems}
           onRowClick={(row) => navigate(`/inventory/${row.id}`)}
           searchable
           searchPlaceholder="Search inventory..."
           pageSize={10}
+          toolbarExtra={
+            <CategoryFilter
+              value={categoryFilter}
+              onChange={setCategoryFilter}
+              options={ingredientCategoryOptions}
+            />
+          }
         />
       )}
 

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { Plus, Pencil, Trash2, X, ListChecks } from 'lucide-react';
 import BigNumber from 'bignumber.js';
@@ -18,6 +18,7 @@ import {
   DataTable,
   LoadingSpinner,
   CurrencyDisplay,
+  CategoryFilter,
   useConfirmation,
   type TableColumn,
 } from '@bake-app/react/ui';
@@ -61,8 +62,19 @@ export function MenuItemsPage() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [saving, setSaving] = useState(false);
+  const [categoryFilter, setCategoryFilter] = useState('');
 
   const products = productsResponse ?? [];
+
+  const categoryOptions = useMemo(
+    () => (categories ?? []).map((c: any) => ({ value: c.id, label: c.name })),
+    [categories],
+  );
+
+  const filteredProducts = useMemo(() => {
+    if (!categoryFilter) return products;
+    return products.filter((p: any) => p.category?.id === categoryFilter || p.categoryId === categoryFilter);
+  }, [products, categoryFilter]);
 
   const openCreate = () => {
     setEditingProduct(null);
@@ -237,10 +249,17 @@ export function MenuItemsPage() {
       ) : (
         <DataTable
           columns={columns}
-          data={products}
+          data={filteredProducts}
           searchable
           searchPlaceholder="Search products..."
           pageSize={25}
+          toolbarExtra={
+            <CategoryFilter
+              value={categoryFilter}
+              onChange={setCategoryFilter}
+              options={categoryOptions}
+            />
+          }
         />
       )}
 

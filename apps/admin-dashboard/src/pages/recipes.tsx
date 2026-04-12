@@ -16,6 +16,7 @@ import {
   DataTable,
   LoadingSpinner,
   Modal,
+  CategoryFilter,
   useConfirmation,
   type TableColumn,
 } from '@bake-app/react/ui';
@@ -265,31 +266,14 @@ export function RecipesPage() {
           pageSize={25}
           onRowClick={(row: Recipe) => navigate(`/recipes/${row.id}/view`)}
           toolbarExtra={
-            categories.length > 0 ? (
-              <div className="flex items-center gap-2">
-                <select
-                  value={selectedCategory}
-                  onChange={(e) => setSelectedCategory(e.target.value)}
-                  className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-700 focus:border-[#8b4513] focus:outline-none focus:ring-1 focus:ring-[#8b4513]/30"
-                >
-                  <option value="">All Categories</option>
-                  {categories.map((cat) => (
-                    <option key={cat} value={cat}>
-                      {cat.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())}
-                    </option>
-                  ))}
-                </select>
-                {selectedCategory && (
-                  <button
-                    type="button"
-                    onClick={() => setSelectedCategory('')}
-                    className="text-xs text-gray-400 hover:text-gray-600"
-                  >
-                    Clear
-                  </button>
-                )}
-              </div>
-            ) : undefined
+            <CategoryFilter
+              value={selectedCategory}
+              onChange={setSelectedCategory}
+              options={categories.map((cat) => ({
+                value: cat,
+                label: cat.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()),
+              }))}
+            />
           }
         />
       )}
