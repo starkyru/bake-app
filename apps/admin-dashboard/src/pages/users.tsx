@@ -1,5 +1,5 @@
 import { useState, useCallback, type FormEvent } from 'react';
-import { Pencil, Trash2, UserPlus, Loader2, X } from 'lucide-react';
+import { Pencil, Trash2, UserPlus, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import {
   useUsers,
@@ -8,7 +8,7 @@ import {
   useDeleteUser,
   useRoles,
 } from '@bake-app/react/api-client';
-import { DataTable, useConfirmation } from '@bake-app/react/ui';
+import { DataTable, Modal, FormInput, FormSelect, Button, useConfirmation } from '@bake-app/react/ui';
 import type { TableColumn } from '@bake-app/react/ui';
 import type { User } from '@bake-app/shared-types';
 
@@ -221,132 +221,83 @@ export function UsersPage() {
       />
 
       {/* Create/Edit Dialog */}
-      {dialogOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center">
-          <div className="absolute inset-0 bg-black/40" onClick={() => setDialogOpen(false)} />
-          <div className="relative z-10 w-full max-w-md rounded-xl bg-white p-6 shadow-xl">
-            <div className="mb-5 flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-[#3e2723]">
-                {editingUser ? 'Edit User' : 'Add User'}
-              </h2>
-              <button
-                type="button"
-                onClick={() => setDialogOpen(false)}
-                className="rounded-lg p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="mb-1 block text-sm font-medium text-[#5d4037]">
-                    First Name
-                  </label>
-                  <input
-                    type="text"
-                    value={form.firstName}
-                    onChange={(e) => updateField('firstName', e.target.value)}
-                    required
-                    className="w-full rounded-lg border border-[#d7ccc8] px-3 py-2.5 text-sm text-[#3e2723]
-                      focus:border-[#8b4513] focus:outline-none focus:ring-2 focus:ring-[#8b4513]/20"
-                  />
-                </div>
-                <div>
-                  <label className="mb-1 block text-sm font-medium text-[#5d4037]">
-                    Last Name
-                  </label>
-                  <input
-                    type="text"
-                    value={form.lastName}
-                    onChange={(e) => updateField('lastName', e.target.value)}
-                    required
-                    className="w-full rounded-lg border border-[#d7ccc8] px-3 py-2.5 text-sm text-[#3e2723]
-                      focus:border-[#8b4513] focus:outline-none focus:ring-2 focus:ring-[#8b4513]/20"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="mb-1 block text-sm font-medium text-[#5d4037]">Email</label>
-                <input
-                  type="email"
-                  value={form.email}
-                  onChange={(e) => updateField('email', e.target.value)}
-                  required
-                  className="w-full rounded-lg border border-[#d7ccc8] px-3 py-2.5 text-sm text-[#3e2723]
-                    focus:border-[#8b4513] focus:outline-none focus:ring-2 focus:ring-[#8b4513]/20"
-                />
-              </div>
-
-              {!editingUser && (
-                <div>
-                  <label className="mb-1 block text-sm font-medium text-[#5d4037]">Password</label>
-                  <input
-                    type="password"
-                    value={form.password}
-                    onChange={(e) => updateField('password', e.target.value)}
-                    required
-                    className="w-full rounded-lg border border-[#d7ccc8] px-3 py-2.5 text-sm text-[#3e2723]
-                      focus:border-[#8b4513] focus:outline-none focus:ring-2 focus:ring-[#8b4513]/20"
-                  />
-                </div>
-              )}
-
-              <div>
-                <label className="mb-1 block text-sm font-medium text-[#5d4037]">Role</label>
-                <select
-                  value={form.roleId}
-                  onChange={(e) => updateField('roleId', e.target.value)}
-                  className="w-full rounded-lg border border-[#d7ccc8] px-3 py-2.5 text-sm text-[#3e2723]
-                    focus:border-[#8b4513] focus:outline-none focus:ring-2 focus:ring-[#8b4513]/20"
-                >
-                  <option value="">Select role...</option>
-                  {(roles as any[]).map((role: any) => (
-                    <option key={role.id} value={role.id}>
-                      {role.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  id="isActive"
-                  checked={form.isActive}
-                  onChange={(e) => updateField('isActive', e.target.checked)}
-                  className="h-4 w-4 rounded border-gray-300 text-[#8b4513] focus:ring-[#8b4513]"
-                />
-                <label htmlFor="isActive" className="text-sm font-medium text-[#5d4037]">
-                  Active
-                </label>
-              </div>
-
-              <div className="flex justify-end gap-3 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setDialogOpen(false)}
-                  className="rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-600
-                    transition-colors hover:bg-gray-50"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={!isFormValid || saving}
-                  className="flex items-center gap-2 rounded-lg bg-[#8b4513] px-4 py-2 text-sm font-medium text-white
-                    transition-colors hover:bg-[#7a3b10] disabled:opacity-60 disabled:cursor-not-allowed"
-                >
-                  {saving && <Loader2 className="h-4 w-4 animate-spin" />}
-                  {editingUser ? 'Update' : 'Create'}
-                </button>
-              </div>
-            </form>
+      <Modal
+        open={dialogOpen}
+        onClose={() => setDialogOpen(false)}
+        title={editingUser ? 'Edit User' : 'Add User'}
+        footer={
+          <>
+            <Button variant="secondary" onClick={() => setDialogOpen(false)}>Cancel</Button>
+            <Button
+              onClick={handleSubmit as any}
+              loading={saving}
+              disabled={!isFormValid}
+              icon={saving ? <Loader2 className="h-4 w-4 animate-spin" /> : undefined}
+            >
+              {editingUser ? 'Update' : 'Create'}
+            </Button>
+          </>
+        }
+      >
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="grid grid-cols-2 gap-3">
+            <FormInput
+              label="First Name"
+              value={form.firstName}
+              onChange={(e) => updateField('firstName', e.target.value)}
+              required
+            />
+            <FormInput
+              label="Last Name"
+              value={form.lastName}
+              onChange={(e) => updateField('lastName', e.target.value)}
+              required
+            />
           </div>
-        </div>
-      )}
+
+          <FormInput
+            label="Email"
+            type="email"
+            value={form.email}
+            onChange={(e) => updateField('email', e.target.value)}
+            required
+          />
+
+          {!editingUser && (
+            <FormInput
+              label="Password"
+              type="password"
+              value={form.password}
+              onChange={(e) => updateField('password', e.target.value)}
+              required
+            />
+          )}
+
+          <FormSelect
+            label="Role"
+            value={form.roleId}
+            onChange={(e) => updateField('roleId', e.target.value)}
+          >
+            <option value="">Select role...</option>
+            {(roles as any[]).map((role: any) => (
+              <option key={role.id} value={role.id}>{role.name}</option>
+            ))}
+          </FormSelect>
+
+          <div className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              id="isActive"
+              checked={form.isActive}
+              onChange={(e) => updateField('isActive', e.target.checked)}
+              className="h-4 w-4 rounded border-gray-300 text-[#8b4513] focus:ring-[#8b4513]"
+            />
+            <label htmlFor="isActive" className="text-sm font-medium text-[#5d4037]">
+              Active
+            </label>
+          </div>
+        </form>
+      </Modal>
 
       {confirmDialog}
     </div>

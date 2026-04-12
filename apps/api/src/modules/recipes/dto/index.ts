@@ -6,6 +6,7 @@ import {
   IsBoolean,
   IsUrl,
   ValidateNested,
+  MaxLength,
   Min,
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional, PartialType } from '@nestjs/swagger';
@@ -71,6 +72,7 @@ class RecipeLinkDto {
 export class CreateRecipeDto {
   @ApiProperty({ example: 'Croissant' })
   @IsString()
+  @MaxLength(255)
   name: string;
 
   @ApiPropertyOptional({ example: 'pastry' })
@@ -82,6 +84,7 @@ export class CreateRecipeDto {
   @IsOptional()
   @Type(() => Number)
   @IsNumber()
+  @Min(0)
   yieldQuantity?: number;
 
   @ApiPropertyOptional({ example: 'pcs' })

@@ -25,7 +25,8 @@ export class UsersService {
       qb.where('user.email ILIKE :search OR user.firstName ILIKE :search OR user.lastName ILIKE :search',
         { search: `%${search}%` });
     }
-    if (sortBy) {
+    const allowedSortColumns = new Set(['email', 'firstName', 'lastName', 'createdAt', 'isActive']);
+    if (sortBy && allowedSortColumns.has(sortBy)) {
       qb.orderBy(`user.${sortBy}`, sortOrder || 'ASC');
     } else {
       qb.orderBy('user.createdAt', 'DESC');

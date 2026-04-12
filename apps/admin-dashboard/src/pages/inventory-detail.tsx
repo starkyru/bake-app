@@ -6,7 +6,6 @@ import {
   Plus,
   Trash2,
   Truck,
-  X,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import {
@@ -22,6 +21,11 @@ import {
   PageContainer,
   DataTable,
   LoadingSpinner,
+  Modal,
+  FormInput,
+  FormSelect,
+  FormTextarea,
+  Button,
   useConfirmation,
   type TableColumn,
 } from '@bake-app/react/ui';
@@ -469,170 +473,75 @@ export function InventoryDetailPage() {
       {ConfirmationDialog}
 
       {/* Add Shipment Dialog */}
-      {showShipmentDialog && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"
-          onClick={() => setShowShipmentDialog(false)}
-        >
-          <div
-            className="relative mx-4 w-full max-w-lg rounded-xl bg-white p-6 shadow-lg"
-            onClick={(e) => e.stopPropagation()}
+      <Modal
+        open={showShipmentDialog}
+        onClose={() => setShowShipmentDialog(false)}
+        title="Add Shipment"
+        size="lg"
+        footer={
+          <>
+            <Button variant="secondary" onClick={() => setShowShipmentDialog(false)}>Cancel</Button>
+            <Button onClick={handleAddShipment} loading={savingShipment}>Add Shipment</Button>
+          </>
+        }
+      >
+        <div className="space-y-4">
+          <FormSelect
+            label="Package *"
+            value={shipmentForm.packageId}
+            onChange={(e) => setShipmentForm({ ...shipmentForm, packageId: e.target.value })}
           >
-            <button
-              type="button"
-              onClick={() => setShowShipmentDialog(false)}
-              className="absolute right-3 top-3 rounded-lg p-1 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600"
-              aria-label="Close"
-            >
-              <X className="h-4 w-4" />
-            </button>
+            <option value="">Select package</option>
+            {packages.map((pkg) => (
+              <option key={pkg.id} value={pkg.id}>{pkg.size} {pkg.unit}</option>
+            ))}
+          </FormSelect>
 
-            <h2 className="text-lg font-semibold text-[#3e2723]">
-              Add Shipment
-            </h2>
-
-            <div className="mt-4 space-y-4">
-              <div>
-                <label className="mb-1 block text-sm font-medium text-gray-700">
-                  Package *
-                </label>
-                <select
-                  value={shipmentForm.packageId}
-                  onChange={(e) =>
-                    setShipmentForm({
-                      ...shipmentForm,
-                      packageId: e.target.value,
-                    })
-                  }
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-[#8b4513] focus:outline-none focus:ring-1 focus:ring-[#8b4513]/30"
-                >
-                  <option value="">Select package</option>
-                  {packages.map((pkg) => (
-                    <option key={pkg.id} value={pkg.id}>
-                      {pkg.size} {pkg.unit}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="mb-1 block text-sm font-medium text-gray-700">
-                    Package Count *
-                  </label>
-                  <input
-                    type="number"
-                    value={shipmentForm.packageCount}
-                    onChange={(e) =>
-                      setShipmentForm({
-                        ...shipmentForm,
-                        packageCount: Number(e.target.value),
-                      })
-                    }
-                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-[#8b4513] focus:outline-none focus:ring-1 focus:ring-[#8b4513]/30"
-                    min="1"
-                  />
-                </div>
-                <div>
-                  <label className="mb-1 block text-sm font-medium text-gray-700">
-                    Unit Cost
-                  </label>
-                  <input
-                    type="number"
-                    value={shipmentForm.unitCost}
-                    onChange={(e) =>
-                      setShipmentForm({
-                        ...shipmentForm,
-                        unitCost: Number(e.target.value),
-                      })
-                    }
-                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-[#8b4513] focus:outline-none focus:ring-1 focus:ring-[#8b4513]/30"
-                    min="0"
-                    step="0.01"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="mb-1 block text-sm font-medium text-gray-700">
-                  Batch Number
-                </label>
-                <input
-                  type="text"
-                  value={shipmentForm.batchNumber}
-                  onChange={(e) =>
-                    setShipmentForm({
-                      ...shipmentForm,
-                      batchNumber: e.target.value,
-                    })
-                  }
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-[#8b4513] focus:outline-none focus:ring-1 focus:ring-[#8b4513]/30"
-                  placeholder="e.g. LOT-2026-001"
-                />
-              </div>
-
-              <div>
-                <label className="mb-1 block text-sm font-medium text-gray-700">
-                  Location *
-                </label>
-                <select
-                  value={shipmentForm.locationId}
-                  onChange={(e) =>
-                    setShipmentForm({
-                      ...shipmentForm,
-                      locationId: e.target.value,
-                    })
-                  }
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-[#8b4513] focus:outline-none focus:ring-1 focus:ring-[#8b4513]/30"
-                >
-                  <option value="">Select location</option>
-                  {locationList.map((loc: any) => (
-                    <option key={loc.id} value={loc.id}>
-                      {loc.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="mb-1 block text-sm font-medium text-gray-700">
-                  Notes
-                </label>
-                <textarea
-                  value={shipmentForm.notes}
-                  onChange={(e) =>
-                    setShipmentForm({
-                      ...shipmentForm,
-                      notes: e.target.value,
-                    })
-                  }
-                  rows={2}
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-[#8b4513] focus:outline-none focus:ring-1 focus:ring-[#8b4513]/30"
-                  placeholder="Optional notes..."
-                />
-              </div>
-            </div>
-
-            <div className="mt-6 flex justify-end gap-3">
-              <button
-                type="button"
-                onClick={() => setShowShipmentDialog(false)}
-                className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 transition-all duration-150 hover:bg-gray-50"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={handleAddShipment}
-                disabled={savingShipment}
-                className="rounded-lg bg-[#8b4513] px-4 py-2 text-sm font-medium text-white transition-all duration-150 hover:bg-[#5d4037] active:scale-95 disabled:opacity-50"
-              >
-                {savingShipment ? 'Adding...' : 'Add Shipment'}
-              </button>
-            </div>
+          <div className="grid grid-cols-2 gap-4">
+            <FormInput
+              label="Package Count *"
+              type="number"
+              value={shipmentForm.packageCount}
+              onChange={(e) => setShipmentForm({ ...shipmentForm, packageCount: Number(e.target.value) })}
+              min="1"
+            />
+            <FormInput
+              label="Unit Cost"
+              type="number"
+              value={shipmentForm.unitCost}
+              onChange={(e) => setShipmentForm({ ...shipmentForm, unitCost: Number(e.target.value) })}
+              min="0"
+              step="0.01"
+            />
           </div>
+
+          <FormInput
+            label="Batch Number"
+            value={shipmentForm.batchNumber}
+            onChange={(e) => setShipmentForm({ ...shipmentForm, batchNumber: e.target.value })}
+            placeholder="e.g. LOT-2026-001"
+          />
+
+          <FormSelect
+            label="Location *"
+            value={shipmentForm.locationId}
+            onChange={(e) => setShipmentForm({ ...shipmentForm, locationId: e.target.value })}
+          >
+            <option value="">Select location</option>
+            {locationList.map((loc: any) => (
+              <option key={loc.id} value={loc.id}>{loc.name}</option>
+            ))}
+          </FormSelect>
+
+          <FormTextarea
+            label="Notes"
+            value={shipmentForm.notes}
+            onChange={(e) => setShipmentForm({ ...shipmentForm, notes: e.target.value })}
+            rows={2}
+            placeholder="Optional notes..."
+          />
         </div>
-      )}
+      </Modal>
     </PageContainer>
   );
 }

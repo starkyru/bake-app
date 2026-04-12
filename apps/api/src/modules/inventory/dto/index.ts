@@ -154,6 +154,7 @@ export class AddShipmentDto {
   @IsOptional()
   @Type(() => Number)
   @IsNumber()
+  @Min(0)
   unitCost?: number;
 
   @ApiPropertyOptional()

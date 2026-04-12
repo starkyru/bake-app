@@ -459,9 +459,14 @@ Return ONLY valid JSON, no markdown, no explanation.`,
 
   // ── Recipe Images ──
 
+  private static readonly ALLOWED_IMAGE_EXTS = new Set(['.jpg', '.jpeg', '.png', '.gif', '.webp']);
+
   async uploadImage(recipeId: string, file: { buffer: Buffer; originalname: string; mimetype: string; size: number }): Promise<RecipeImage> {
     await this.findOne(recipeId);
-    const ext = path.extname(file.originalname) || '.jpg';
+    const ext = (path.extname(file.originalname) || '.jpg').toLowerCase();
+    if (!RecipesService.ALLOWED_IMAGE_EXTS.has(ext)) {
+      throw new BadRequestException(`File extension "${ext}" is not allowed. Use: ${[...RecipesService.ALLOWED_IMAGE_EXTS].join(', ')}`);
+    }
     const filename = `${randomUUID()}${ext}`;
     const filePath = path.join(this.uploadsDir, filename);
     fs.writeFileSync(filePath, file.buffer);

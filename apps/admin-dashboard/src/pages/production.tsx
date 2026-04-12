@@ -110,6 +110,7 @@ export function ProductionPage() {
   };
 
   const handleAdvanceStatus = (task: ProductionTask) => {
+    if (updateTaskStatus.isPending) return;
     const nextStatus = TASK_STATUS_FLOW[task.status];
     if (!nextStatus) {
       toast.error('Cannot advance this task further');

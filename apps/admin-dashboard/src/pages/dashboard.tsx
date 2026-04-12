@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import {
   DollarSign,
   ShoppingCart,
@@ -26,13 +27,18 @@ export function DashboardPage() {
   const profit = salesData?.profit ?? salesData?.totalRevenue ?? 0;
 
   // Extract low-stock items from inventory report
-  const lowStockItems: Array<{ name: string; currentStock: number; minStock: number; status: string }> =
-    (inventoryData?.lowStockItems ?? inventoryData?.items ?? [])
-      .filter((item: any) => item.status === 'low_stock' || item.status === 'out_of_stock')
-      .slice(0, 5);
+  const lowStockItems = useMemo<Array<{ id?: string; name: string; currentStock: number; minStock: number; status: string }>>(
+    () =>
+      (inventoryData?.lowStockItems ?? inventoryData?.items ?? [])
+        .filter((item: any) => item.status === 'low_stock' || item.status === 'out_of_stock')
+        .slice(0, 5),
+    [inventoryData],
+  );
 
-  const topProductsList: Array<{ name: string; quantitySold: number; revenue: number }> =
-    Array.isArray(topData) ? topData.slice(0, 5) : [];
+  const topProductsList = useMemo<Array<{ name: string; quantitySold: number; revenue: number }>>(
+    () => (Array.isArray(topData) ? topData.slice(0, 5) : []),
+    [topData],
+  );
 
   if (isLoading) {
     return (
@@ -87,9 +93,9 @@ export function DashboardPage() {
             <p className="text-sm text-gray-500">No low-stock items. Everything is well stocked.</p>
           ) : (
             <ul className="space-y-3">
-              {lowStockItems.map((item, idx) => (
+              {lowStockItems.map((item) => (
                 <li
-                  key={idx}
+                  key={item.id ?? item.name}
                   className="flex items-center justify-between rounded-lg border border-gray-100 px-3 py-2"
                 >
                   <div>
@@ -115,7 +121,7 @@ export function DashboardPage() {
             <ul className="space-y-3">
               {topProductsList.map((product, idx) => (
                 <li
-                  key={idx}
+                  key={product.name}
                   className="flex items-center justify-between rounded-lg border border-gray-100 px-3 py-2"
                 >
                   <div className="flex items-center gap-3">

@@ -107,7 +107,8 @@ export class ReportingService {
     }
     const qb = this.orderRepo
       .createQueryBuilder('o')
-      .select(`DATE_TRUNC('${groupByValue}', o.createdAt)`, 'period')
+      .select(`DATE_TRUNC(:groupBy, o.createdAt)`, 'period')
+      .setParameter('groupBy', groupByValue)
       .addSelect('COUNT(o.id)', 'orderCount')
       .addSelect('SUM(o.total)', 'revenue')
       .addSelect('AVG(o.total)', 'avgCheck')
