@@ -7,6 +7,8 @@ import { RecipeIngredient } from './entities/recipe-ingredient.entity';
 import { RecipeLink } from './entities/recipe-link.entity';
 import { RecipeVersion } from './entities/recipe-version.entity';
 import { InventoryMovement } from '../inventory/entities/inventory-movement.entity';
+import { Ingredient } from '../inventory/entities/ingredient.entity';
+import { IngredientCategory } from '../inventory/entities/ingredient-category.entity';
 
 describe('RecipesService — getCost BigNumber precision', () => {
   let service: RecipesService;
@@ -39,6 +41,8 @@ describe('RecipesService — getCost BigNumber precision', () => {
         { provide: getRepositoryToken(RecipeLink), useValue: { create: jest.fn(), save: jest.fn(), delete: jest.fn() } },
         { provide: getRepositoryToken(RecipeVersion), useValue: { find: jest.fn(), create: jest.fn(), save: jest.fn() } },
         { provide: getRepositoryToken(InventoryMovement), useValue: movementRepo },
+        { provide: getRepositoryToken(Ingredient), useValue: { find: jest.fn(), findOne: jest.fn(), create: jest.fn((d) => d), save: jest.fn((e) => Promise.resolve(e)) } },
+        { provide: getRepositoryToken(IngredientCategory), useValue: { find: jest.fn().mockResolvedValue([]), findOne: jest.fn() } },
         { provide: ConfigService, useValue: { get: jest.fn().mockReturnValue('fake-key') } },
       ],
     }).compile();
