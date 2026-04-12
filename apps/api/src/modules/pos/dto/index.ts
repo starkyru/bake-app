@@ -1,6 +1,6 @@
 export * from './menu.dto';
 export * from './product-option.dto';
-import { IsString, IsNumber, IsOptional, IsArray, IsUUID, Min, ValidateNested, IsEnum } from 'class-validator';
+import { IsString, IsNumber, IsOptional, IsBoolean, IsArray, IsUUID, Min, ValidateNested, IsEnum } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional, PartialType } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 
@@ -24,6 +24,11 @@ export class CreateCategoryDto {
   @Type(() => Number)
   @IsNumber()
   sortOrder?: number;
+
+  @ApiPropertyOptional({ default: true })
+  @IsOptional()
+  @IsBoolean()
+  isActive?: boolean;
 }
 
 export class UpdateCategoryDto extends PartialType(CreateCategoryDto) {}
@@ -72,6 +77,11 @@ export class CreateProductDto {
   @IsOptional()
   @IsUUID()
   ingredientId?: string;
+
+  @ApiPropertyOptional({ default: true })
+  @IsOptional()
+  @IsBoolean()
+  isActive?: boolean;
 }
 
 export class UpdateProductDto extends PartialType(CreateProductDto) {}

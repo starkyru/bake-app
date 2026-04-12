@@ -1,4 +1,4 @@
-import { IsString, IsNumber, IsOptional, IsUUID, IsArray, Min, ValidateNested } from 'class-validator';
+import { IsString, IsNumber, IsOptional, IsBoolean, IsUUID, IsArray, Min, ValidateNested } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional, PartialType } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 
@@ -55,6 +55,11 @@ export class CreateLocationDto {
   @IsOptional()
   @IsString()
   phone?: string;
+
+  @ApiPropertyOptional({ default: true })
+  @IsOptional()
+  @IsBoolean()
+  isActive?: boolean;
 }
 
 export class UpdateLocationDto extends PartialType(CreateLocationDto) {}

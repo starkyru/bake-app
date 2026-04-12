@@ -60,6 +60,7 @@ export class UsersService {
       phone: dto.phone,
       role,
       locationId: dto.locationId,
+      isActive: dto.isActive ?? true,
     });
     return this.usersRepository.save(user);
   }

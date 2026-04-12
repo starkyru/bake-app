@@ -32,11 +32,11 @@ export class CreateUserDto {
   @IsOptional()
   @IsString()
   locationId?: string;
-}
 
-export class UpdateUserDto extends PartialType(CreateUserDto) {
-  @ApiPropertyOptional()
+  @ApiPropertyOptional({ default: true })
   @IsOptional()
   @IsBoolean()
   isActive?: boolean;
 }
+
+export class UpdateUserDto extends PartialType(CreateUserDto) {}

@@ -63,6 +63,11 @@ export class CreateProductOptionDto {
   @IsInt()
   @Min(0)
   sortOrder?: number;
+
+  @ApiPropertyOptional({ default: true })
+  @IsOptional()
+  @IsBoolean()
+  isActive?: boolean;
 }
 
 export class UpdateProductOptionDto extends PartialType(CreateProductOptionDto) {}
