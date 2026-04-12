@@ -1,8 +1,8 @@
 import { useState } from 'react';
-import { useNavigate, useParams } from 'react-router';
+import { useParams } from 'react-router';
 import {
-  ArrowLeft,
   Package,
+  Pencil,
   Plus,
   Trash2,
   Truck,
@@ -11,6 +11,7 @@ import {
 import { toast } from 'sonner';
 import {
   useInventoryItem,
+  useUpdateInventoryItem,
   useAddPackage,
   useDeletePackage,
   useAddShipment,
@@ -27,16 +28,19 @@ import {
 import type { InventoryItemPackage, InventoryShipment } from '@bake-app/shared-types';
 
 export function InventoryDetailPage() {
-  const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
   const { data: item, isLoading } = useInventoryItem(id!);
   const { data: shipments, isLoading: shipmentsLoading } =
     useInventoryShipments(id!);
   const { data: locations } = useLocations();
+  const updateItem = useUpdateInventoryItem();
   const addPackage = useAddPackage();
   const deletePackage = useDeletePackage();
   const addShipment = useAddShipment();
   const { confirm, ConfirmationDialog } = useConfirmation();
+
+  const [editing, setEditing] = useState(false);
+  const [editForm, setEditForm] = useState({ title: '', minStockLevel: 0, minStockUnit: '' });
 
   const [showAddPackage, setShowAddPackage] = useState(false);
   const [packageForm, setPackageForm] = useState({ size: 1, unit: 'kg' });
@@ -58,6 +62,37 @@ export function InventoryDetailPage() {
   const shipmentList: InventoryShipment[] =
     (shipments as InventoryShipment[]) ?? [];
   const locationList = (locations as any[]) ?? [];
+
+  const startEditing = () => {
+    setEditForm({
+      title: inventoryItem?.title ?? '',
+      minStockLevel: inventoryItem?.minStockLevel ?? 0,
+      minStockUnit: inventoryItem?.minStockUnit ?? '',
+    });
+    setEditing(true);
+  };
+
+  const handleSaveEdit = () => {
+    if (!editForm.title.trim()) {
+      toast.error('Title is required');
+      return;
+    }
+    updateItem.mutate(
+      {
+        id: id!,
+        title: editForm.title.trim(),
+        minStockLevel: editForm.minStockLevel || undefined,
+        minStockUnit: editForm.minStockUnit || undefined,
+      } as any,
+      {
+        onSuccess: () => {
+          toast.success('Item updated');
+          setEditing(false);
+        },
+        onError: () => toast.error('Failed to update item'),
+      },
+    );
+  };
 
   const handleAddPackage = () => {
     if (!packageForm.size || !packageForm.unit) {
@@ -212,18 +247,21 @@ export function InventoryDetailPage() {
 
   return (
     <PageContainer
-      title={inventoryItem.title}
-      subtitle={inventoryItem.ingredient?.name ?? 'Inventory Item'}
+      title={editing ? undefined : inventoryItem.title}
+      subtitle={editing ? undefined : inventoryItem.ingredient?.name ?? 'Inventory Item'}
+      backPath="/inventory"
       actions={
         <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={() => navigate('/inventory')}
-            className="flex items-center gap-2 rounded-lg border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50"
-          >
-            <ArrowLeft size={16} />
-            Back
-          </button>
+          {!editing && (
+            <button
+              type="button"
+              onClick={startEditing}
+              className="flex items-center gap-2 rounded-lg border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50"
+            >
+              <Pencil size={16} />
+              Edit
+            </button>
+          )}
           <button
             type="button"
             onClick={() => {
@@ -241,6 +279,75 @@ export function InventoryDetailPage() {
         </div>
       }
     >
+      {/* Edit Form */}
+      {editing && (
+        <div className="rounded-xl border border-[#8b4513]/10 bg-white p-5 shadow-sm">
+          <h2 className="mb-4 text-lg font-semibold text-[#3e2723]">Edit Item</h2>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+            <div className="sm:col-span-3">
+              <label className="mb-1 block text-sm font-medium text-gray-700">Title</label>
+              <input
+                type="text"
+                value={editForm.title}
+                onChange={(e) => setEditForm({ ...editForm, title: e.target.value })}
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-[#8b4513] focus:outline-none focus:ring-1 focus:ring-[#8b4513]/30"
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-sm font-medium text-gray-700">Min Stock Level</label>
+              <input
+                type="number"
+                value={editForm.minStockLevel}
+                onChange={(e) => setEditForm({ ...editForm, minStockLevel: Number(e.target.value) })}
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-[#8b4513] focus:outline-none focus:ring-1 focus:ring-[#8b4513]/30"
+                min="0"
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-sm font-medium text-gray-700">Min Stock Unit</label>
+              <select
+                value={editForm.minStockUnit}
+                onChange={(e) => setEditForm({ ...editForm, minStockUnit: e.target.value })}
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-[#8b4513] focus:outline-none focus:ring-1 focus:ring-[#8b4513]/30"
+              >
+                <option value="">Select unit</option>
+                {['g', 'kg', 'lb', 'oz', 'ml', 'L', 'pcs'].map((u) => (
+                  <option key={u} value={u}>{u}</option>
+                ))}
+              </select>
+            </div>
+            <div className="flex items-end gap-2">
+              <button
+                type="button"
+                onClick={handleSaveEdit}
+                disabled={updateItem.isPending}
+                className="rounded-lg bg-[#8b4513] px-4 py-2 text-sm font-medium text-white transition-all hover:bg-[#5d4037] disabled:opacity-50"
+              >
+                {updateItem.isPending ? 'Saving...' : 'Save'}
+              </button>
+              <button
+                type="button"
+                onClick={() => setEditing(false)}
+                className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Min Stock Info (non-edit mode) */}
+      {!editing && (inventoryItem.minStockLevel != null || inventoryItem.status) && (
+        <div className="flex flex-wrap gap-2">
+          {inventoryItem.minStockLevel != null && (
+            <span className="inline-flex items-center gap-1 rounded-full bg-[#faf3e8] px-3 py-1 text-sm font-medium text-[#5d4037]">
+              Min stock: {inventoryItem.minStockLevel} {inventoryItem.minStockUnit || ''}
+            </span>
+          )}
+        </div>
+      )}
+
       {/* Packages Section */}
       <div>
         <div className="mb-3 flex items-center justify-between">

@@ -51,17 +51,16 @@ export function AdminShell() {
 
   return (
     <div className="flex h-screen overflow-hidden bg-[#faf3e8]">
-      {/* Desktop sidebar */}
-      {sidebarOpen && (
-        <div className="hidden md:flex">
-          <Sidebar
-            items={sidebarItems}
-            onLogout={handleLogout}
-            userName={user?.name}
-            userRole={user?.role}
-          />
-        </div>
-      )}
+      {/* Desktop sidebar — always visible, collapses to icons */}
+      <div className="hidden md:flex">
+        <Sidebar
+          items={sidebarItems}
+          onLogout={handleLogout}
+          userName={user?.name}
+          userRole={user?.role}
+          collapsed={!sidebarOpen}
+        />
+      </div>
 
       {/* Mobile sidebar overlay */}
       {sidebarOpen && (
