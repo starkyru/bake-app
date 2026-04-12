@@ -28,6 +28,20 @@ import {
 } from '@bake-app/react/ui';
 import type { InventoryItem } from '@bake-app/shared-types';
 
+const UNIT_GROUPS: Record<string, string[]> = {
+  g: ['g', 'kg', 'lb', 'oz'],
+  kg: ['g', 'kg', 'lb', 'oz'],
+  ml: ['ml', 'L'],
+  L: ['ml', 'L'],
+  pcs: ['pcs'],
+  tbsp: ['tbsp', 'tsp', 'ml'],
+  tsp: ['tbsp', 'tsp', 'ml'],
+};
+
+function getCompatibleUnits(baseUnit: string): string[] {
+  return UNIT_GROUPS[baseUnit] || ['g', 'kg', 'ml', 'L', 'pcs'];
+}
+
 export function InventoryPage() {
   const navigate = useNavigate();
   const { data: items, isLoading } = useInventoryItems();
@@ -285,9 +299,17 @@ export function InventoryPage() {
                 </label>
                 <select
                   value={form.ingredientId}
-                  onChange={(e) =>
-                    setForm({ ...form, ingredientId: e.target.value })
-                  }
+                  onChange={(e) => {
+                    const selected = ((ingredients as any[]) ?? []).find((ing: any) => ing.id === e.target.value);
+                    const unit = selected?.unit || 'g';
+                    const compatible = getCompatibleUnits(unit);
+                    setForm({
+                      ...form,
+                      ingredientId: e.target.value,
+                      minStockUnit: compatible.includes(form.minStockUnit) ? form.minStockUnit : unit,
+                      packageUnit: compatible.includes(form.packageUnit) ? form.packageUnit : compatible[1] || compatible[0],
+                    });
+                  }}
                   className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-[#8b4513] focus:outline-none focus:ring-1 focus:ring-[#8b4513]/30"
                 >
                   <option value="">Select ingredient</option>
@@ -328,7 +350,10 @@ export function InventoryPage() {
                     }
                     className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-[#8b4513] focus:outline-none focus:ring-1 focus:ring-[#8b4513]/30"
                   >
-                    {['g', 'kg', 'ml', 'L', 'pcs'].map((u) => (
+                    {(() => {
+                      const selected = ((ingredients as any[]) ?? []).find((ing: any) => ing.id === form.ingredientId);
+                      return getCompatibleUnits(selected?.unit || 'g');
+                    })().map((u) => (
                       <option key={u} value={u}>
                         {u}
                       </option>
@@ -370,13 +395,14 @@ export function InventoryPage() {
                       }
                       className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-[#8b4513] focus:outline-none focus:ring-1 focus:ring-[#8b4513]/30"
                     >
-                      {['g', 'kg', 'lb', 'oz', 'ml', 'L', 'pcs'].map(
-                        (u) => (
-                          <option key={u} value={u}>
-                            {u}
-                          </option>
-                        ),
-                      )}
+                      {(() => {
+                        const selected = ((ingredients as any[]) ?? []).find((ing: any) => ing.id === form.ingredientId);
+                        return getCompatibleUnits(selected?.unit || 'g');
+                      })().map((u) => (
+                        <option key={u} value={u}>
+                          {u}
+                        </option>
+                      ))}
                     </select>
                   </div>
                 </div>
