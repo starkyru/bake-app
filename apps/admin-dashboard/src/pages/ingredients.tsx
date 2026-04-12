@@ -32,7 +32,6 @@ const UNIT_OPTIONS = [
 interface IngredientFormData {
   name: string;
   unit: string;
-  minStockLevel: string;
   categoryId: string;
   description: string;
 }
@@ -40,7 +39,6 @@ interface IngredientFormData {
 const emptyForm: IngredientFormData = {
   name: '',
   unit: 'g',
-  minStockLevel: '',
   categoryId: '',
   description: '',
 };
@@ -72,7 +70,6 @@ export function IngredientsPage() {
     setForm({
       name: ingredient.name,
       unit: ingredient.unit,
-      minStockLevel: String(ingredient.minStockLevel),
       categoryId: ingredient.categoryId ?? '',
       description: ingredient.description ?? '',
     });
@@ -92,7 +89,6 @@ export function IngredientsPage() {
     const payload: Partial<Ingredient> = {
       name: form.name.trim(),
       unit: form.unit,
-      minStockLevel: parseFloat(form.minStockLevel) || 0,
       categoryId: form.categoryId || undefined,
       description: form.description.trim() || undefined,
     };
@@ -139,12 +135,6 @@ export function IngredientsPage() {
           {value}
         </span>
       ),
-    },
-    {
-      key: 'minStockLevel',
-      label: 'Min Stock',
-      type: 'number',
-      sortable: true,
     },
     {
       key: 'ingredientCategory.name',
@@ -277,23 +267,6 @@ export function IngredientsPage() {
                       </option>
                     ))}
                   </select>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-[#5d4037]">
-                    Min Stock Level
-                  </label>
-                  <input
-                    type="number"
-                    step="1"
-                    min="0"
-                    value={form.minStockLevel}
-                    onChange={(e) =>
-                      setForm((f) => ({ ...f, minStockLevel: e.target.value }))
-                    }
-                    className="mt-1 w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm focus:border-[#8b4513] focus:bg-white focus:outline-none focus:ring-1 focus:ring-[#8b4513]/30"
-                    placeholder="0"
-                  />
                 </div>
 
                 <div>

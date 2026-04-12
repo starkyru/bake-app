@@ -8,6 +8,8 @@ import { RecipeIngredient } from './entities/recipe-ingredient.entity';
 import { RecipeLink } from './entities/recipe-link.entity';
 import { RecipeVersion } from './entities/recipe-version.entity';
 import { InventoryMovement } from '../inventory/entities/inventory-movement.entity';
+import { Ingredient } from '../inventory/entities/ingredient.entity';
+import { IngredientCategory } from '../inventory/entities/ingredient-category.entity';
 import { CreateRecipeDto, UpdateRecipeDto } from './dto';
 import { PaginationDto } from '../../common/dto/pagination.dto';
 import { PaginatedResponseDto } from '../../common/dto/paginated-response.dto';
@@ -23,6 +25,8 @@ export class RecipesService {
     @InjectRepository(RecipeLink) private linkRepo: Repository<RecipeLink>,
     @InjectRepository(RecipeVersion) private versionRepo: Repository<RecipeVersion>,
     @InjectRepository(InventoryMovement) private movementRepo: Repository<InventoryMovement>,
+    @InjectRepository(Ingredient) private catalogIngredientRepo: Repository<Ingredient>,
+    @InjectRepository(IngredientCategory) private ingredientCategoryRepo: Repository<IngredientCategory>,
     private configService: ConfigService,
   ) {
     this.anthropic = new Anthropic({
@@ -51,6 +55,7 @@ export class RecipesService {
   }
 
   async create(dto: CreateRecipeDto): Promise<Recipe> {
+    const ingredients = dto.ingredients ? await this.resolveNewIngredients(dto.ingredients) : undefined;
     const recipe = this.recipeRepo.create({
       name: dto.name,
       category: dto.category,
@@ -58,7 +63,7 @@ export class RecipesService {
       yieldUnit: dto.yieldUnit,
       instructions: dto.instructions,
       productId: dto.productId,
-      ingredients: dto.ingredients?.map(i => this.ingredientRepo.create(i)),
+      ingredients: ingredients?.map(i => this.ingredientRepo.create(i)),
       links: dto.links?.map(l => this.linkRepo.create(this.processLink(l))),
     });
     const saved = await this.recipeRepo.save(recipe);
@@ -77,8 +82,9 @@ export class RecipesService {
     }));
 
     if (dto.ingredients) {
+      const resolvedIngredients = await this.resolveNewIngredients(dto.ingredients);
       await this.ingredientRepo.delete({ recipeId: id });
-      recipe.ingredients = dto.ingredients.map(i => this.ingredientRepo.create({ ...i, recipeId: id }));
+      recipe.ingredients = resolvedIngredients.map(i => this.ingredientRepo.create({ ...i, recipeId: id }));
     }
     if (dto.links) {
       await this.linkRepo.delete({ recipeId: id });
@@ -201,7 +207,31 @@ export class RecipesService {
     return this.versionRepo.find({ where: { recipeId: id }, order: { versionNumber: 'DESC' } });
   }
 
+  private async getIngredientCategoryNames(): Promise<string[]> {
+    const categories = await this.ingredientCategoryRepo.find({ where: { isActive: true }, order: { name: 'ASC' } });
+    return categories.map(c => c.name);
+  }
+
+  private buildIngredientSchema(categoryNames: string[]): string {
+    const categoriesHint = categoryNames.length > 0
+      ? `"ingredientCategory": "one of: ${categoryNames.join(', ')}, or Uncategorized if unsure"`
+      : `"ingredientCategory": "a logical category name like Dairy, Flour & Starch, Spices, Fruits, Oils & Fats, Sweeteners, etc."`;
+
+    return `"ingredients": [
+    {
+      "ingredientId": "ingredient-name-slugified",
+      "ingredientName": "Ingredient Name",
+      "quantity": number,
+      "unit": "one of: g, kg, ml, L, pcs, oz, lb, tbsp, tsp",
+      ${categoriesHint}
+    }
+  ]`;
+  }
+
   async generateFromUrl(url: string): Promise<Partial<CreateRecipeDto>> {
+    const categoryNames = await this.getIngredientCategoryNames();
+    const ingredientSchema = this.buildIngredientSchema(categoryNames);
+
     const response = await this.callAnthropic([
       {
         role: 'user',
@@ -214,14 +244,7 @@ Please fetch and parse the recipe from this URL and return a JSON object with th
   "yieldQuantity": number,
   "yieldUnit": "pcs or kg or loaves or cakes or liters",
   "instructions": "Step by step instructions as plain text",
-  "ingredients": [
-    {
-      "ingredientId": "ingredient-name-slugified",
-      "ingredientName": "Ingredient Name",
-      "quantity": number,
-      "unit": "g or kg or ml or l or pcs or tbsp or tsp",
-    }
-  ],
+  ${ingredientSchema},
   "links": [
     {
       "url": "${url}",
@@ -237,8 +260,39 @@ Return ONLY valid JSON, no markdown, no explanation.`,
     return this.parseAiJson(response);
   }
 
+  async generateFromText(text: string): Promise<Partial<CreateRecipeDto>> {
+    const categoryNames = await this.getIngredientCategoryNames();
+    const ingredientSchema = this.buildIngredientSchema(categoryNames);
+
+    const response = await this.callAnthropic([
+      {
+        role: 'user',
+        content: `You are a recipe parser. Parse this recipe text and return a structured JSON object.
+
+Recipe text:
+${text}
+
+Return a JSON object with the following structure:
+{
+  "name": "Recipe Name",
+  "category": "one of: bread, pastry, cake, beverage, sandwich, other",
+  "yieldQuantity": number,
+  "yieldUnit": "pcs or kg or loaves or cakes or liters",
+  "instructions": "Step by step instructions as plain text",
+  ${ingredientSchema}
+}
+
+Return ONLY valid JSON, no markdown, no explanation.`,
+      },
+    ]);
+
+    return this.parseAiJson(response);
+  }
+
   async generateFromImage(imageBase64: string, mimeType = 'image/jpeg'): Promise<Partial<CreateRecipeDto>> {
     const mediaType = mimeType as 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp';
+    const categoryNames = await this.getIngredientCategoryNames();
+    const ingredientSchema = this.buildIngredientSchema(categoryNames);
 
     const response = await this.callAnthropic([
       {
@@ -263,14 +317,7 @@ Return a JSON object with the following structure:
   "yieldQuantity": number,
   "yieldUnit": "pcs or kg or loaves or cakes or liters",
   "instructions": "Step by step instructions as plain text",
-  "ingredients": [
-    {
-      "ingredientId": "ingredient-name-slugified",
-      "ingredientName": "Ingredient Name",
-      "quantity": number,
-      "unit": "g or kg or ml or l or pcs or tbsp or tsp",
-    }
-  ]
+  ${ingredientSchema}
 }
 
 Return ONLY valid JSON, no markdown, no explanation.`,
@@ -280,6 +327,40 @@ Return ONLY valid JSON, no markdown, no explanation.`,
     ]);
 
     return this.parseAiJson(response);
+  }
+
+  private async resolveNewIngredients(ingredients: CreateRecipeDto['ingredients']): Promise<CreateRecipeDto['ingredients']> {
+    if (!ingredients) return [];
+    const resolved = [];
+    for (const ing of ingredients) {
+      if (ing.isNew) {
+        // Find or create the category
+        let categoryId: string | undefined;
+        if (ing.ingredientCategory && ing.ingredientCategory !== 'Uncategorized') {
+          const existingCat = await this.ingredientCategoryRepo.findOne({
+            where: { name: ing.ingredientCategory, isActive: true },
+          });
+          categoryId = existingCat?.id;
+        }
+        // Create the ingredient in the catalog
+        const newIngredient = await this.catalogIngredientRepo.save(
+          this.catalogIngredientRepo.create({
+            name: ing.ingredientName || ing.ingredientId,
+            unit: ing.unit,
+            categoryId,
+          }),
+        );
+        resolved.push({
+          ingredientId: newIngredient.id,
+          ingredientName: newIngredient.name,
+          quantity: ing.quantity,
+          unit: ing.unit,
+        });
+      } else {
+        resolved.push(ing);
+      }
+    }
+    return resolved;
   }
 
   private parseAiJson(response: string): Partial<CreateRecipeDto> {

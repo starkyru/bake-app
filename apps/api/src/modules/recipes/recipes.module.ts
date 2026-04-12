@@ -5,11 +5,13 @@ import { RecipeIngredient } from './entities/recipe-ingredient.entity';
 import { RecipeLink } from './entities/recipe-link.entity';
 import { RecipeVersion } from './entities/recipe-version.entity';
 import { InventoryMovement } from '../inventory/entities/inventory-movement.entity';
+import { Ingredient } from '../inventory/entities/ingredient.entity';
+import { IngredientCategory } from '../inventory/entities/ingredient-category.entity';
 import { RecipesService } from './recipes.service';
 import { RecipesController } from './recipes.controller';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Recipe, RecipeIngredient, RecipeLink, RecipeVersion, InventoryMovement])],
+  imports: [TypeOrmModule.forFeature([Recipe, RecipeIngredient, RecipeLink, RecipeVersion, InventoryMovement, Ingredient, IngredientCategory])],
   controllers: [RecipesController],
   providers: [RecipesService],
   exports: [RecipesService],

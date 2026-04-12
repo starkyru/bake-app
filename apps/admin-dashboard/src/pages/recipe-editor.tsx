@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useParams, useNavigate } from 'react-router';
+import { useParams, useNavigate, useLocation } from 'react-router';
 import {
   ArrowLeft,
   Plus,
@@ -8,6 +8,7 @@ import {
   Link as LinkIcon,
   Video,
   Search,
+  Sparkles,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import type { RecipeIngredient, RecipeLink, Ingredient } from '@bake-app/shared-types';
@@ -16,6 +17,7 @@ import {
   useCreateRecipe,
   useUpdateRecipe,
   useIngredients,
+  useIngredientCategories,
   useRecipeCost,
 } from '@bake-app/react/api-client';
 import {
@@ -24,6 +26,74 @@ import {
 } from '@bake-app/react/ui';
 
 const UNIT_OPTIONS = ['g', 'kg', 'ml', 'L', 'pcs', 'oz', 'lb', 'tbsp', 'tsp'];
+
+const UNIT_ALIASES: Record<string, string> = {
+  l: 'L',
+  liter: 'L',
+  liters: 'L',
+  litre: 'L',
+  litres: 'L',
+  gram: 'g',
+  grams: 'g',
+  kilogram: 'kg',
+  kilograms: 'kg',
+  milliliter: 'ml',
+  milliliters: 'ml',
+  millilitre: 'ml',
+  millilitres: 'ml',
+  piece: 'pcs',
+  pieces: 'pcs',
+  ounce: 'oz',
+  ounces: 'oz',
+  pound: 'lb',
+  pounds: 'lb',
+  tablespoon: 'tbsp',
+  tablespoons: 'tbsp',
+  teaspoon: 'tsp',
+  teaspoons: 'tsp',
+  cup: 'ml',
+  cups: 'ml',
+};
+
+function normalizeUnit(unit: string): string {
+  const lower = unit.toLowerCase().trim();
+  if (UNIT_OPTIONS.includes(unit)) return unit;
+  if (UNIT_ALIASES[lower]) return UNIT_ALIASES[lower];
+  // Check case-insensitive match against UNIT_OPTIONS
+  const found = UNIT_OPTIONS.find((u) => u.toLowerCase() === lower);
+  return found ?? 'g';
+}
+
+function fuzzyScore(a: string, b: string): number {
+  const al = a.toLowerCase().trim();
+  const bl = b.toLowerCase().trim();
+  if (al === bl) return 1;
+  if (al.includes(bl) || bl.includes(al)) {
+    return 0.9;
+  }
+  // Simple normalized Levenshtein
+  const maxLen = Math.max(al.length, bl.length);
+  if (maxLen === 0) return 1;
+  const dist = levenshtein(al, bl);
+  return 1 - dist / maxLen;
+}
+
+function levenshtein(a: string, b: string): number {
+  const m = a.length;
+  const n = b.length;
+  const dp: number[][] = Array.from({ length: m + 1 }, () => Array(n + 1).fill(0));
+  for (let i = 0; i <= m; i++) dp[i][0] = i;
+  for (let j = 0; j <= n; j++) dp[0][j] = j;
+  for (let i = 1; i <= m; i++) {
+    for (let j = 1; j <= n; j++) {
+      dp[i][j] =
+        a[i - 1] === b[j - 1]
+          ? dp[i - 1][j - 1]
+          : 1 + Math.min(dp[i - 1][j], dp[i][j - 1], dp[i - 1][j - 1]);
+    }
+  }
+  return dp[m][n];
+}
 
 const RECIPE_CATEGORIES = ['bread', 'pastry', 'cake', 'beverage', 'sandwich', 'other'] as const;
 const CATEGORY_OPTIONS = RECIPE_CATEGORIES.map((val) => ({
@@ -37,6 +107,8 @@ interface RecipeIngredientRow {
   ingredientName: string;
   quantity: string;
   unit: string;
+  isNew?: boolean;
+  suggestedCategory?: string;
 }
 
 interface RecipeLinkRow {
@@ -55,12 +127,15 @@ function extractYouTubeId(url: string): string | null {
 export function RecipeEditorPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
   const isNew = id === 'new';
+  const aiRecipeData = (location.state as any)?.aiRecipeData;
 
   const { data: existingRecipe, isLoading: recipeLoading } = useRecipe(
     isNew ? '' : id!,
   );
   const { data: allIngredients } = useIngredients() as { data: Ingredient[] | undefined };
+  const { data: ingredientCategories } = useIngredientCategories();
   const { data: recipeCost } = useRecipeCost(isNew ? '' : id!);
   const createRecipe = useCreateRecipe();
   const updateRecipe = useUpdateRecipe();
@@ -110,6 +185,65 @@ export function RecipeEditorPage() {
     }
   }, [existingRecipe, isNew]);
 
+  // Populate from AI data
+  useEffect(() => {
+    if (!aiRecipeData || !allIngredients) return;
+    setName(aiRecipeData.name || '');
+    setCategory(aiRecipeData.category || '');
+    setYieldQuantity(String(aiRecipeData.yieldQuantity || 1));
+    setYieldUnit(aiRecipeData.yieldUnit || 'pcs');
+    setInstructions(aiRecipeData.instructions || '');
+
+    // Match AI ingredients against existing catalog
+    const rows: RecipeIngredientRow[] = (aiRecipeData.ingredients || []).map(
+      (aiIng: any) => {
+        const unit = normalizeUnit(aiIng.unit || 'g');
+        const ingredientName = aiIng.ingredientName || aiIng.ingredientId || '';
+
+        // Try to fuzzy match against existing ingredients
+        let bestMatch: Ingredient | null = null;
+        let bestScore = 0;
+        for (const existing of allIngredients) {
+          const score = fuzzyScore(ingredientName, existing.name);
+          if (score > bestScore) {
+            bestScore = score;
+            bestMatch = existing;
+          }
+        }
+
+        if (bestMatch && bestScore >= 0.85) {
+          return {
+            ingredientId: bestMatch.id,
+            ingredientName: bestMatch.name,
+            quantity: String(aiIng.quantity || 0),
+            unit,
+          };
+        }
+
+        // No good match — mark as new
+        return {
+          ingredientId: `new-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+          ingredientName,
+          quantity: String(aiIng.quantity || 0),
+          unit,
+          isNew: true,
+          suggestedCategory: aiIng.ingredientCategory || '',
+        };
+      },
+    );
+
+    setIngredientRows(rows);
+
+    // Links
+    if (aiRecipeData.links) {
+      setLinkRows(
+        aiRecipeData.links.map((l: any) => ({
+          url: l.url || '',
+          title: l.title || '',
+        })),
+      );
+    }
+  }, [aiRecipeData, allIngredients]);
 
   const filteredIngredients = useMemo(() => {
     if (!allIngredients) return [];
@@ -117,7 +251,7 @@ export function RecipeEditorPage() {
     return allIngredients.filter(
       (ing) =>
         ing.name.toLowerCase().includes(query) &&
-        !ingredientRows.some((r) => r.ingredientId === ing.id),
+        !ingredientRows.some((r) => r.ingredientId === ing.id && !r.isNew),
     );
   }, [allIngredients, ingredientSearch, ingredientRows]);
 
@@ -147,6 +281,26 @@ export function RecipeEditorPage() {
               ingredientId: ingredient.id,
               ingredientName: ingredient.name,
               unit: ingredient.unit,
+              isNew: undefined,
+              suggestedCategory: undefined,
+            }
+          : row,
+      ),
+    );
+    setActiveIngredientIdx(null);
+    setIngredientSearch('');
+  };
+
+  const createNewIngredientInline = (idx: number, ingredientName: string) => {
+    setIngredientRows((rows) =>
+      rows.map((row, i) =>
+        i === idx
+          ? {
+              ...row,
+              ingredientId: `new-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+              ingredientName,
+              isNew: true,
+              suggestedCategory: '',
             }
           : row,
       ),
@@ -196,12 +350,14 @@ export function RecipeEditorPage() {
 
     setSaving(true);
 
-    const ingredients: Partial<RecipeIngredient>[] = ingredientRows
-      .filter((r) => r.ingredientId)
+    const ingredients = ingredientRows
+      .filter((r) => r.ingredientId || r.isNew)
       .map((r) => ({
         ingredientId: r.ingredientId,
+        ingredientName: r.ingredientName,
         quantity: parseFloat(r.quantity) || 0,
         unit: r.unit,
+        ...(r.isNew && { isNew: true, ingredientCategory: r.suggestedCategory || undefined }),
       }));
 
     const links: Partial<RecipeLink>[] = linkRows
@@ -251,6 +407,8 @@ export function RecipeEditorPage() {
     );
   }
 
+  const newIngredientsCount = ingredientRows.filter((r) => r.isNew).length;
+
   return (
     <PageContainer
       title={isNew ? 'New Recipe' : `Edit: ${name || 'Recipe'}`}
@@ -280,6 +438,20 @@ export function RecipeEditorPage() {
       }
     >
       <div className="space-y-6">
+        {/* AI-generated notice */}
+        {aiRecipeData && (
+          <div className="flex items-center gap-2 rounded-lg border border-purple-200 bg-purple-50 px-4 py-3 text-sm text-purple-700">
+            <Sparkles size={16} />
+            <span>
+              AI-generated recipe. Review the ingredients below
+              {newIngredientsCount > 0 && (
+                <> &mdash; <strong>{newIngredientsCount} new ingredient{newIngredientsCount > 1 ? 's' : ''}</strong> will be created on save</>
+              )}
+              .
+            </span>
+          </div>
+        )}
+
         {/* Basic Info */}
         <div className="rounded-xl border border-[#8b4513]/10 bg-white p-6 shadow-sm">
           <h3 className="text-base font-semibold text-[#3e2723]">
@@ -408,7 +580,7 @@ export function RecipeEditorPage() {
                       <tr key={idx} className="border-b border-gray-50">
                         <td className="py-2 pr-2">
                           <div className="relative">
-                            {row.ingredientId ? (
+                            {row.ingredientId && !row.isNew ? (
                               <div className="flex items-center gap-2">
                                 <span className="text-sm font-medium text-[#3e2723]">
                                   {row.ingredientName}
@@ -429,6 +601,48 @@ export function RecipeEditorPage() {
                                 >
                                   change
                                 </button>
+                              </div>
+                            ) : row.isNew ? (
+                              <div className="flex flex-col gap-1">
+                                <div className="flex items-center gap-2">
+                                  <span className="text-sm font-medium text-[#3e2723]">
+                                    {row.ingredientName}
+                                  </span>
+                                  <span className="inline-flex items-center rounded-full bg-green-100 px-1.5 py-0.5 text-[10px] font-semibold text-green-700">
+                                    New
+                                  </span>
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setIngredientRows((rows) =>
+                                        rows.map((r, i) =>
+                                          i === idx
+                                            ? { ...r, ingredientId: '', ingredientName: '', isNew: undefined, suggestedCategory: undefined }
+                                            : r,
+                                        ),
+                                      );
+                                      setActiveIngredientIdx(idx);
+                                      setIngredientSearch('');
+                                    }}
+                                    className="text-xs text-blue-500 hover:text-blue-700"
+                                  >
+                                    link to existing
+                                  </button>
+                                </div>
+                                <select
+                                  value={row.suggestedCategory || ''}
+                                  onChange={(e) =>
+                                    updateIngredientRow(idx, 'suggestedCategory' as any, e.target.value)
+                                  }
+                                  className="w-40 rounded border border-gray-200 bg-gray-50 px-2 py-0.5 text-xs text-gray-600 focus:border-[#8b4513] focus:outline-none"
+                                >
+                                  <option value="">Category...</option>
+                                  {ingredientCategories?.map((cat: any) => (
+                                    <option key={cat.id} value={cat.name}>
+                                      {cat.name}
+                                    </option>
+                                  ))}
+                                </select>
                               </div>
                             ) : (
                               <>
@@ -455,30 +669,44 @@ export function RecipeEditorPage() {
                                 </div>
                                 {activeIngredientIdx === idx && (
                                   <div className="absolute z-10 mt-1 max-h-48 w-64 overflow-y-auto rounded-lg border border-gray-200 bg-white shadow-lg">
-                                    {filteredIngredients.length === 0 ? (
+                                    {filteredIngredients.length === 0 && !ingredientSearch.trim() ? (
                                       <div className="px-3 py-2 text-sm text-gray-400">
                                         No ingredients found
                                       </div>
                                     ) : (
-                                      filteredIngredients
-                                        .slice(0, 20)
-                                        .map((ing) => (
+                                      <>
+                                        {filteredIngredients
+                                          .slice(0, 20)
+                                          .map((ing) => (
+                                            <button
+                                              key={ing.id}
+                                              type="button"
+                                              onClick={() =>
+                                                selectIngredient(idx, ing)
+                                              }
+                                              className="flex w-full items-center justify-between px-3 py-2 text-left text-sm hover:bg-[#faf3e8]/60"
+                                            >
+                                              <span className="text-[#3e2723]">
+                                                {ing.name}
+                                              </span>
+                                              <span className="text-xs text-gray-400">
+                                                {ing.unit}
+                                              </span>
+                                            </button>
+                                          ))}
+                                        {ingredientSearch.trim() && (
                                           <button
-                                            key={ing.id}
                                             type="button"
                                             onClick={() =>
-                                              selectIngredient(idx, ing)
+                                              createNewIngredientInline(idx, ingredientSearch.trim())
                                             }
-                                            className="flex w-full items-center justify-between px-3 py-2 text-left text-sm hover:bg-[#faf3e8]/60"
+                                            className="flex w-full items-center gap-2 border-t border-gray-100 px-3 py-2 text-left text-sm font-medium text-green-700 hover:bg-green-50"
                                           >
-                                            <span className="text-[#3e2723]">
-                                              {ing.name}
-                                            </span>
-                                            <span className="text-xs text-gray-400">
-                                              {ing.unit}
-                                            </span>
+                                            <Plus size={14} />
+                                            Create &ldquo;{ingredientSearch.trim()}&rdquo;
                                           </button>
-                                        ))
+                                        )}
+                                      </>
                                     )}
                                   </div>
                                 )}

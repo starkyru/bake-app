@@ -1,7 +1,7 @@
 import { Controller, Get, Post, Put, Delete, Body, Param, Query, UseGuards, Request } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { RecipesService } from './recipes.service';
-import { CreateRecipeDto, UpdateRecipeDto, ScaleRecipeDto, GenerateFromUrlDto, GenerateFromImageDto } from './dto';
+import { CreateRecipeDto, UpdateRecipeDto, ScaleRecipeDto, GenerateFromUrlDto, GenerateFromImageDto, GenerateFromTextDto } from './dto';
 import { PaginationDto } from '../../common/dto/pagination.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../../common/guards/permissions.guard';
@@ -29,6 +29,13 @@ export class RecipesController {
   @ApiOperation({ summary: 'AI-generate recipe data from a URL' })
   generateFromUrl(@Body() dto: GenerateFromUrlDto) {
     return this.recipesService.generateFromUrl(dto.url);
+  }
+
+  @Post('generate/from-text')
+  @RequirePermissions('recipes:create')
+  @ApiOperation({ summary: 'AI-generate recipe data from pasted text' })
+  generateFromText(@Body() dto: GenerateFromTextDto) {
+    return this.recipesService.generateFromText(dto.text);
   }
 
   @Post('generate/from-image')

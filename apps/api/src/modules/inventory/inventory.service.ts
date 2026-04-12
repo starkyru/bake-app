@@ -358,14 +358,12 @@ export class InventoryService {
         totalQuantity += Number(shipment.packageCount) * converted;
       }
 
-      // Use item-level minStockLevel, fall back to ingredient's
+      // Use item-level minStockLevel
       let minStockLevel = 0;
       if (item.minStockLevel != null) {
         // Convert from minStockUnit to ingredient base unit if needed
         const minUnit = item.minStockUnit || ingredientUnit;
         minStockLevel = convertToBaseUnit(Number(item.minStockLevel), minUnit, ingredientUnit);
-      } else {
-        minStockLevel = Number(item.ingredient?.minStockLevel || 0);
       }
 
       let status = 'in_stock';
@@ -384,7 +382,6 @@ export class InventoryService {
         name: item.ingredient.name,
         unit: item.ingredient.unit,
         category: item.ingredient.category,
-        minStockLevel: item.ingredient.minStockLevel,
         ingredientCategory: item.ingredient.ingredientCategory ? {
           id: item.ingredient.ingredientCategory.id,
           name: item.ingredient.ingredientCategory.name,
@@ -557,13 +554,11 @@ export class InventoryService {
       totalQuantity += Number(shipment.packageCount) * converted;
     }
 
-    // Use item-level minStockLevel, fall back to ingredient's
+    // Use item-level minStockLevel
     let minStockLevel = 0;
     if (fullItem?.minStockLevel != null) {
       const minUnit = fullItem.minStockUnit || ingredient.unit;
       minStockLevel = convertToBaseUnit(Number(fullItem.minStockLevel), minUnit, ingredient.unit);
-    } else {
-      minStockLevel = Number(ingredient.minStockLevel);
     }
 
     if (minStockLevel > 0 && totalQuantity <= minStockLevel) {

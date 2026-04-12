@@ -265,7 +265,7 @@ export class ReportingService {
       }
 
       const qty = Math.round(totalQuantity * 100) / 100;
-      const minLevel = Number(item.ingredient?.minStockLevel || 0);
+      const minLevel = Number(item.minStockLevel || 0);
       let status = 'in_stock';
       if (qty <= 0) {
         status = 'out_of_stock';

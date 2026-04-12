@@ -97,23 +97,22 @@ export function useScaleRecipe() {
 }
 
 export function useGenerateRecipeFromUrl() {
-  const qc = useQueryClient();
   return useMutation({
     mutationFn: (data: { url: string }) =>
-      apiClient.post<Recipe>('/v1/recipes/generate/from-url', data),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: recipeKeys.lists() });
-    },
+      apiClient.post<any>('/v1/recipes/generate/from-url', data),
   });
 }
 
 export function useGenerateRecipeFromImage() {
-  const qc = useQueryClient();
   return useMutation({
     mutationFn: (data: { imageBase64: string; mimeType?: string }) =>
-      apiClient.post<Recipe>('/v1/recipes/generate/from-image', data),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: recipeKeys.lists() });
-    },
+      apiClient.post<any>('/v1/recipes/generate/from-image', data),
+  });
+}
+
+export function useGenerateRecipeFromText() {
+  return useMutation({
+    mutationFn: (data: { text: string }) =>
+      apiClient.post<any>('/v1/recipes/generate/from-text', data),
   });
 }

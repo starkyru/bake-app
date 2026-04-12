@@ -316,7 +316,6 @@ export async function seed(dataSource: DataSource): Promise<void> {
         ingredientRepo.create({
           name: ing.name,
           unit: ing.unit,
-          minStockLevel: ing.minStockLevel,
           category: ing.category,
           isActive: true,
         }),

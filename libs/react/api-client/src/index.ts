@@ -75,6 +75,7 @@ export {
   useScaleRecipe,
   useGenerateRecipeFromUrl,
   useGenerateRecipeFromImage,
+  useGenerateRecipeFromText,
 } from './hooks/recipes';
 export type { RecipeCostResult } from './hooks/recipes';
 

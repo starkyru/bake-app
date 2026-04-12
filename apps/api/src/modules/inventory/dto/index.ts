@@ -16,13 +16,6 @@ export class CreateIngredientDto {
   @IsString()
   description?: string;
 
-  @ApiPropertyOptional({ example: 10 })
-  @IsOptional()
-  @Type(() => Number)
-  @IsNumber()
-  @Min(0)
-  minStockLevel?: number;
-
   @ApiPropertyOptional({ example: 364 })
   @IsOptional()
   @Type(() => Number)

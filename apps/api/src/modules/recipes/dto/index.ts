@@ -31,6 +31,15 @@ class RecipeIngredientDto {
   @IsString()
   unit: string;
 
+  @ApiPropertyOptional({ description: 'Set to true to auto-create this ingredient' })
+  @IsOptional()
+  @IsBoolean()
+  isNew?: boolean;
+
+  @ApiPropertyOptional({ description: 'Category name for new ingredients' })
+  @IsOptional()
+  @IsString()
+  ingredientCategory?: string;
 }
 
 class RecipeLinkDto {
@@ -130,4 +139,10 @@ export class GenerateFromImageDto {
   @IsOptional()
   @IsString()
   mimeType?: string;
+}
+
+export class GenerateFromTextDto {
+  @ApiProperty({ description: 'Raw recipe text to parse' })
+  @IsString()
+  text: string;
 }
