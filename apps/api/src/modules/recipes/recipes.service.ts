@@ -145,7 +145,9 @@ export class RecipesService {
       for (const m of mvts) {
         const qty = Number(m.quantity);
         if (m.type === 'delivery') {
-          deliveries.push({ qty, cost: Number(m.unitCost) });
+          // unitCost is total cost for the shipment; derive cost per base unit
+          const costPerBaseUnit = qty > 0 ? new BigNumber(m.unitCost).div(qty).toNumber() : 0;
+          deliveries.push({ qty, cost: costPerBaseUnit });
         } else {
           consumed += qty;
         }

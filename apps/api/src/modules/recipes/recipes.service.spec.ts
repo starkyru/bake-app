@@ -77,17 +77,17 @@ describe('RecipesService — getCost BigNumber precision', () => {
       { ingredientId: 'ing-1', ingredientName: 'Flour', quantity: 0.5, unit: 'kg' },
     ]);
 
-    // Two deliveries: 10kg at $0.10/kg, 5kg at $0.20/kg
+    // Two deliveries: 10kg total cost $1.00, 5kg total cost $1.00
+    // costPerUnit: delivery1 = 1.00/10 = 0.10, delivery2 = 1.00/5 = 0.20
     // No consumption -> weighted avg = (10*0.10 + 5*0.20) / 15 = 2.0/15 = 0.13333...
     mockMovements([
-      { ingredientId: 'ing-1', type: 'delivery', quantity: 10, unitCost: 0.10, createdAt: new Date('2026-01-01') },
-      { ingredientId: 'ing-1', type: 'delivery', quantity: 5, unitCost: 0.20, createdAt: new Date('2026-01-02') },
+      { ingredientId: 'ing-1', type: 'delivery', quantity: 10, unitCost: 1.00, createdAt: new Date('2026-01-01') },
+      { ingredientId: 'ing-1', type: 'delivery', quantity: 5, unitCost: 1.00, createdAt: new Date('2026-01-02') },
     ]);
 
     const result = await service.getCost('recipe-1');
 
     // costPerUnit = (10*0.10 + 5*0.20) / 15 = 2/15
-    // lineCost = 0.5 * (2/15)
     const expectedCostPerUnit = 2 / 15;
     const expectedLineCost = 0.5 * expectedCostPerUnit;
 
@@ -102,13 +102,13 @@ describe('RecipesService — getCost BigNumber precision', () => {
       { ingredientId: 'ing-1', ingredientName: 'Sugar', quantity: 2, unit: 'kg' },
     ]);
 
-    // Delivery 10kg @ $1, then usage of 8kg, then delivery 5kg @ $2
+    // Delivery 10kg total cost $10 (=$1/kg), usage 8kg, delivery 5kg total cost $10 (=$2/kg)
     // After FIFO consumption: first delivery has 2kg left, second has 5kg
     // Weighted avg = (2*1 + 5*2) / 7 = 12/7
     mockMovements([
-      { ingredientId: 'ing-1', type: 'delivery', quantity: 10, unitCost: 1, createdAt: new Date('2026-01-01') },
+      { ingredientId: 'ing-1', type: 'delivery', quantity: 10, unitCost: 10, createdAt: new Date('2026-01-01') },
       { ingredientId: 'ing-1', type: 'usage', quantity: 8, unitCost: null, createdAt: new Date('2026-01-05') },
-      { ingredientId: 'ing-1', type: 'delivery', quantity: 5, unitCost: 2, createdAt: new Date('2026-01-10') },
+      { ingredientId: 'ing-1', type: 'delivery', quantity: 5, unitCost: 10, createdAt: new Date('2026-01-10') },
     ]);
 
     const result = await service.getCost('recipe-1');
@@ -125,12 +125,12 @@ describe('RecipesService — getCost BigNumber precision', () => {
       { ingredientId: 'ing-2', ingredientName: 'B', quantity: 7, unit: 'kg' },
     ]);
 
-    // ing-1: 10kg at $0.1 -> costPerUnit = 0.1, lineCost = 0.3
-    // ing-2: 10kg at $0.2 -> costPerUnit = 0.2, lineCost = 1.4
+    // ing-1: 10kg total cost $1 -> costPerUnit = 0.1, lineCost = 0.3
+    // ing-2: 10kg total cost $2 -> costPerUnit = 0.2, lineCost = 1.4
     // total = 0.3 + 1.4 = 1.7 exactly
     mockMovements([
-      { ingredientId: 'ing-1', type: 'delivery', quantity: 10, unitCost: 0.1, createdAt: new Date('2026-01-01') },
-      { ingredientId: 'ing-2', type: 'delivery', quantity: 10, unitCost: 0.2, createdAt: new Date('2026-01-01') },
+      { ingredientId: 'ing-1', type: 'delivery', quantity: 10, unitCost: 1, createdAt: new Date('2026-01-01') },
+      { ingredientId: 'ing-2', type: 'delivery', quantity: 10, unitCost: 2, createdAt: new Date('2026-01-01') },
     ]);
 
     const result = await service.getCost('recipe-1');
@@ -159,7 +159,7 @@ describe('RecipesService — getCost BigNumber precision', () => {
     ]);
 
     mockMovements([
-      { ingredientId: 'ing-1', type: 'delivery', quantity: 5, unitCost: 1, createdAt: new Date('2026-01-01') },
+      { ingredientId: 'ing-1', type: 'delivery', quantity: 5, unitCost: 5, createdAt: new Date('2026-01-01') },
       { ingredientId: 'ing-1', type: 'usage', quantity: 5, unitCost: null, createdAt: new Date('2026-01-02') },
     ]);
 
@@ -203,12 +203,12 @@ describe('RecipesService — getCost BigNumber precision', () => {
       { ingredientId: 'ing-2', ingredientName: 'B', quantity: 1, unit: 'kg' },
     ]);
 
-    // ing-1 costPerUnit = 0.1, lineCost = 0.1
-    // ing-2 costPerUnit = 0.2, lineCost = 0.2
+    // ing-1: 10kg total cost $1 -> costPerUnit = 0.1, lineCost = 0.1
+    // ing-2: 10kg total cost $2 -> costPerUnit = 0.2, lineCost = 0.2
     // ingredientsCost = 0.1 + 0.2 should be 0.3 exactly
     mockMovements([
-      { ingredientId: 'ing-1', type: 'delivery', quantity: 10, unitCost: 0.1, createdAt: new Date('2026-01-01') },
-      { ingredientId: 'ing-2', type: 'delivery', quantity: 10, unitCost: 0.2, createdAt: new Date('2026-01-01') },
+      { ingredientId: 'ing-1', type: 'delivery', quantity: 10, unitCost: 1, createdAt: new Date('2026-01-01') },
+      { ingredientId: 'ing-2', type: 'delivery', quantity: 10, unitCost: 2, createdAt: new Date('2026-01-01') },
     ]);
 
     const result = await service.getCost('recipe-1');
