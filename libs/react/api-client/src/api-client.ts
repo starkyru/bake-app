@@ -51,7 +51,9 @@ async function request<T>(
     return undefined as T;
   }
 
-  return response.json();
+  const text = await response.text();
+  if (!text) return undefined as T;
+  return JSON.parse(text);
 }
 
 function buildQuery(params?: Record<string, unknown>): string {
