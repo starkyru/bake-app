@@ -71,6 +71,7 @@ export interface RecipeCostResult {
     ingredientName: string;
     quantity: number;
     unit: string;
+    note?: string;
     costPerUnit: number;
     lineCost: number;
   }[];

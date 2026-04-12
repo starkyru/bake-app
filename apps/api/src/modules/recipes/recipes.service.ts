@@ -85,7 +85,7 @@ export class RecipesService {
     await this.versionRepo.save(this.versionRepo.create({
       recipeId: id,
       versionNumber: recipe.currentVersion,
-      ingredientsSnapshot: recipe.ingredients.map(i => ({ ingredientId: i.ingredientId, ingredientName: i.ingredientName, quantity: i.quantity, unit: i.unit })),
+      ingredientsSnapshot: recipe.ingredients.map(i => ({ ingredientId: i.ingredientId, ingredientName: i.ingredientName, quantity: i.quantity, unit: i.unit, note: i.note })),
       instructionsSnapshot: recipe.instructions,
       changedById: userId,
     }));
@@ -192,6 +192,7 @@ export class RecipesService {
         ingredientName: ri.ingredientName,
         quantity: Number(ri.quantity),
         unit: ri.unit,
+        note: ri.note,
         costPerUnit,
         lineCost,
       };
@@ -234,6 +235,7 @@ export class RecipesService {
       "ingredientName": "Ingredient Name",
       "quantity": number (converted to metric — grams for dry/solid ingredients, ml for liquids. Convert cups: 1 cup flour ≈ 125g, 1 cup sugar ≈ 200g, 1 cup butter ≈ 227g, 1 cup milk ≈ 240ml, 1 cup water ≈ 240ml. If the recipe provides both metric and imperial, use the metric value.),
       "unit": "one of: g, kg, ml, L, pcs, tbsp, tsp (prefer g for solids, ml for liquids)",
+      "note": "optional preparation note, e.g. 'sifted', 'room temperature', 'finely chopped', 'extra large preferred'. Omit if no special note applies.",
       ${categoriesHint}
     }
   ]`;
@@ -384,6 +386,7 @@ Return ONLY valid JSON, no markdown, no explanation.`,
           ingredientName: newIngredient.name,
           quantity: ing.quantity,
           unit: ing.unit,
+          note: ing.note,
         });
       } else {
         resolved.push(ing);

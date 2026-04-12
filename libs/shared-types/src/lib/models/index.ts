@@ -218,6 +218,7 @@ export interface RecipeIngredient {
   ingredientName?: string;
   quantity: number;
   unit: string;
+  note?: string;
 }
 
 export interface RecipeImage {

@@ -67,7 +67,10 @@ export function CostEstimate({ recipeCost, scaleFactor = 1, title = 'Batch Cost 
         <tbody>
           {recipeCost.ingredients.map((line, i) => (
             <tr key={i} className="text-gray-600">
-              <td className="py-0.5">{line.ingredientName}</td>
+              <td className="py-0.5">
+                {line.ingredientName}
+                {line.note && <span className="ml-1 text-xs text-gray-400">({line.note})</span>}
+              </td>
               <td className="py-0.5 text-right font-mono text-xs">
                 {Math.round(line.quantity * scaleFactor * 100) / 100} {line.unit}
               </td>

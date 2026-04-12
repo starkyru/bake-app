@@ -21,6 +21,9 @@ export class RecipeIngredient extends BaseEntity {
   @Column({ name: 'ingredient_name', nullable: true })
   ingredientName: string;
 
+  @Column({ nullable: true })
+  note: string;
+
   @ManyToOne(() => Recipe, recipe => recipe.ingredients, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'recipe_id' })
   recipe: Recipe;

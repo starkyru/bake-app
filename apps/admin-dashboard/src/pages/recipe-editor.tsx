@@ -127,6 +127,7 @@ interface RecipeIngredientRow {
   ingredientName: string;
   quantity: string;
   unit: string;
+  note?: string;
   isNew?: boolean;
   suggestedCategory?: string;
 }
@@ -195,6 +196,7 @@ export function RecipeEditorPage() {
           ingredientName: ri.ingredientName ?? '',
           quantity: String(ri.quantity),
           unit: ri.unit,
+          note: ri.note ?? '',
         })),
       );
       setLinkRows(
@@ -239,6 +241,7 @@ export function RecipeEditorPage() {
             ingredientName: bestMatch.name,
             quantity: String(aiIng.quantity || 0),
             unit: bestMatch.unit || unit,
+            note: aiIng.note || '',
           };
         }
 
@@ -248,6 +251,7 @@ export function RecipeEditorPage() {
           ingredientName,
           quantity: String(aiIng.quantity || 0),
           unit,
+          note: aiIng.note || '',
           isNew: true,
           suggestedCategory: aiIng.ingredientCategory || '',
         };
@@ -379,6 +383,7 @@ export function RecipeEditorPage() {
         ingredientName: r.ingredientName,
         quantity: parseFloat(r.quantity) || 0,
         unit: r.unit,
+        note: r.note?.trim() || undefined,
         ...(r.isNew && { isNew: true, ingredientCategory: r.suggestedCategory || undefined }),
       }));
 
@@ -597,6 +602,9 @@ export function RecipeEditorPage() {
                     <th className="pb-2 text-xs font-semibold uppercase tracking-wider text-[#5d4037] w-24">
                       Unit
                     </th>
+                    <th className="pb-2 text-xs font-semibold uppercase tracking-wider text-[#5d4037] w-36">
+                      Note
+                    </th>
                     <th className="pb-2 w-12" />
                   </tr>
                 </thead>
@@ -779,6 +787,17 @@ export function RecipeEditorPage() {
                               </option>
                             ))}
                           </select>
+                        </td>
+                        <td className="py-2 pr-2">
+                          <input
+                            type="text"
+                            value={row.note || ''}
+                            onChange={(e) =>
+                              updateIngredientRow(idx, 'note', e.target.value)
+                            }
+                            className="w-full rounded-lg border border-gray-200 bg-gray-50 px-2 py-1.5 text-sm focus:border-[#8b4513] focus:bg-white focus:outline-none focus:ring-1 focus:ring-[#8b4513]/30"
+                            placeholder="e.g. sifted"
+                          />
                         </td>
                         <td className="py-2">
                           <button

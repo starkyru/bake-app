@@ -32,6 +32,11 @@ class RecipeIngredientDto {
   @IsString()
   unit: string;
 
+  @ApiPropertyOptional({ example: 'sifted' })
+  @IsOptional()
+  @IsString()
+  note?: string;
+
   @ApiPropertyOptional({ description: 'Set to true to auto-create this ingredient' })
   @IsOptional()
   @IsBoolean()
