@@ -216,7 +216,7 @@ export function RecipeEditorPage() {
             ingredientId: bestMatch.id,
             ingredientName: bestMatch.name,
             quantity: String(aiIng.quantity || 0),
-            unit,
+            unit: bestMatch.unit || unit,
           };
         }
 

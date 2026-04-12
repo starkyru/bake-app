@@ -1,8 +1,9 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { ConfigService } from '@nestjs/config';
 import { Repository } from 'typeorm';
 import Anthropic from '@anthropic-ai/sdk';
+import axios from 'axios';
 import { Recipe } from './entities/recipe.entity';
 import { RecipeIngredient } from './entities/recipe-ingredient.entity';
 import { RecipeLink } from './entities/recipe-link.entity';
@@ -229,21 +230,27 @@ export class RecipesService {
   }
 
   async generateFromUrl(url: string): Promise<Partial<CreateRecipeDto>> {
+    const pageContent = await this.fetchPageContent(url);
     const categoryNames = await this.getIngredientCategoryNames();
     const ingredientSchema = this.buildIngredientSchema(categoryNames);
 
     const response = await this.callAnthropic([
       {
         role: 'user',
-        content: `You are a recipe parser. Given this URL to a recipe page: ${url}
+        content: `You are a recipe parser. Parse the recipe from this web page content exactly as written — do NOT add, remove, or substitute any ingredients or instructions. If the recipe is not in English, translate all text fields (name, instructions, ingredient names) to English.
 
-Please fetch and parse the recipe from this URL and return a JSON object with the following structure:
+Source URL: ${url}
+
+Page content:
+${pageContent}
+
+Return a JSON object with the following structure:
 {
   "name": "Recipe Name",
   "category": "one of: bread, pastry, cake, beverage, sandwich, other",
   "yieldQuantity": number,
   "yieldUnit": "pcs or kg or loaves or cakes or liters",
-  "instructions": "Step by step instructions as plain text",
+  "instructions": "Step by step instructions as plain text, exactly as written on the page",
   ${ingredientSchema},
   "links": [
     {
@@ -252,6 +259,8 @@ Please fetch and parse the recipe from this URL and return a JSON object with th
     }
   ]
 }
+
+IMPORTANT: Include ALL ingredients listed on the page and ONLY those ingredients. Do not add ingredients that are not mentioned. Copy instructions exactly as they appear on the page.
 
 Return ONLY valid JSON, no markdown, no explanation.`,
       },
@@ -267,7 +276,7 @@ Return ONLY valid JSON, no markdown, no explanation.`,
     const response = await this.callAnthropic([
       {
         role: 'user',
-        content: `You are a recipe parser. Parse this recipe text and return a structured JSON object.
+        content: `You are a recipe parser. Parse this recipe text and return a structured JSON object. If the recipe is not in English, translate all text fields (name, instructions, ingredient names) to English.
 
 Recipe text:
 ${text}
@@ -308,7 +317,7 @@ Return ONLY valid JSON, no markdown, no explanation.`,
           },
           {
             type: 'text',
-            text: `You are a recipe parser. Look at this image of a recipe and extract all the information you can see.
+            text: `You are a recipe parser. Look at this image of a recipe and extract all the information you can see. If the recipe is not in English, translate all text fields (name, instructions, ingredient names) to English.
 
 Return a JSON object with the following structure:
 {
@@ -370,6 +379,31 @@ Return ONLY valid JSON, no markdown, no explanation.`,
       return JSON.parse(cleaned);
     } catch {
       throw new BadRequestException('AI returned invalid JSON. Please try again.');
+    }
+  }
+
+  private async fetchPageContent(url: string): Promise<string> {
+    try {
+      const { data } = await axios.get<string>(url, {
+        headers: { 'User-Agent': 'Mozilla/5.0 (compatible; BakeApp/1.0)' },
+        timeout: 15000,
+        maxContentLength: 2 * 1024 * 1024,
+      });
+      // Strip HTML tags and extract text content
+      return data
+        .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
+        .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
+        .replace(/<[^>]+>/g, ' ')
+        .replace(/&nbsp;/g, ' ')
+        .replace(/&amp;/g, '&')
+        .replace(/&lt;/g, '<')
+        .replace(/&gt;/g, '>')
+        .replace(/&#\d+;/g, '')
+        .replace(/\s+/g, ' ')
+        .trim()
+        .slice(0, 50000);
+    } catch {
+      throw new BadRequestException('Could not fetch the recipe page. Please check the URL or paste the recipe text instead.');
     }
   }
 
