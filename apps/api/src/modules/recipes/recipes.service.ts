@@ -262,7 +262,7 @@ Return a JSON object with the following structure:
   "category": "one of: bread, pastry, cake, beverage, sandwich, other",
   "yieldQuantity": number,
   "yieldUnit": "pcs or kg or loaves or cakes or liters",
-  "instructions": "Step by step instructions, each step on its own line as a numbered list (1. ... 2. ... etc). Preserve the original content.",
+  "instructions": "Step by step instructions, each step on its own line as a numbered list (1. ... 2. ... etc). Preserve the original content. If the recipe includes tips, notes, or variations, add them at the end after a blank line prefixed with 'Tip:' or 'Note:'.",
   ${ingredientSchema},
   "links": [
     {
@@ -301,7 +301,7 @@ Return a JSON object with the following structure:
   "category": "one of: bread, pastry, cake, beverage, sandwich, other",
   "yieldQuantity": number,
   "yieldUnit": "pcs or kg or loaves or cakes or liters",
-  "instructions": "Step by step instructions, each step on its own line as a numbered list (1. ... 2. ... etc)",
+  "instructions": "Step by step instructions, each step on its own line as a numbered list (1. ... 2. ... etc). If the recipe includes tips, notes, or variations, add them at the end after a blank line prefixed with 'Tip:' or 'Note:'.",
   ${ingredientSchema}
 }
 
@@ -343,7 +343,7 @@ Return a JSON object with the following structure:
   "category": "one of: bread, pastry, cake, beverage, sandwich, other",
   "yieldQuantity": number,
   "yieldUnit": "pcs or kg or loaves or cakes or liters",
-  "instructions": "Step by step instructions, each step on its own line as a numbered list (1. ... 2. ... etc)",
+  "instructions": "Step by step instructions, each step on its own line as a numbered list (1. ... 2. ... etc). If the recipe includes tips, notes, or variations, add them at the end after a blank line prefixed with 'Tip:' or 'Note:'.",
   ${ingredientSchema}
 }
 
