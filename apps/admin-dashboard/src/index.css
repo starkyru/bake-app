@@ -19,15 +19,33 @@ select {
     overflow: visible !important;
     height: auto !important;
     max-height: none !important;
+    min-height: 0 !important;
     flex-shrink: 0 !important;
+    flex-basis: auto !important;
   }
   body, html {
     background: white !important;
+    display: block !important;
   }
   main {
     padding: 0 !important;
     margin: 0 !important;
+    display: block !important;
   }
+  /* Reset flex/grid layout containers so content flows naturally */
+  div {
+    display: block !important;
+  }
+  /* Preserve flex only for elements that need it for inline layout */
+  .flex.items-center, .flex.gap-2, .flex.gap-3 {
+    display: flex !important;
+  }
+  /* Keep table layout */
+  table { display: table !important; }
+  thead { display: table-header-group !important; }
+  tbody { display: table-row-group !important; }
+  tr { display: table-row !important; }
+  td, th { display: table-cell !important; }
   body.print-ingredients-only [data-print-section="instructions"] {
     display: none !important;
   }
