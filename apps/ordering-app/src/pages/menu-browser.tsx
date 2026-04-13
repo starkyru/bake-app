@@ -5,29 +5,32 @@ import { useOnlineMenus, useOnlineLocationDetail } from '@bake-app/react/api-cli
 import { useOrderingUIStore } from '@bake-app/react/store';
 import { ProductCard } from '../components/product-card';
 
-interface OnlineMenuProduct {
-  id: string;
-  productId: string;
-  product?: {
-    id: string;
-    name: string;
-    price: number;
-    description?: string;
-    categoryId?: string;
-    category?: { id: string; name: string };
-  };
-  sortOrder: number;
-}
-
-interface OnlineMenu {
+interface MenuProduct {
   id: string;
   name: string;
+  price: number;
   description?: string;
-  menuProducts?: OnlineMenuProduct[];
+  categoryId?: string;
+  category?: { id: string; name: string };
+}
+
+interface StandaloneMenu {
+  menu: { id: string; name: string; description?: string };
+  products: MenuProduct[];
   config?: {
-    mergeWithOthers?: boolean;
-    standalone?: boolean;
+    prepTimeMinutes?: number;
+    leadTimeHours?: number;
+    requiresApproval?: boolean;
+    preorderEnabled?: boolean;
+  } | null;
+}
+
+interface MenusResponse {
+  merged: {
+    products: MenuProduct[];
+    byCategory?: { category: string; products: MenuProduct[] }[];
   };
+  standalone: StandaloneMenu[];
 }
 
 interface FlatProduct {
@@ -37,8 +40,6 @@ interface FlatProduct {
   description?: string;
   category: string;
   categoryId: string;
-  menuId: string;
-  menuName: string;
 }
 
 const DIETARY_FILTERS = ['Vegan', 'Gluten-Free', 'Dairy-Free', 'Nut-Free', 'Sugar-Free'];
@@ -59,46 +60,38 @@ export function MenuBrowserPage() {
   const { data: menuData, isLoading } = useOnlineMenus(selectedLocationId ?? '');
 
   const location = locationData as { name?: string } | undefined;
-  const menus = (menuData as OnlineMenu[] | undefined) ?? [];
+  const menusResponse = menuData as MenusResponse | undefined;
 
-  // Split into merged and standalone menus
+  // Map API response into flat products
   const { mergedProducts, standaloneMenus, allCategories } = useMemo(() => {
-    const merged: FlatProduct[] = [];
-    const standalone: { menu: OnlineMenu; products: FlatProduct[] }[] = [];
     const categorySet = new Set<string>();
 
-    for (const menu of menus) {
-      const products: FlatProduct[] =
-        menu.menuProducts
-          ?.filter((mp) => mp.product)
-          .map((mp) => {
-            const cat = mp.product!.category?.name ?? 'Other';
-            categorySet.add(cat);
-            return {
-              id: mp.product!.id,
-              name: mp.product!.name,
-              price: mp.product!.price,
-              description: mp.product!.description,
-              category: cat,
-              categoryId: mp.product!.categoryId ?? '',
-              menuId: menu.id,
-              menuName: menu.name,
-            };
-          }) ?? [];
+    const toFlat = (p: MenuProduct): FlatProduct => {
+      const cat = p.category?.name ?? 'Other';
+      categorySet.add(cat);
+      return {
+        id: p.id,
+        name: p.name,
+        price: p.price,
+        description: p.description,
+        category: cat,
+        categoryId: p.categoryId ?? '',
+      };
+    };
 
-      if (menu.config?.standalone) {
-        standalone.push({ menu, products });
-      } else {
-        merged.push(...products);
-      }
-    }
+    const merged = (menusResponse?.merged?.products ?? []).map(toFlat);
+
+    const standalone = (menusResponse?.standalone ?? []).map((s) => ({
+      menu: s.menu,
+      products: s.products.map(toFlat),
+    }));
 
     return {
       mergedProducts: merged,
       standaloneMenus: standalone,
       allCategories: Array.from(categorySet).sort(),
     };
-  }, [menus]);
+  }, [menusResponse]);
 
   // Filter products
   const filterProducts = (products: FlatProduct[]) => {

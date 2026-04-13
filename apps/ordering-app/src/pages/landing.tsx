@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { useNavigate } from 'react-router';
 import { MapPin, Phone, Clock, Truck, ShoppingBag, Store } from 'lucide-react';
 import { useOnlineLocations } from '@bake-app/react/api-client';
@@ -24,6 +25,14 @@ export function LandingPage() {
   const { businessName, tagline, heroImageUrl } = useTheme();
 
   const locations = (data as OnlineLocation[] | undefined) ?? [];
+
+  // Auto-select if there's only one location
+  useEffect(() => {
+    if (!isLoading && locations.length === 1) {
+      setSelectedLocationId(locations[0].id);
+      navigate('/menu', { replace: true });
+    }
+  }, [isLoading, locations, setSelectedLocationId, navigate]);
 
   const handleSelectLocation = (locationId: string) => {
     setSelectedLocationId(locationId);
