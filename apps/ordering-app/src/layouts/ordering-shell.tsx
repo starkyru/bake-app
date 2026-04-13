@@ -2,7 +2,12 @@ import { Outlet, useNavigate, useLocation } from 'react-router';
 import { Home, UtensilsCrossed, ShoppingBag, User, MapPin, Phone } from 'lucide-react';
 import { CartIcon } from '../components/cart-icon';
 import { useCustomerAuth } from '@bake-app/react/customer-auth';
-import { useCustomerCartStore, selectCustomerTotalItems } from '@bake-app/react/store';
+import {
+  useCustomerCartStore,
+  selectCustomerTotalItems,
+  useOrderingUIStore,
+} from '@bake-app/react/store';
+import { useOnlineLocationDetail } from '@bake-app/react/api-client';
 import { useTheme } from '../providers/theme-provider';
 
 export function OrderingShell() {
@@ -10,10 +15,14 @@ export function OrderingShell() {
   const location = useLocation();
   const { customer, isAuthenticated } = useCustomerAuth();
   const totalItems = useCustomerCartStore(selectCustomerTotalItems);
+  const selectedLocationId = useOrderingUIStore((s) => s.selectedLocationId);
+  const { data: locationDetailData } = useOnlineLocationDetail(selectedLocationId ?? '');
+  const locationInfo = (locationDetailData as { location?: { name?: string; address?: string; phone?: string } } | undefined)?.location;
   const { businessName, logoUrl } = useTheme();
 
+  const homePath = selectedLocationId ? '/menu' : '/';
   const navItems = [
-    { path: '/', icon: Home, label: 'Home' },
+    ...(selectedLocationId ? [] : [{ path: '/' as const, icon: Home, label: 'Home' }]),
     { path: '/menu', icon: UtensilsCrossed, label: 'Menu' },
     { path: '/cart', icon: ShoppingBag, label: 'Cart', badge: totalItems },
     { path: isAuthenticated ? '/account' : '/login', icon: User, label: 'Account' },
@@ -30,7 +39,7 @@ export function OrderingShell() {
           {/* Logo / business name */}
           <button
             type="button"
-            onClick={() => navigate('/')}
+            onClick={() => navigate(homePath)}
             className="flex items-center gap-2 text-lg font-bold"
             style={{ color: 'var(--color-primary)' }}
           >
@@ -44,17 +53,21 @@ export function OrderingShell() {
 
           {/* Desktop nav */}
           <nav className="hidden items-center gap-6 md:flex">
-            <button
-              type="button"
-              onClick={() => navigate('/')}
-              className="text-sm font-medium transition-colors hover:opacity-80"
-              style={{
-                color:
-                  location.pathname === '/' ? 'var(--color-primary)' : 'var(--color-text-muted)',
-              }}
-            >
-              Home
-            </button>
+            {!selectedLocationId && (
+              <button
+                type="button"
+                onClick={() => navigate('/')}
+                className="text-sm font-medium transition-colors hover:opacity-80"
+                style={{
+                  color:
+                    location.pathname === '/'
+                      ? 'var(--color-primary)'
+                      : 'var(--color-text-muted)',
+                }}
+              >
+                Home
+              </button>
+            )}
             <button
               type="button"
               onClick={() => navigate('/menu')}
@@ -66,18 +79,6 @@ export function OrderingShell() {
               }}
             >
               Menu
-            </button>
-            <button
-              type="button"
-              onClick={() => navigate('/custom-cake')}
-              className="text-sm font-medium transition-colors hover:opacity-80"
-              style={{
-                color: location.pathname === '/custom-cake'
-                  ? 'var(--color-primary)'
-                  : 'var(--color-text-muted)',
-              }}
-            >
-              Custom Cakes
             </button>
           </nav>
 
@@ -144,14 +145,6 @@ export function OrderingShell() {
                 </button>
                 <button
                   type="button"
-                  onClick={() => navigate('/custom-cake')}
-                  className="text-left text-xs hover:underline"
-                  style={{ color: 'var(--color-text-muted)' }}
-                >
-                  Custom Cakes
-                </button>
-                <button
-                  type="button"
                   onClick={() => navigate('/account/orders')}
                   className="text-left text-xs hover:underline"
                   style={{ color: 'var(--color-text-muted)' }}
@@ -169,14 +162,16 @@ export function OrderingShell() {
                   className="flex items-center gap-1.5 text-xs"
                   style={{ color: 'var(--color-text-muted)' }}
                 >
-                  <MapPin className="h-3 w-3" /> Select a location to see address
+                  <MapPin className="h-3 w-3" /> {locationInfo?.address ?? 'Select a location to see address'}
                 </span>
-                <span
-                  className="flex items-center gap-1.5 text-xs"
-                  style={{ color: 'var(--color-text-muted)' }}
-                >
-                  <Phone className="h-3 w-3" /> Contact details at each location
-                </span>
+                {locationInfo?.phone && (
+                  <span
+                    className="flex items-center gap-1.5 text-xs"
+                    style={{ color: 'var(--color-text-muted)' }}
+                  >
+                    <Phone className="h-3 w-3" /> {locationInfo.phone}
+                  </span>
+                )}
               </div>
             </div>
           </div>

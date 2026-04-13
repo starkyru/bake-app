@@ -59,7 +59,9 @@ export function MenuBrowserPage() {
   const { data: locationData } = useOnlineLocationDetail(selectedLocationId ?? '');
   const { data: menuData, isLoading } = useOnlineMenus(selectedLocationId ?? '');
 
-  const location = locationData as { name?: string } | undefined;
+  const locationDetail = locationData as
+    | { location?: { name?: string; address?: string; phone?: string }; config?: unknown }
+    | undefined;
   const menusResponse = menuData as MenusResponse | undefined;
 
   // Map API response into flat products
@@ -162,7 +164,7 @@ export function MenuBrowserPage() {
         <div className="flex items-center gap-2">
           <MapPin className="h-4 w-4" style={{ color: 'var(--color-primary)' }} />
           <span className="text-sm font-semibold" style={{ color: 'var(--color-text)' }}>
-            {location?.name ?? 'Selected Location'}
+            {locationDetail?.location?.name ?? 'Selected Location'}
           </span>
         </div>
         <button
