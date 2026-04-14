@@ -20,9 +20,8 @@ export function OrderingShell() {
   const locationInfo = (locationDetailData as { location?: { name?: string; address?: string; phone?: string } } | undefined)?.location;
   const { businessName, logoUrl } = useTheme();
 
-  const homePath = selectedLocationId ? '/menu' : '/';
   const navItems = [
-    ...(selectedLocationId ? [] : [{ path: '/' as const, icon: Home, label: 'Home' }]),
+    { path: '/', icon: Home, label: 'Home' },
     { path: '/menu', icon: UtensilsCrossed, label: 'Menu' },
     { path: '/cart', icon: ShoppingBag, label: 'Cart', badge: totalItems },
     { path: isAuthenticated ? '/account' : '/login', icon: User, label: 'Account' },
@@ -39,7 +38,7 @@ export function OrderingShell() {
           {/* Logo / business name */}
           <button
             type="button"
-            onClick={() => navigate(homePath)}
+            onClick={() => navigate('/')}
             className="flex items-center gap-2 text-lg font-bold"
             style={{ color: 'var(--color-primary)' }}
           >
@@ -53,21 +52,19 @@ export function OrderingShell() {
 
           {/* Desktop nav */}
           <nav className="hidden items-center gap-6 md:flex">
-            {!selectedLocationId && (
-              <button
-                type="button"
-                onClick={() => navigate('/')}
-                className="text-sm font-medium transition-colors hover:opacity-80"
-                style={{
-                  color:
-                    location.pathname === '/'
-                      ? 'var(--color-primary)'
-                      : 'var(--color-text-muted)',
-                }}
-              >
-                Home
-              </button>
-            )}
+            <button
+              type="button"
+              onClick={() => navigate('/')}
+              className="text-sm font-medium transition-colors hover:opacity-80"
+              style={{
+                color:
+                  location.pathname === '/'
+                    ? 'var(--color-primary)'
+                    : 'var(--color-text-muted)',
+              }}
+            >
+              Home
+            </button>
             <button
               type="button"
               onClick={() => navigate('/menu')}

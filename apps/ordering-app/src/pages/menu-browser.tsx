@@ -1,7 +1,11 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router';
 import { Search, SlidersHorizontal, X, MapPin } from 'lucide-react';
-import { useOnlineMenus, useOnlineLocationDetail } from '@bake-app/react/api-client';
+import {
+  useOnlineMenus,
+  useOnlineLocationDetail,
+  useOnlineLocations,
+} from '@bake-app/react/api-client';
 import { useOrderingUIStore } from '@bake-app/react/store';
 import { ProductCard } from '../components/product-card';
 
@@ -47,6 +51,7 @@ const DIETARY_FILTERS = ['Vegan', 'Gluten-Free', 'Dairy-Free', 'Nut-Free', 'Suga
 export function MenuBrowserPage() {
   const navigate = useNavigate();
   const selectedLocationId = useOrderingUIStore((s) => s.selectedLocationId);
+  const setSelectedLocationId = useOrderingUIStore((s) => s.setSelectedLocationId);
   const searchQuery = useOrderingUIStore((s) => s.menuSearchQuery);
   const setSearchQuery = useOrderingUIStore((s) => s.setMenuSearchQuery);
   const dietaryFilters = useOrderingUIStore((s) => s.activeDietaryFilters);
@@ -56,8 +61,20 @@ export function MenuBrowserPage() {
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<string | null>(null);
 
-  const { data: locationData } = useOnlineLocationDetail(selectedLocationId ?? '');
-  const { data: menuData, isLoading } = useOnlineMenus(selectedLocationId ?? '');
+  // Auto-select if there's only one location
+  const { data: locationsData, isLoading: locationsLoading } = useOnlineLocations();
+  const locations = (locationsData as { id: string }[] | undefined) ?? [];
+
+  useEffect(() => {
+    if (!selectedLocationId && !locationsLoading && locations.length === 1) {
+      setSelectedLocationId(locations[0].id);
+    }
+  }, [selectedLocationId, locationsLoading, locations, setSelectedLocationId]);
+
+  const effectiveLocationId = selectedLocationId ?? (locations.length === 1 ? locations[0].id : '');
+
+  const { data: locationData } = useOnlineLocationDetail(effectiveLocationId);
+  const { data: menuData, isLoading } = useOnlineMenus(effectiveLocationId);
 
   const locationDetail = locationData as
     | { location?: { name?: string; address?: string; phone?: string }; config?: unknown }
@@ -130,8 +147,18 @@ export function MenuBrowserPage() {
     return groups;
   }, [filteredMerged]);
 
-  // Redirect if no location selected
-  if (!selectedLocationId) {
+  // Show prompt only if no location and not auto-selecting
+  if (!effectiveLocationId) {
+    if (locationsLoading) {
+      return (
+        <div className="flex justify-center py-16">
+          <div
+            className="h-8 w-8 animate-spin rounded-full border-4 border-t-transparent"
+            style={{ borderColor: 'var(--color-accent)', borderTopColor: 'transparent' }}
+          />
+        </div>
+      );
+    }
     return (
       <div className="mx-auto max-w-6xl px-4 py-16 text-center">
         <p className="text-lg font-medium" style={{ color: 'var(--color-text)' }}>
@@ -157,6 +184,8 @@ export function MenuBrowserPage() {
     }
   };
 
+  const hasProducts = mergedProducts.length > 0 || standaloneMenus.some((s) => s.products.length > 0);
+
   return (
     <div className="mx-auto max-w-6xl px-4 py-6">
       {/* Location header */}
@@ -167,122 +196,120 @@ export function MenuBrowserPage() {
             {locationDetail?.location?.name ?? 'Selected Location'}
           </span>
         </div>
-        <button
-          type="button"
-          onClick={() => navigate('/')}
-          className="text-xs font-medium hover:underline"
-          style={{ color: 'var(--color-primary)' }}
-        >
-          Change
-        </button>
       </div>
 
-      {/* Search */}
-      <div className="mb-4 flex gap-2">
-        <div className="relative flex-1">
-          <Search
-            className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2"
-            style={{ color: 'var(--color-text-muted)' }}
-          />
-          <input
-            type="text"
-            placeholder="Search menu..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="h-11 w-full border border-black/10 pl-10 pr-4 text-sm outline-none focus:ring-2"
-            style={{
-              borderRadius: 'var(--radius)',
-              backgroundColor: 'var(--color-card)',
-              color: 'var(--color-text)',
-              '--tw-ring-color': 'var(--color-primary)',
-            } as React.CSSProperties}
-          />
-          {searchQuery && (
+      {/* Search & filters - only show when products exist */}
+      {!isLoading && hasProducts && (
+        <>
+          <div className="mb-4 flex gap-2">
+            <div className="relative flex-1">
+              <Search
+                className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2"
+                style={{ color: 'var(--color-text-muted)' }}
+              />
+              <input
+                type="text"
+                placeholder="Search menu..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="h-11 w-full border border-black/10 pl-10 pr-4 text-sm outline-none focus:ring-2"
+                style={{
+                  borderRadius: 'var(--radius)',
+                  backgroundColor: 'var(--color-card)',
+                  color: 'var(--color-text)',
+                  '--tw-ring-color': 'var(--color-primary)',
+                } as React.CSSProperties}
+              />
+              {searchQuery && (
+                <button
+                  type="button"
+                  onClick={() => setSearchQuery('')}
+                  className="absolute right-3 top-1/2 -translate-y-1/2"
+                >
+                  <X className="h-4 w-4" style={{ color: 'var(--color-text-muted)' }} />
+                </button>
+              )}
+            </div>
             <button
               type="button"
-              onClick={() => setSearchQuery('')}
-              className="absolute right-3 top-1/2 -translate-y-1/2"
+              onClick={() => setShowFilters(!showFilters)}
+              className="flex h-11 w-11 items-center justify-center border border-black/10"
+              style={{
+                borderRadius: 'var(--radius)',
+                backgroundColor: showFilters ? 'var(--color-primary)' : 'var(--color-card)',
+                color: showFilters ? 'white' : 'var(--color-text-muted)',
+              }}
+              aria-label="Toggle filters"
             >
-              <X className="h-4 w-4" style={{ color: 'var(--color-text-muted)' }} />
+              <SlidersHorizontal className="h-4 w-4" />
             </button>
-          )}
-        </div>
-        <button
-          type="button"
-          onClick={() => setShowFilters(!showFilters)}
-          className="flex h-11 w-11 items-center justify-center border border-black/10"
-          style={{
-            borderRadius: 'var(--radius)',
-            backgroundColor: showFilters ? 'var(--color-primary)' : 'var(--color-card)',
-            color: showFilters ? 'white' : 'var(--color-text-muted)',
-          }}
-          aria-label="Toggle filters"
-        >
-          <SlidersHorizontal className="h-4 w-4" />
-        </button>
-      </div>
+          </div>
 
-      {/* Dietary filters */}
-      {showFilters && (
-        <div
-          className="mb-4 flex flex-wrap gap-2 p-3"
-          style={{
-            backgroundColor: 'var(--color-card)',
-            borderRadius: 'var(--radius)',
-            border: '1px solid rgba(0,0,0,0.06)',
-          }}
-        >
-          <span className="mr-1 text-xs font-medium" style={{ color: 'var(--color-text-muted)' }}>
-            Dietary:
-          </span>
-          {DIETARY_FILTERS.map((filter) => {
-            const active = dietaryFilters.includes(filter);
-            return (
+          {/* Dietary filters */}
+          {showFilters && (
+            <div
+              className="mb-4 flex flex-wrap gap-2 p-3"
+              style={{
+                backgroundColor: 'var(--color-card)',
+                borderRadius: 'var(--radius)',
+                border: '1px solid rgba(0,0,0,0.06)',
+              }}
+            >
+              <span className="mr-1 text-xs font-medium" style={{ color: 'var(--color-text-muted)' }}>
+                Dietary:
+              </span>
+              {DIETARY_FILTERS.map((filter) => {
+                const active = dietaryFilters.includes(filter);
+                return (
+                  <button
+                    key={filter}
+                    type="button"
+                    onClick={() => toggleDietary(filter)}
+                    className="rounded-full px-3 py-1 text-xs font-medium transition-colors"
+                    style={{
+                      backgroundColor: active ? 'var(--color-primary)' : 'var(--color-surface)',
+                      color: active ? 'white' : 'var(--color-text-muted)',
+                    }}
+                  >
+                    {filter}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+
+          {/* Category chips */}
+          {allCategories.length > 1 && (
+            <div className="mb-6 flex gap-2 overflow-x-auto pb-1">
               <button
-                key={filter}
                 type="button"
-                onClick={() => toggleDietary(filter)}
-                className="rounded-full px-3 py-1 text-xs font-medium transition-colors"
+                onClick={() => setActiveCategory(null)}
+                className="shrink-0 rounded-full px-4 py-2 text-xs font-medium transition-colors"
                 style={{
-                  backgroundColor: active ? 'var(--color-primary)' : 'var(--color-surface)',
-                  color: active ? 'white' : 'var(--color-text-muted)',
+                  backgroundColor: !activeCategory ? 'var(--color-primary)' : 'var(--color-card)',
+                  color: !activeCategory ? 'white' : 'var(--color-text-muted)',
                 }}
               >
-                {filter}
+                All
               </button>
-            );
-          })}
-        </div>
+              {allCategories.map((cat) => (
+                <button
+                  key={cat}
+                  type="button"
+                  onClick={() => setActiveCategory(cat === activeCategory ? null : cat)}
+                  className="shrink-0 rounded-full px-4 py-2 text-xs font-medium transition-colors"
+                  style={{
+                    backgroundColor: activeCategory === cat ? 'var(--color-primary)' : 'var(--color-card)',
+                    color: activeCategory === cat ? 'white' : 'var(--color-text-muted)',
+                  }}
+                >
+                  {cat}
+                </button>
+              ))}
+            </div>
+          )}
+        </>
       )}
-
-      {/* Category chips */}
-      <div className="mb-6 flex gap-2 overflow-x-auto pb-1">
-        <button
-          type="button"
-          onClick={() => setActiveCategory(null)}
-          className="shrink-0 rounded-full px-4 py-2 text-xs font-medium transition-colors"
-          style={{
-            backgroundColor: !activeCategory ? 'var(--color-primary)' : 'var(--color-card)',
-            color: !activeCategory ? 'white' : 'var(--color-text-muted)',
-          }}
-        >
-          All
-        </button>
-        {allCategories.map((cat) => (
-          <button
-            key={cat}
-            type="button"
-            onClick={() => setActiveCategory(cat === activeCategory ? null : cat)}
-            className="shrink-0 rounded-full px-4 py-2 text-xs font-medium transition-colors"
-            style={{
-              backgroundColor: activeCategory === cat ? 'var(--color-primary)' : 'var(--color-card)',
-              color: activeCategory === cat ? 'white' : 'var(--color-text-muted)',
-            }}
-          >
-            {cat}
-          </button>
-        ))}
-      </div>
 
       {isLoading ? (
         <div className="flex justify-center py-12">
