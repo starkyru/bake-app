@@ -1,6 +1,8 @@
-import { Entity, Column, ManyToOne, JoinColumn } from 'typeorm';
+import { Entity, Column, ManyToOne, OneToOne, OneToMany, JoinColumn } from 'typeorm';
 import { BaseEntity } from '../../../common/entities/base.entity';
 import { ProductionPlan } from './production-plan.entity';
+import { ProductionBatch } from './production-batch.entity';
+import { BatchConsumption } from './batch-consumption.entity';
 
 @Entity('production_tasks')
 export class ProductionTask extends BaseEntity {
@@ -46,4 +48,10 @@ export class ProductionTask extends BaseEntity {
 
   @Column({ name: 'plan_id' })
   planId: string;
+
+  @OneToOne(() => ProductionBatch, batch => batch.productionTask)
+  producedBatch: ProductionBatch;
+
+  @OneToMany(() => BatchConsumption, bc => bc.consumingTask)
+  consumedBatches: BatchConsumption[];
 }

@@ -28,6 +28,7 @@ import { PaymentConfigPage } from './pages/payment-config';
 import { LocationOnlineConfigPage } from './pages/location-online-config';
 import { MenuOnlineConfigPage } from './pages/menu-online-config';
 import { ProductOptionsEditorPage } from './pages/product-options-editor';
+import { BatchInventoryPage } from './pages/batch-inventory';
 
 const router = createBrowserRouter([
   { path: '/login', element: <LoginPage /> },
@@ -52,6 +53,7 @@ const router = createBrowserRouter([
           { path: '/finance', element: <FinancePage /> },
           { path: '/sales', element: <SalesPage /> },
           { path: '/production', element: <ProductionPage /> },
+          { path: '/batch-inventory', element: <BatchInventoryPage /> },
           { path: '/settings', element: <SettingsPage /> },
           { path: '/online-orders', element: <OnlineOrdersPage /> },
           { path: '/online-orders/:id', element: <OnlineOrderDetailPage /> },

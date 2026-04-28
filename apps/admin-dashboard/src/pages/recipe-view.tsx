@@ -11,13 +11,25 @@ import {
   Link as LinkIcon,
   Video,
   Type,
+  Thermometer,
+  Snowflake,
+  Droplets,
+  ChefHat,
 } from 'lucide-react';
-import { useRecipe, useRecipeCost } from '@bake-app/react/api-client';
+import { useRecipe, useRecipeCost, useRecipeCompositeCost } from '@bake-app/react/api-client';
 import { PageContainer, LoadingSpinner } from '@bake-app/react/ui';
 import { useWakeLock } from '../hooks/use-wake-lock';
 import { useInstructionSteps } from '../hooks/use-instruction-steps';
 import { CostEstimate } from '../components/cost-estimate';
 import { YieldScaler } from '../components/yield-scaler';
+
+function formatStorageDuration(hours: number): string {
+  if (hours >= 24) {
+    const days = Math.round(hours / 24);
+    return `${days} day${days !== 1 ? 's' : ''}`;
+  }
+  return `${hours} hour${hours !== 1 ? 's' : ''}`;
+}
 
 const FONT_SIZES = [
   { label: 'S', class: 'text-sm', stepClass: 'text-base' },
@@ -28,8 +40,10 @@ const FONT_SIZES = [
 export function RecipeViewPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { data: recipe, isLoading } = useRecipe(id!);
+  const { data: recipe, isLoading } = useRecipe(id!, true);
+  const hasSubRecipes = !!(recipe?.subRecipes && recipe.subRecipes.length > 0);
   const { data: recipeCost } = useRecipeCost(id!);
+  const { data: compositeCost } = useRecipeCompositeCost(id!);
   const { isActive: wakeLockActive, isSupported: wakeLockSupported, toggle: toggleWakeLock } = useWakeLock();
 
   const [scaleFactor, setScaleFactor] = useState(1);
@@ -152,12 +166,56 @@ export function RecipeViewPage() {
           onScaleChange={setScaleFactor}
         />
 
+        {/* Sub-Recipes */}
+        {hasSubRecipes && (
+          <div className="rounded-xl border border-purple-200 bg-purple-50/50 p-6 shadow-sm">
+            <h3 className="text-base font-semibold text-purple-900">Sub-Recipes</h3>
+            <div className="mt-4 space-y-3">
+              {recipe.subRecipes!.map((sr) => (
+                <div
+                  key={sr.id}
+                  className="flex items-center justify-between rounded-lg border border-purple-100 bg-white px-4 py-3"
+                >
+                  <div className="flex items-center gap-3">
+                    <ChefHat size={16} className="text-purple-500" />
+                    <div>
+                      <button
+                        type="button"
+                        onClick={() => navigate(`/recipes/view/${sr.subRecipeId}`)}
+                        className="text-sm font-medium text-purple-700 hover:underline"
+                      >
+                        {sr.subRecipe?.name ?? 'Sub-recipe'}
+                      </button>
+                      {sr.note && (
+                        <p className="text-xs text-gray-400">{sr.note}</p>
+                      )}
+                    </div>
+                  </div>
+                  <span className="font-mono text-sm text-gray-600">
+                    {Math.round(sr.quantity * scaleFactor * 100) / 100} {sr.unit}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Cost Estimate (replaces separate ingredients list) */}
-        {recipeCost && (
+        {(recipeCost || compositeCost) && (
           <CostEstimate
-            recipeCost={recipeCost}
+            recipeCost={compositeCost ?? recipeCost!}
             scaleFactor={scaleFactor}
             title="Ingredients & Cost"
+            subRecipeCosts={
+              hasSubRecipes && compositeCost?.subRecipeCosts?.length
+                ? compositeCost.subRecipeCosts
+                : undefined
+            }
+            grandTotal={
+              hasSubRecipes && compositeCost?.totalCost != null
+                ? compositeCost.totalCost
+                : undefined
+            }
           />
         )}
 
@@ -276,6 +334,51 @@ export function RecipeViewPage() {
                       <ChevronsRight size={18} />
                     </button>
                   </div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Storage Life */}
+        {(recipe.roomTempHours || recipe.refrigeratedHours || recipe.frozenHours || recipe.thawedHours) && (
+          <div className="rounded-xl border border-[#8b4513]/10 bg-white p-6 shadow-sm">
+            <h3 className="text-base font-semibold text-[#3e2723]">Storage Life</h3>
+            <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
+              {recipe.roomTempHours != null && recipe.roomTempHours > 0 && (
+                <div className="flex flex-col items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3">
+                  <Thermometer size={20} className="text-amber-600" />
+                  <span className="text-xs font-medium text-amber-800">Room Temp</span>
+                  <span className="font-mono text-sm font-semibold text-amber-900">
+                    {formatStorageDuration(recipe.roomTempHours)}
+                  </span>
+                </div>
+              )}
+              {recipe.refrigeratedHours != null && recipe.refrigeratedHours > 0 && (
+                <div className="flex flex-col items-center gap-2 rounded-lg border border-blue-200 bg-blue-50 p-3">
+                  <Snowflake size={20} className="text-blue-500" />
+                  <span className="text-xs font-medium text-blue-800">Refrigerated</span>
+                  <span className="font-mono text-sm font-semibold text-blue-900">
+                    {formatStorageDuration(recipe.refrigeratedHours)}
+                  </span>
+                </div>
+              )}
+              {recipe.frozenHours != null && recipe.frozenHours > 0 && (
+                <div className="flex flex-col items-center gap-2 rounded-lg border border-indigo-200 bg-indigo-50 p-3">
+                  <Snowflake size={20} className="text-indigo-500 drop-shadow-sm" />
+                  <span className="text-xs font-medium text-indigo-800">Frozen</span>
+                  <span className="font-mono text-sm font-semibold text-indigo-900">
+                    {formatStorageDuration(recipe.frozenHours)}
+                  </span>
+                </div>
+              )}
+              {recipe.thawedHours != null && recipe.thawedHours > 0 && (
+                <div className="flex flex-col items-center gap-2 rounded-lg border border-teal-200 bg-teal-50 p-3">
+                  <Droplets size={20} className="text-teal-500" />
+                  <span className="text-xs font-medium text-teal-800">After Thawing</span>
+                  <span className="font-mono text-sm font-semibold text-teal-900">
+                    {formatStorageDuration(recipe.thawedHours)}
+                  </span>
                 </div>
               )}
             </div>

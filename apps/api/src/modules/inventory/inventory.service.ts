@@ -9,6 +9,7 @@ import { InventoryItemPackage } from './entities/inventory-item-package.entity';
 import { InventoryShipment } from './entities/inventory-shipment.entity';
 import { InventoryMovement } from './entities/inventory-movement.entity';
 import { Location } from './entities/location.entity';
+import { StorageCondition } from './entities/storage-condition.entity';
 import {
   CreateIngredientDto, UpdateIngredientDto, CreateLocationDto, UpdateLocationDto,
   CreateInventoryItemDto, UpdateInventoryItemDto, AddShipmentDto, AddPackageDto,
@@ -29,6 +30,7 @@ export class InventoryService {
     @InjectRepository(InventoryShipment) private shipmentRepo: Repository<InventoryShipment>,
     @InjectRepository(InventoryMovement) private movementRepo: Repository<InventoryMovement>,
     @InjectRepository(Location) private locationRepo: Repository<Location>,
+    @InjectRepository(StorageCondition) private storageConditionRepo: Repository<StorageCondition>,
     private eventEmitter: EventEmitter2,
   ) {}
 
@@ -530,6 +532,37 @@ export class InventoryService {
 
     cat.isActive = false;
     await this.ingredientCategoryRepo.save(cat);
+  }
+
+  // Storage Conditions
+  async findStorageConditions(locationId: string): Promise<StorageCondition[]> {
+    return this.storageConditionRepo.find({
+      where: { locationId, isActive: true },
+      order: { sortOrder: 'ASC', name: 'ASC' },
+    });
+  }
+
+  async createStorageCondition(locationId: string, data: { name: string; description?: string; sortOrder?: number }): Promise<StorageCondition> {
+    return this.storageConditionRepo.save(this.storageConditionRepo.create({
+      locationId,
+      name: data.name,
+      description: data.description,
+      sortOrder: data.sortOrder || 0,
+    }));
+  }
+
+  async updateStorageCondition(id: string, data: { name?: string; description?: string; sortOrder?: number }): Promise<StorageCondition> {
+    const sc = await this.storageConditionRepo.findOne({ where: { id } });
+    if (!sc) throw new NotFoundException('Storage condition not found');
+    Object.assign(sc, data);
+    return this.storageConditionRepo.save(sc);
+  }
+
+  async deleteStorageCondition(id: string): Promise<void> {
+    const sc = await this.storageConditionRepo.findOne({ where: { id } });
+    if (!sc) throw new NotFoundException('Storage condition not found');
+    sc.isActive = false;
+    await this.storageConditionRepo.save(sc);
   }
 
   private async checkLowStock(item: InventoryItem): Promise<void> {

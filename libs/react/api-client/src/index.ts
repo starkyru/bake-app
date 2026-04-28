@@ -78,6 +78,10 @@ export {
   useGenerateRecipeFromText,
   useUploadRecipeImage,
   useDeleteRecipeImage,
+  useRecipeDependencyTree,
+  useRecipeCompositeCost,
+  useRecipeUsedIn,
+  useSubRecipeSuggestions,
 } from './hooks/recipes';
 export type { RecipeCostResult } from './hooks/recipes';
 
@@ -136,6 +140,9 @@ export {
   useDeleteProductionPlan,
   useUpdateTaskStatus,
 } from './hooks/production';
+
+// Hooks - Batches
+export * from './hooks/batches';
 
 // Hooks - Finance
 export {

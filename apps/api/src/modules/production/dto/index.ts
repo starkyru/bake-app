@@ -69,6 +69,18 @@ export class UpdateProductionPlanDto extends PartialType(CreateProductionPlanDto
   status?: string;
 }
 
+class BatchConsumptionOverrideDto {
+  @ApiProperty()
+  @IsString()
+  batchId: string;
+
+  @ApiProperty()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0.001)
+  quantity: number;
+}
+
 export class UpdateTaskStatusDto {
   @ApiProperty({ example: 'in_progress' })
   @IsString()
@@ -85,4 +97,92 @@ export class UpdateTaskStatusDto {
   @Type(() => Number)
   @IsNumber()
   wasteQuantity?: number;
+
+  @ApiPropertyOptional({ description: 'Storage condition for the produced batch' })
+  @IsOptional()
+  @IsString()
+  storageCondition?: string;
+
+  @ApiPropertyOptional({ description: 'Location for the produced batch' })
+  @IsOptional()
+  @IsString()
+  locationId?: string;
+
+  @ApiPropertyOptional({ description: 'Manual batch consumption overrides (instead of auto FIFO)' })
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => BatchConsumptionOverrideDto)
+  batchConsumptions?: BatchConsumptionOverrideDto[];
+}
+
+export class CreateProductionBatchDto {
+  @ApiProperty()
+  @IsString()
+  recipeId: string;
+
+  @ApiProperty()
+  @IsString()
+  locationId: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  storageCondition?: string;
+
+  @ApiProperty({ example: 24 })
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0.001)
+  producedQuantity: number;
+
+  @ApiProperty({ example: 'pcs' })
+  @IsString()
+  unit: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsDateString()
+  productionDate?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  notes?: string;
+}
+
+export class DiscardBatchDto {
+  @ApiProperty()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0.001)
+  quantity: number;
+
+  @ApiProperty({ example: 'Expired' })
+  @IsString()
+  reason: string;
+}
+
+export class TransferBatchDto {
+  @ApiProperty()
+  @IsString()
+  toLocationId: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  storageCondition?: string;
+}
+
+export class ConsumeBatchDto {
+  @ApiProperty()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0.001)
+  quantity: number;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  consumingTaskId?: string;
 }

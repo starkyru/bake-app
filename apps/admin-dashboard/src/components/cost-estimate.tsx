@@ -16,14 +16,31 @@ function formatVolume(ml: number): string {
   return `${Math.round(ml)} ml`;
 }
 
+export interface SubRecipeCostLine {
+  subRecipeId?: string;
+  subRecipeName: string;
+  quantity: number;
+  unit: string;
+  costPerYield?: number;
+  lineCost: number;
+}
+
 interface CostEstimateProps {
   recipeCost: RecipeCostResult;
   scaleFactor?: number;
   title?: string;
+  subRecipeCosts?: SubRecipeCostLine[];
+  grandTotal?: number;
 }
 
-export function CostEstimate({ recipeCost, scaleFactor = 1, title = 'Batch Cost Estimate' }: CostEstimateProps) {
-  if (!recipeCost.ingredients.length) return null;
+export function CostEstimate({
+  recipeCost,
+  scaleFactor = 1,
+  title = 'Batch Cost Estimate',
+  subRecipeCosts,
+  grandTotal,
+}: CostEstimateProps) {
+  if (!recipeCost.ingredients.length && (!subRecipeCosts || !subRecipeCosts.length)) return null;
 
   let totalGrams = 0;
   let totalMl = 0;
@@ -40,7 +57,12 @@ export function CostEstimate({ recipeCost, scaleFactor = 1, title = 'Batch Cost 
     }
   }
 
-  const totalCost = recipeCost.ingredientsCost * scaleFactor;
+  const ingredientsCost = recipeCost.ingredientsCost * scaleFactor;
+  const scaledSubRecipeCost = subRecipeCosts
+    ? subRecipeCosts.reduce((sum, sr) => sum + sr.lineCost * scaleFactor, 0)
+    : 0;
+  const totalCost = grandTotal != null ? grandTotal * scaleFactor : ingredientsCost;
+  const hasSubRecipes = subRecipeCosts && subRecipeCosts.length > 0;
 
   const weightParts: string[] = [];
   if (totalGrams > 0) weightParts.push(formatWeight(totalGrams));
@@ -82,6 +104,31 @@ export function CostEstimate({ recipeCost, scaleFactor = 1, title = 'Batch Cost 
               </td>
             </tr>
           ))}
+          {hasSubRecipes && (
+            <>
+              <tr>
+                <td colSpan={4} className="pb-0.5 pt-3">
+                  <span className="text-xs font-medium text-purple-700">Sub-recipes</span>
+                </td>
+              </tr>
+              {subRecipeCosts.map((sr, i) => (
+                <tr key={`sr-${i}`} className="text-gray-600">
+                  <td className="py-0.5">
+                    <span className="text-purple-700">{sr.subRecipeName}</span>
+                  </td>
+                  <td className="py-0.5 text-right font-mono text-xs">
+                    {Math.round(sr.quantity * scaleFactor * 100) / 100} {sr.unit}
+                  </td>
+                  <td className="py-0.5 text-right font-mono text-xs">
+                    {sr.costPerYield != null ? `$${sr.costPerYield.toFixed(2)}/${sr.unit}` : '—'}
+                  </td>
+                  <td className="py-0.5 text-right font-mono">
+                    ${(sr.lineCost * scaleFactor).toFixed(2)}
+                  </td>
+                </tr>
+              ))}
+            </>
+          )}
         </tbody>
         <tfoot>
           {weightParts.length > 0 && (
@@ -92,8 +139,22 @@ export function CostEstimate({ recipeCost, scaleFactor = 1, title = 'Batch Cost 
               </td>
             </tr>
           )}
+          {hasSubRecipes && (
+            <>
+              <tr className="border-t border-amber-200 text-xs text-gray-500">
+                <td className="pt-1" colSpan={3}>Ingredients cost</td>
+                <td className="pt-1 text-right font-mono">${ingredientsCost.toFixed(2)}</td>
+              </tr>
+              <tr className="text-xs text-gray-500">
+                <td colSpan={3}>Sub-recipes cost</td>
+                <td className="text-right font-mono">${scaledSubRecipeCost.toFixed(2)}</td>
+              </tr>
+            </>
+          )}
           <tr className="border-t border-amber-300 font-medium text-[#3e2723]">
-            <td className="pt-1" colSpan={3}>Total ingredients cost</td>
+            <td className="pt-1" colSpan={3}>
+              {hasSubRecipes ? 'Total cost' : 'Total ingredients cost'}
+            </td>
             <td className="pt-1 text-right font-mono">${totalCost.toFixed(2)}</td>
           </tr>
           {recipeCost.yieldQuantity > 0 && (

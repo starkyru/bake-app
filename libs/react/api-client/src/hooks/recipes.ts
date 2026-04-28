@@ -9,6 +9,11 @@ export const recipeKeys = {
   details: () => [...recipeKeys.all, 'detail'] as const,
   detail: (id: string) => [...recipeKeys.details(), id] as const,
   cost: (id: string) => [...recipeKeys.all, 'cost', id] as const,
+  dependencyTree: (id: string) =>
+    [...recipeKeys.all, 'dependency-tree', id] as const,
+  compositeCost: (id: string) =>
+    [...recipeKeys.all, 'composite-cost', id] as const,
+  usedIn: (id: string) => [...recipeKeys.all, 'used-in', id] as const,
 };
 
 export function useRecipes() {
@@ -21,10 +26,14 @@ export function useRecipes() {
   });
 }
 
-export function useRecipe(id: string) {
+export function useRecipe(id: string, includeSubRecipes?: boolean) {
   return useQuery({
     queryKey: recipeKeys.detail(id),
-    queryFn: () => apiClient.get<Recipe>(`/v1/recipes/${id}`),
+    queryFn: () =>
+      apiClient.get<Recipe>(
+        `/v1/recipes/${id}`,
+        includeSubRecipes ? { includeSubRecipes: true } : undefined,
+      ),
     enabled: !!id,
   });
 }
@@ -140,5 +149,36 @@ export function useDeleteRecipeImage() {
     onSuccess: (_data, { recipeId }) => {
       qc.invalidateQueries({ queryKey: recipeKeys.detail(recipeId) });
     },
+  });
+}
+
+export function useRecipeDependencyTree(id: string) {
+  return useQuery({
+    queryKey: recipeKeys.dependencyTree(id),
+    queryFn: () => apiClient.get<any>(`/v1/recipes/${id}/dependency-tree`),
+    enabled: !!id,
+  });
+}
+
+export function useRecipeCompositeCost(id: string) {
+  return useQuery({
+    queryKey: recipeKeys.compositeCost(id),
+    queryFn: () => apiClient.get<any>(`/v1/recipes/${id}/composite-cost`),
+    enabled: !!id,
+  });
+}
+
+export function useRecipeUsedIn(id: string) {
+  return useQuery({
+    queryKey: recipeKeys.usedIn(id),
+    queryFn: () => apiClient.get<any>(`/v1/recipes/${id}/used-in`),
+    enabled: !!id,
+  });
+}
+
+export function useSubRecipeSuggestions() {
+  return useMutation({
+    mutationFn: (data: { recipeId?: string; text?: string }) =>
+      apiClient.post<any>('/v1/recipes/generate/analyze-sub-recipes', data),
   });
 }

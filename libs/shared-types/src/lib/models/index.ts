@@ -207,9 +207,15 @@ export interface Recipe {
   instructions?: string;
   productId?: string;
   isActive: boolean;
+  roomTempHours?: number;
+  refrigeratedHours?: number;
+  frozenHours?: number;
+  thawedHours?: number;
   ingredients: RecipeIngredient[];
   images: RecipeImage[];
   links: RecipeLink[];
+  subRecipes?: RecipeSubRecipe[];
+  storageLives?: RecipeStorageLife[];
 }
 
 export interface RecipeIngredient {
@@ -271,6 +277,68 @@ export interface ProductionTask {
   recipeName?: string;
   assigneeId?: string;
   assigneeName?: string;
+  producedBatch?: ProductionBatch;
+}
+
+export interface RecipeSubRecipe {
+  id: string;
+  parentRecipeId: string;
+  subRecipeId: string;
+  subRecipe?: Recipe;
+  quantity: number;
+  unit: string;
+  note?: string;
+  sortOrder: number;
+}
+
+export interface StorageCondition {
+  id: string;
+  locationId: string;
+  name: string;
+  description?: string;
+  sortOrder: number;
+  isActive: boolean;
+}
+
+export interface RecipeStorageLife {
+  id: string;
+  recipeId: string;
+  storageConditionId: string;
+  storageCondition?: StorageCondition;
+  shelfLifeHours: number;
+}
+
+export interface ProductionBatch {
+  id: string;
+  batchNumber: string;
+  recipeId: string;
+  recipeName: string;
+  productionTaskId?: string;
+  locationId: string;
+  storageCondition?: string;
+  producedQuantity: number;
+  remainingQuantity: number;
+  unit: string;
+  productionDate: Date;
+  expiryDate?: Date;
+  compositeExpiryDate?: Date;
+  status: string;
+  costPerUnit?: number;
+  notes?: string;
+  producedById?: string;
+  consumptions?: BatchConsumption[];
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface BatchConsumption {
+  id: string;
+  productionBatchId: string;
+  consumingTaskId: string;
+  quantityConsumed: number;
+  unit: string;
+  isManualOverride: boolean;
+  createdAt: Date;
 }
 
 export interface Payment {

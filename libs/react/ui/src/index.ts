@@ -49,3 +49,9 @@ export type { CategoryFilterProps, CategoryFilterOption } from './components/cat
 
 export { FormInput, FormSelect, FormTextarea, Button } from './components/form-fields';
 export type { FormInputProps, FormSelectProps, FormTextareaProps, ButtonProps } from './components/form-fields';
+
+export { DurationInput } from './components/duration-input';
+export type { DurationInputProps } from './components/duration-input';
+
+export { ExpiryWarningBadge } from './components/expiry-warning-badge';
+export type { ExpiryWarningBadgeProps } from './components/expiry-warning-badge';

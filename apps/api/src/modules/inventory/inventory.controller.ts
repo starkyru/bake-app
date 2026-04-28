@@ -187,4 +187,34 @@ export class InventoryController {
   processTransfer(@Body() dto: TransferDto, @Request() req: any) {
     return this.inventoryService.processTransfer(dto, req.user?.id);
   }
+
+  // Storage Conditions
+
+  @Get('locations/:id/storage-conditions')
+  @RequirePermissions('locations:read')
+  @ApiOperation({ summary: 'Get storage conditions for a location' })
+  findStorageConditions(@Param('id') id: string) {
+    return this.inventoryService.findStorageConditions(id);
+  }
+
+  @Post('locations/:id/storage-conditions')
+  @RequirePermissions('locations:update')
+  @ApiOperation({ summary: 'Create storage condition for a location' })
+  createStorageCondition(@Param('id') id: string, @Body() body: { name: string; description?: string; sortOrder?: number }) {
+    return this.inventoryService.createStorageCondition(id, body);
+  }
+
+  @Put('storage-conditions/:id')
+  @RequirePermissions('locations:update')
+  @ApiOperation({ summary: 'Update storage condition' })
+  updateStorageCondition(@Param('id') id: string, @Body() body: { name?: string; description?: string; sortOrder?: number }) {
+    return this.inventoryService.updateStorageCondition(id, body);
+  }
+
+  @Delete('storage-conditions/:id')
+  @RequirePermissions('locations:delete')
+  @ApiOperation({ summary: 'Delete storage condition' })
+  deleteStorageCondition(@Param('id') id: string) {
+    return this.inventoryService.deleteStorageCondition(id);
+  }
 }

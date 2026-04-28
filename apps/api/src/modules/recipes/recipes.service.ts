@@ -11,6 +11,8 @@ import { RecipeIngredient } from './entities/recipe-ingredient.entity';
 import { RecipeImage } from './entities/recipe-image.entity';
 import { RecipeLink } from './entities/recipe-link.entity';
 import { RecipeVersion } from './entities/recipe-version.entity';
+import { RecipeSubRecipe } from './entities/recipe-sub-recipe.entity';
+import { RecipeStorageLife } from './entities/recipe-storage-life.entity';
 import { InventoryMovement } from '../inventory/entities/inventory-movement.entity';
 import { Ingredient } from '../inventory/entities/ingredient.entity';
 import { IngredientCategory } from '../inventory/entities/ingredient-category.entity';
@@ -31,6 +33,8 @@ export class RecipesService {
     @InjectRepository(RecipeImage) private imageRepo: Repository<RecipeImage>,
     @InjectRepository(RecipeLink) private linkRepo: Repository<RecipeLink>,
     @InjectRepository(RecipeVersion) private versionRepo: Repository<RecipeVersion>,
+    @InjectRepository(RecipeSubRecipe) private subRecipeRepo: Repository<RecipeSubRecipe>,
+    @InjectRepository(RecipeStorageLife) private storageLifeRepo: Repository<RecipeStorageLife>,
     @InjectRepository(InventoryMovement) private movementRepo: Repository<InventoryMovement>,
     @InjectRepository(Ingredient) private catalogIngredientRepo: Repository<Ingredient>,
     @InjectRepository(IngredientCategory) private ingredientCategoryRepo: Repository<IngredientCategory>,
@@ -54,17 +58,27 @@ export class RecipesService {
     return new PaginatedResponseDto(data, total, page, limit);
   }
 
-  async findOne(id: string): Promise<Recipe> {
-    const recipe = await this.recipeRepo.findOne({
-      where: { id },
-      relations: ['ingredients', 'links', 'versions'],
-    });
+  async findOne(id: string, includeSubRecipes = false): Promise<Recipe> {
+    const relations = ['ingredients', 'links', 'versions'];
+    if (includeSubRecipes) {
+      relations.push('subRecipes', 'subRecipes.subRecipe', 'storageLives', 'storageLives.storageCondition');
+    }
+    const recipe = await this.recipeRepo.findOne({ where: { id }, relations });
     if (!recipe) throw new NotFoundException('Recipe not found');
     return recipe;
   }
 
   async create(dto: CreateRecipeDto): Promise<Recipe> {
     const ingredients = dto.ingredients ? await this.resolveNewIngredients(dto.ingredients) : undefined;
+
+    // Validate sub-recipe circular dependencies
+    if (dto.subRecipes?.length) {
+      for (const sr of dto.subRecipes) {
+        // Can't validate full tree for a new recipe, but check self-reference won't happen
+        // Full validation happens on subsequent updates
+      }
+    }
+
     const recipe = this.recipeRepo.create({
       name: dto.name,
       category: dto.category,
@@ -72,15 +86,30 @@ export class RecipesService {
       yieldUnit: dto.yieldUnit,
       instructions: dto.instructions,
       productId: dto.productId,
+      roomTempHours: dto.roomTempHours,
+      refrigeratedHours: dto.refrigeratedHours,
+      frozenHours: dto.frozenHours,
+      thawedHours: dto.thawedHours,
       ingredients: ingredients?.map(i => this.ingredientRepo.create(i)),
       links: dto.links?.map(l => this.linkRepo.create(this.processLink(l))),
+      subRecipes: dto.subRecipes?.map(sr => this.subRecipeRepo.create({
+        subRecipeId: sr.subRecipeId,
+        quantity: sr.quantity,
+        unit: sr.unit,
+        note: sr.note,
+        sortOrder: sr.sortOrder || 0,
+      })),
+      storageLives: dto.storageLives?.map(sl => this.storageLifeRepo.create({
+        storageConditionId: sl.storageConditionId,
+        shelfLifeHours: sl.shelfLifeHours,
+      })),
     });
     const saved = await this.recipeRepo.save(recipe);
-    return this.findOne(saved.id);
+    return this.findOne(saved.id, true);
   }
 
   async update(id: string, dto: UpdateRecipeDto, userId?: string): Promise<Recipe> {
-    const recipe = await this.findOne(id);
+    const recipe = await this.findOne(id, true);
     // Save version snapshot before updating
     await this.versionRepo.save(this.versionRepo.create({
       recipeId: id,
@@ -99,6 +128,29 @@ export class RecipesService {
       await this.linkRepo.delete({ recipeId: id });
       recipe.links = dto.links.map(l => this.linkRepo.create({ ...this.processLink(l), recipeId: id }));
     }
+    if (dto.subRecipes !== undefined) {
+      // Validate circular dependencies for each new sub-recipe
+      for (const sr of dto.subRecipes) {
+        await this.validateNoCircularDependency(id, sr.subRecipeId);
+      }
+      await this.subRecipeRepo.delete({ parentRecipeId: id });
+      recipe.subRecipes = dto.subRecipes.map(sr => this.subRecipeRepo.create({
+        parentRecipeId: id,
+        subRecipeId: sr.subRecipeId,
+        quantity: sr.quantity,
+        unit: sr.unit,
+        note: sr.note,
+        sortOrder: sr.sortOrder || 0,
+      }));
+    }
+    if (dto.storageLives !== undefined) {
+      await this.storageLifeRepo.delete({ recipeId: id });
+      recipe.storageLives = dto.storageLives.map(sl => this.storageLifeRepo.create({
+        recipeId: id,
+        storageConditionId: sl.storageConditionId,
+        shelfLifeHours: sl.shelfLifeHours,
+      }));
+    }
     // Remove loaded versions to prevent TypeORM from cascading updates on them
     delete recipe.versions;
     Object.assign(recipe, {
@@ -108,10 +160,14 @@ export class RecipesService {
       ...(dto.yieldUnit && { yieldUnit: dto.yieldUnit }),
       ...(dto.instructions !== undefined && { instructions: dto.instructions }),
       ...(dto.productId !== undefined && { productId: dto.productId }),
+      ...(dto.roomTempHours !== undefined && { roomTempHours: dto.roomTempHours }),
+      ...(dto.refrigeratedHours !== undefined && { refrigeratedHours: dto.refrigeratedHours }),
+      ...(dto.frozenHours !== undefined && { frozenHours: dto.frozenHours }),
+      ...(dto.thawedHours !== undefined && { thawedHours: dto.thawedHours }),
       currentVersion: recipe.currentVersion + 1,
     });
     await this.recipeRepo.save(recipe);
-    return this.findOne(id);
+    return this.findOne(id, true);
   }
 
   async delete(id: string): Promise<void> {
@@ -549,6 +605,165 @@ Return ONLY valid JSON, no markdown, no explanation.`,
     const filePath = path.join(this.uploadsDir, image.filename);
     if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
     await this.imageRepo.remove(image);
+  }
+
+  // ── Sub-Recipe Management ──
+
+  async validateNoCircularDependency(parentId: string, subRecipeId: string): Promise<void> {
+    if (parentId === subRecipeId) {
+      throw new BadRequestException('A recipe cannot include itself as a sub-recipe.');
+    }
+    const visited = new Set<string>();
+    const stack = [subRecipeId];
+    while (stack.length > 0) {
+      const current = stack.pop()!;
+      if (current === parentId) {
+        throw new BadRequestException('Adding this sub-recipe would create a circular dependency.');
+      }
+      if (visited.has(current)) continue;
+      visited.add(current);
+      const children = await this.subRecipeRepo.find({
+        where: { parentRecipeId: current },
+        select: ['subRecipeId'],
+      });
+      for (const child of children) {
+        stack.push(child.subRecipeId);
+      }
+    }
+  }
+
+  async getDependencyTree(recipeId: string): Promise<any> {
+    const recipe = await this.recipeRepo.findOne({
+      where: { id: recipeId },
+      relations: ['subRecipes', 'subRecipes.subRecipe'],
+    });
+    if (!recipe) throw new NotFoundException('Recipe not found');
+
+    const buildNode = async (r: Recipe, depth = 0): Promise<any> => {
+      if (depth > 10) return { id: r.id, name: r.name, subRecipes: [] };
+      const subs = await this.subRecipeRepo.find({
+        where: { parentRecipeId: r.id },
+        relations: ['subRecipe'],
+        order: { sortOrder: 'ASC' },
+      });
+      const children = [];
+      for (const sr of subs) {
+        const childNode = await buildNode(sr.subRecipe, depth + 1);
+        children.push({
+          ...childNode,
+          quantity: Number(sr.quantity),
+          unit: sr.unit,
+          note: sr.note,
+        });
+      }
+      return {
+        id: r.id,
+        name: r.name,
+        category: r.category,
+        yieldQuantity: Number(r.yieldQuantity),
+        yieldUnit: r.yieldUnit,
+        subRecipes: children,
+      };
+    };
+
+    return buildNode(recipe);
+  }
+
+  async getUsedIn(recipeId: string): Promise<RecipeSubRecipe[]> {
+    return this.subRecipeRepo.find({
+      where: { subRecipeId: recipeId },
+      relations: ['parentRecipe'],
+    });
+  }
+
+  async getCompositeCost(id: string): Promise<any> {
+    const baseCost = await this.getCost(id);
+    const subRecipes = await this.subRecipeRepo.find({
+      where: { parentRecipeId: id },
+      relations: ['subRecipe'],
+    });
+
+    const subRecipeCosts = [];
+    let totalSubRecipeCost = new BigNumber(0);
+
+    for (const sr of subRecipes) {
+      const subCost = await this.getCompositeCost(sr.subRecipeId);
+      const costPerYield = subCost.yieldQuantity > 0
+        ? new BigNumber(subCost.totalCost).div(subCost.yieldQuantity)
+        : new BigNumber(0);
+      const lineCost = costPerYield.times(sr.quantity);
+      totalSubRecipeCost = totalSubRecipeCost.plus(lineCost);
+      subRecipeCosts.push({
+        subRecipeId: sr.subRecipeId,
+        subRecipeName: sr.subRecipe.name,
+        quantity: Number(sr.quantity),
+        unit: sr.unit,
+        costPerYield: costPerYield.toNumber(),
+        lineCost: lineCost.toNumber(),
+      });
+    }
+
+    const totalCost = new BigNumber(baseCost.ingredientsCost).plus(totalSubRecipeCost).toNumber();
+
+    return {
+      ...baseCost,
+      subRecipeCosts,
+      totalSubRecipeCost: totalSubRecipeCost.toNumber(),
+      totalCost,
+    };
+  }
+
+  async analyzeSubRecipes(recipeData: Partial<CreateRecipeDto>): Promise<any> {
+    const allRecipes = await this.recipeRepo.find({
+      where: { isActive: true },
+      relations: ['ingredients'],
+      take: 500,
+    });
+
+    const existingRecipesSummary = allRecipes.map(r => ({
+      id: r.id,
+      name: r.name,
+      category: r.category,
+      ingredients: r.ingredients.map(i => i.ingredientName || i.ingredientId).join(', '),
+    }));
+
+    const response = await this.callAnthropic([
+      {
+        role: 'user',
+        content: `You are a bakery recipe analyst. Analyze this recipe and suggest sub-recipes.
+
+RECIPE TO ANALYZE:
+${JSON.stringify(recipeData, null, 2)}
+
+EXISTING RECIPES IN THE DATABASE:
+${JSON.stringify(existingRecipesSummary, null, 2)}
+
+Your tasks:
+1. Check if any groups of ingredients in this recipe match an existing recipe from the database
+2. Identify steps/ingredient groups that could be extracted as reusable sub-recipes
+
+Return a JSON object:
+{
+  "suggestions": [
+    {
+      "type": "existing_match" | "new_suggestion",
+      "existingRecipeId": "uuid (only for existing_match)",
+      "existingRecipeName": "name (only for existing_match)",
+      "suggestedName": "name for new sub-recipe (only for new_suggestion)",
+      "matchedIngredients": ["ingredient names that would move to this sub-recipe"],
+      "matchedSteps": "which instruction steps relate to this sub-recipe",
+      "confidence": 0.0-1.0,
+      "reason": "why this should be a sub-recipe"
+    }
+  ]
+}
+
+Only suggest splits that make practical sense for a bakery (e.g., cream, dough, ganache, syrup are common sub-recipes).
+Return ONLY valid JSON.`,
+      },
+    ]);
+
+    return this.parseAiJson(response);
   }
 
   private processLink(link: { url: string; title?: string; description?: string; isYoutube?: boolean; youtubeVideoId?: string }) {

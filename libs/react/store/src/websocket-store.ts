@@ -17,6 +17,10 @@ const WS_EVENT_INVALIDATION_MAP: Record<string, string[]> = {
   'inventory:stockAlert': ['inventory'],
   'production:taskUpdated': ['production-plans'],
   'notification:new': ['notifications'],
+  'batch:created': ['batches'],
+  'batch:updated': ['batches'],
+  'batch:expiringSoon': ['batches'],
+  'batch:expired': ['batches'],
 };
 
 export const useWebSocketStore = create<WebSocketStore>((set, get) => ({

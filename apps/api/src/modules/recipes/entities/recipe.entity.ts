@@ -4,6 +4,8 @@ import { RecipeIngredient } from './recipe-ingredient.entity';
 import { RecipeImage } from './recipe-image.entity';
 import { RecipeLink } from './recipe-link.entity';
 import { RecipeVersion } from './recipe-version.entity';
+import { RecipeSubRecipe } from './recipe-sub-recipe.entity';
+import { RecipeStorageLife } from './recipe-storage-life.entity';
 
 @Entity('recipes')
 export class Recipe extends BaseEntity {
@@ -31,6 +33,18 @@ export class Recipe extends BaseEntity {
   @Column({ name: 'is_active', default: true })
   isActive: boolean;
 
+  @Column({ name: 'room_temp_hours', type: 'decimal', precision: 10, scale: 2, nullable: true })
+  roomTempHours: number;
+
+  @Column({ name: 'refrigerated_hours', type: 'decimal', precision: 10, scale: 2, nullable: true })
+  refrigeratedHours: number;
+
+  @Column({ name: 'frozen_hours', type: 'decimal', precision: 10, scale: 2, nullable: true })
+  frozenHours: number;
+
+  @Column({ name: 'thawed_hours', type: 'decimal', precision: 10, scale: 2, nullable: true })
+  thawedHours: number;
+
   @OneToMany(() => RecipeIngredient, ri => ri.recipe, { cascade: true, eager: true })
   ingredients: RecipeIngredient[];
 
@@ -42,4 +56,13 @@ export class Recipe extends BaseEntity {
 
   @OneToMany(() => RecipeVersion, rv => rv.recipe)
   versions: RecipeVersion[];
+
+  @OneToMany(() => RecipeSubRecipe, rsr => rsr.parentRecipe, { cascade: true })
+  subRecipes: RecipeSubRecipe[];
+
+  @OneToMany(() => RecipeSubRecipe, rsr => rsr.subRecipe)
+  usedInRecipes: RecipeSubRecipe[];
+
+  @OneToMany(() => RecipeStorageLife, rsl => rsl.recipe, { cascade: true })
+  storageLives: RecipeStorageLife[];
 }

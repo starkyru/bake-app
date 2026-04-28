@@ -46,10 +46,19 @@ export class RecipesController {
     return this.recipesService.generateFromImage(dto.imageBase64, dto.mimeType);
   }
 
+  @Post('generate/analyze-sub-recipes')
+  @RequirePermissions('recipes:create')
+  @ApiOperation({ summary: 'AI-analyze recipe for sub-recipe suggestions' })
+  analyzeSubRecipes(@Body() body: any) {
+    return this.recipesService.analyzeSubRecipes(body);
+  }
+
   @Get(':id')
   @RequirePermissions('recipes:read')
   @ApiOperation({ summary: 'Get recipe by ID' })
-  findOne(@Param('id') id: string) { return this.recipesService.findOne(id); }
+  findOne(@Param('id') id: string, @Query('includeSubRecipes') includeSubRecipes?: string) {
+    return this.recipesService.findOne(id, includeSubRecipes === 'true');
+  }
 
   @Put(':id')
   @RequirePermissions('recipes:update')
@@ -67,6 +76,21 @@ export class RecipesController {
   @RequirePermissions('recipes:read')
   @ApiOperation({ summary: 'Get recipe cost calculation' })
   getCost(@Param('id') id: string) { return this.recipesService.getCost(id); }
+
+  @Get(':id/composite-cost')
+  @RequirePermissions('recipes:read')
+  @ApiOperation({ summary: 'Get recipe cost including sub-recipe costs' })
+  getCompositeCost(@Param('id') id: string) { return this.recipesService.getCompositeCost(id); }
+
+  @Get(':id/dependency-tree')
+  @RequirePermissions('recipes:read')
+  @ApiOperation({ summary: 'Get sub-recipe dependency tree' })
+  getDependencyTree(@Param('id') id: string) { return this.recipesService.getDependencyTree(id); }
+
+  @Get(':id/used-in')
+  @RequirePermissions('recipes:read')
+  @ApiOperation({ summary: 'Get parent recipes that use this recipe' })
+  getUsedIn(@Param('id') id: string) { return this.recipesService.getUsedIn(id); }
 
   @Post(':id/scale')
   @RequirePermissions('recipes:read')

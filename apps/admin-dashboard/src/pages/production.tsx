@@ -26,6 +26,7 @@ import {
 } from '@bake-app/react/ui';
 import type { ProductionPlan, ProductionTask } from '@bake-app/shared-types';
 import { ProductionTaskStatus } from '@bake-app/shared-types';
+import { TaskCompletionModal } from '../components/task-completion-modal';
 
 function formatDate(date: Date): string {
   return date.toISOString().split('T')[0];
@@ -49,6 +50,9 @@ export function ProductionPage() {
     });
 
   const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const [completionTask, setCompletionTask] = useState<ProductionTask | null>(
+    null,
+  );
   const [saving, setSaving] = useState(false);
   const [createForm, setCreateForm] = useState({
     date: formatDate(new Date()),
@@ -116,6 +120,13 @@ export function ProductionPage() {
       toast.error('Cannot advance this task further');
       return;
     }
+
+    // When completing a task, open the completion modal
+    if (nextStatus === ProductionTaskStatus.COMPLETED) {
+      setCompletionTask(task);
+      return;
+    }
+
     updateTaskStatus.mutate(
       { id: task.id, status: nextStatus },
       {
@@ -381,6 +392,15 @@ export function ProductionPage() {
           </div>
         )}
       </div>
+
+      {/* Task Completion Modal */}
+      {completionTask && (
+        <TaskCompletionModal
+          task={completionTask}
+          open={!!completionTask}
+          onClose={() => setCompletionTask(null)}
+        />
+      )}
 
       {/* Create Plan Dialog */}
       {showCreateDialog && (

@@ -72,8 +72,31 @@ export function useDeleteProductionPlan() {
 export function useUpdateTaskStatus() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, status }: { id: string; status: string }) =>
-      apiClient.put(`/v1/production/tasks/${id}/status`, { status }),
+    mutationFn: ({
+      id,
+      status,
+      actualYield,
+      wasteQuantity,
+      storageCondition,
+      locationId,
+      batchConsumptions,
+    }: {
+      id: string;
+      status: string;
+      actualYield?: number;
+      wasteQuantity?: number;
+      storageCondition?: string;
+      locationId?: string;
+      batchConsumptions?: { batchId: string; quantity: number }[];
+    }) =>
+      apiClient.put(`/v1/production/tasks/${id}/status`, {
+        status,
+        actualYield,
+        wasteQuantity,
+        storageCondition,
+        locationId,
+        batchConsumptions,
+      }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: productionKeys.all });
     },

@@ -157,6 +157,20 @@ export enum NotificationSubscriptionType {
   PROMOTION = 'promotion',
 }
 
+export enum ProductionBatchStatus {
+  AVAILABLE = 'available',
+  PARTIALLY_CONSUMED = 'partially_consumed',
+  FULLY_CONSUMED = 'fully_consumed',
+  EXPIRED = 'expired',
+  DISCARDED = 'discarded',
+}
+
+export enum StorageConditionType {
+  ROOM_TEMP = 'room_temp',
+  REFRIGERATED = 'refrigerated',
+  FROZEN = 'frozen',
+}
+
 export enum DietaryTag {
   VEGAN = 'vegan',
   VEGETARIAN = 'vegetarian',

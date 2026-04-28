@@ -74,6 +74,45 @@ class RecipeLinkDto {
   youtubeVideoId?: string;
 }
 
+class SubRecipeDto {
+  @ApiProperty()
+  @IsString()
+  subRecipeId: string;
+
+  @ApiProperty({ example: 2 })
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0.001)
+  quantity: number;
+
+  @ApiProperty({ example: 'batches' })
+  @IsString()
+  unit: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  note?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  sortOrder?: number;
+}
+
+class RecipeStorageLifeDto {
+  @ApiProperty()
+  @IsString()
+  storageConditionId: string;
+
+  @ApiProperty()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0)
+  shelfLifeHours: number;
+}
+
 export class CreateRecipeDto {
   @ApiProperty({ example: 'Croissant' })
   @IsString()
@@ -107,6 +146,34 @@ export class CreateRecipeDto {
   @IsString()
   productId?: string;
 
+  @ApiPropertyOptional()
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0)
+  roomTempHours?: number;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0)
+  refrigeratedHours?: number;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0)
+  frozenHours?: number;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0)
+  thawedHours?: number;
+
   @ApiPropertyOptional({ type: [RecipeIngredientDto] })
   @IsOptional()
   @IsArray()
@@ -120,6 +187,20 @@ export class CreateRecipeDto {
   @ValidateNested({ each: true })
   @Type(() => RecipeLinkDto)
   links?: RecipeLinkDto[];
+
+  @ApiPropertyOptional({ type: [SubRecipeDto] })
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => SubRecipeDto)
+  subRecipes?: SubRecipeDto[];
+
+  @ApiPropertyOptional({ type: [RecipeStorageLifeDto] })
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => RecipeStorageLifeDto)
+  storageLives?: RecipeStorageLifeDto[];
 }
 
 export class UpdateRecipeDto extends PartialType(CreateRecipeDto) {}

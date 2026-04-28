@@ -65,6 +65,29 @@ export class WsEventsListener {
     );
   }
 
+  @OnEvent(DOMAIN_EVENTS.BATCH_CREATED)
+  @OnEvent(DOMAIN_EVENTS.BATCH_CONSUMED)
+  @OnEvent(DOMAIN_EVENTS.BATCH_DISCARDED)
+  handleBatchUpdated(payload: any) {
+    this.logger.debug(`Batch event: ${payload.batchNumber || payload.batchId}`);
+    this.gateway.emitToRoom(WS_ROOMS.KITCHEN, WS_EVENTS.BATCH_UPDATED, payload);
+    this.gateway.emitToRoom(WS_ROOMS.MANAGER, WS_EVENTS.BATCH_UPDATED, payload);
+  }
+
+  @OnEvent(DOMAIN_EVENTS.BATCH_EXPIRING_SOON)
+  handleBatchExpiringSoon(payload: any) {
+    this.logger.debug(`Batches expiring soon: ${payload.batches?.length}`);
+    this.gateway.emitToRoom(WS_ROOMS.KITCHEN, WS_EVENTS.BATCH_EXPIRING_SOON, payload);
+    this.gateway.emitToRoom(WS_ROOMS.MANAGER, WS_EVENTS.BATCH_EXPIRING_SOON, payload);
+  }
+
+  @OnEvent(DOMAIN_EVENTS.BATCH_EXPIRED)
+  handleBatchExpired(payload: any) {
+    this.logger.debug(`Batch expired: ${payload.batchNumber}`);
+    this.gateway.emitToRoom(WS_ROOMS.KITCHEN, WS_EVENTS.BATCH_EXPIRED, payload);
+    this.gateway.emitToRoom(WS_ROOMS.MANAGER, WS_EVENTS.BATCH_EXPIRED, payload);
+  }
+
   @OnEvent(DOMAIN_EVENTS.ONLINE_ORDER_CREATED)
   handleOnlineOrderCreated(payload: any) {
     this.logger.debug(`Online order created: ${payload.orderNumber}`);

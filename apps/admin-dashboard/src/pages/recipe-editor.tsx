@@ -10,11 +10,19 @@ import {
   Search,
   Sparkles,
   X,
+  Clock,
 } from 'lucide-react';
 import { toast } from 'sonner';
-import type { RecipeIngredient, RecipeLink, RecipeImage, Ingredient } from '@bake-app/shared-types';
+import type {
+  RecipeIngredient,
+  RecipeLink,
+  RecipeImage,
+  Ingredient,
+  Recipe,
+} from '@bake-app/shared-types';
 import {
   useRecipe,
+  useRecipes,
   useCreateRecipe,
   useUpdateRecipe,
   useIngredients,
@@ -26,8 +34,10 @@ import {
 import {
   PageContainer,
   LoadingSpinner,
+  DurationInput,
 } from '@bake-app/react/ui';
 import { CostEstimate } from '../components/cost-estimate';
+import { AiSubRecipeSuggestions } from '../components/ai-sub-recipe-suggestions';
 
 const UNIT_OPTIONS = ['g', 'kg', 'ml', 'L', 'pcs', 'oz', 'lb', 'tbsp', 'tsp'];
 
@@ -138,6 +148,16 @@ interface RecipeLinkRow {
   title: string;
 }
 
+interface SubRecipeRow {
+  subRecipeId: string;
+  subRecipeName: string;
+  quantity: number;
+  unit: string;
+  note: string;
+}
+
+const SUB_RECIPE_UNIT_OPTIONS = ['batches', 'g', 'kg', 'ml', 'L', 'pcs'];
+
 function extractYouTubeId(url: string): string | null {
   const match = url.match(
     /(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/)|youtu\.be\/)([\w-]{11})/,
@@ -154,7 +174,9 @@ export function RecipeEditorPage() {
 
   const { data: existingRecipe, isLoading: recipeLoading } = useRecipe(
     isNew ? '' : id!,
+    true,
   );
+  const { data: allRecipes } = useRecipes() as { data: Recipe[] | undefined };
   const { data: allIngredients } = useIngredients() as { data: Ingredient[] | undefined };
   const { data: ingredientCategories } = useIngredientCategories();
   const { data: recipeCost } = useRecipeCost(isNew ? '' : id!);
@@ -173,6 +195,13 @@ export function RecipeEditorPage() {
     [],
   );
   const [linkRows, setLinkRows] = useState<RecipeLinkRow[]>([]);
+  const [subRecipeRows, setSubRecipeRows] = useState<SubRecipeRow[]>([]);
+  const [storageLife, setStorageLife] = useState<{
+    roomTempHours?: number;
+    refrigeratedHours?: number;
+    frozenHours?: number;
+    thawedHours?: number;
+  }>({});
   const [saving, setSaving] = useState(false);
 
   // Ingredient autocomplete state
@@ -180,6 +209,10 @@ export function RecipeEditorPage() {
     null,
   );
   const [ingredientSearch, setIngredientSearch] = useState('');
+
+  // Sub-recipe autocomplete state
+  const [activeSubRecipeIdx, setActiveSubRecipeIdx] = useState<number | null>(null);
+  const [subRecipeSearch, setSubRecipeSearch] = useState('');
 
   // Populate form when editing
   useEffect(() => {
@@ -206,6 +239,21 @@ export function RecipeEditorPage() {
           title: l.title ?? '',
         })),
       );
+      setSubRecipeRows(
+        (existingRecipe.subRecipes ?? []).map((sr) => ({
+          subRecipeId: sr.subRecipeId,
+          subRecipeName: sr.subRecipe?.name ?? '',
+          quantity: sr.quantity,
+          unit: sr.unit,
+          note: sr.note ?? '',
+        })),
+      );
+      setStorageLife({
+        roomTempHours: existingRecipe.roomTempHours ?? undefined,
+        refrigeratedHours: existingRecipe.refrigeratedHours ?? undefined,
+        frozenHours: existingRecipe.frozenHours ?? undefined,
+        thawedHours: existingRecipe.thawedHours ?? undefined,
+      });
     }
   }, [existingRecipe, isNew]);
 
@@ -280,6 +328,85 @@ export function RecipeEditorPage() {
         !ingredientRows.some((r) => r.ingredientId === ing.id && !r.isNew),
     );
   }, [allIngredients, ingredientSearch, ingredientRows]);
+
+  const filteredRecipesForSubRecipe = useMemo(() => {
+    if (!allRecipes) return [];
+    const query = subRecipeSearch.toLowerCase();
+    return allRecipes.filter(
+      (r) =>
+        r.id !== id &&
+        r.name.toLowerCase().includes(query) &&
+        !subRecipeRows.some((sr) => sr.subRecipeId === r.id),
+    );
+  }, [allRecipes, subRecipeSearch, subRecipeRows, id]);
+
+  // Sub-recipe row management
+  const addSubRecipeRow = () => {
+    setSubRecipeRows((rows) => [
+      ...rows,
+      { subRecipeId: '', subRecipeName: '', quantity: 1, unit: 'batches', note: '' },
+    ]);
+  };
+
+  const removeSubRecipeRow = (idx: number) => {
+    setSubRecipeRows((rows) => rows.filter((_, i) => i !== idx));
+  };
+
+  const selectSubRecipe = (idx: number, recipe: Recipe) => {
+    setSubRecipeRows((rows) =>
+      rows.map((row, i) =>
+        i === idx
+          ? { ...row, subRecipeId: recipe.id, subRecipeName: recipe.name }
+          : row,
+      ),
+    );
+    setActiveSubRecipeIdx(null);
+    setSubRecipeSearch('');
+  };
+
+  const updateSubRecipeRow = (
+    idx: number,
+    field: keyof SubRecipeRow,
+    value: string | number,
+  ) => {
+    setSubRecipeRows((rows) =>
+      rows.map((row, i) => (i === idx ? { ...row, [field]: value } : row)),
+    );
+  };
+
+  // AI sub-recipe suggestion handlers
+  const handleLinkSubRecipe = (suggestion: {
+    existingRecipeId: string;
+    matchedIngredientNames: string[];
+  }) => {
+    const recipe = allRecipes?.find((r) => r.id === suggestion.existingRecipeId);
+    if (!recipe) return;
+
+    // Remove matched ingredients from ingredient rows
+    const lowerMatched = new Set(
+      suggestion.matchedIngredientNames.map((n) => n.toLowerCase().trim()),
+    );
+    setIngredientRows((rows) =>
+      rows.filter(
+        (row) => !lowerMatched.has(row.ingredientName.toLowerCase().trim()),
+      ),
+    );
+
+    // Add as sub-recipe if not already present
+    setSubRecipeRows((rows) => {
+      if (rows.some((sr) => sr.subRecipeId === recipe.id)) return rows;
+      return [
+        ...rows,
+        {
+          subRecipeId: recipe.id,
+          subRecipeName: recipe.name,
+          quantity: 1,
+          unit: 'batches',
+          note: '',
+        },
+      ];
+    });
+  };
 
   // Ingredient row management
   const addIngredientRow = () => {
@@ -399,6 +526,15 @@ export function RecipeEditorPage() {
         };
       });
 
+    const subRecipes = subRecipeRows
+      .filter((sr) => sr.subRecipeId)
+      .map((sr) => ({
+        subRecipeId: sr.subRecipeId,
+        quantity: sr.quantity,
+        unit: sr.unit,
+        note: sr.note?.trim() || undefined,
+      }));
+
     const payload = {
       name: name.trim(),
       category: category || undefined,
@@ -407,6 +543,11 @@ export function RecipeEditorPage() {
       instructions: instructions.trim() || undefined,
       ingredients,
       links,
+      subRecipes,
+      roomTempHours: storageLife.roomTempHours ?? undefined,
+      refrigeratedHours: storageLife.refrigeratedHours ?? undefined,
+      frozenHours: storageLife.frozenHours ?? undefined,
+      thawedHours: storageLife.thawedHours ?? undefined,
     };
 
     try {
@@ -822,6 +963,157 @@ export function RecipeEditorPage() {
           {recipeCost && <div className="mt-4"><CostEstimate recipeCost={recipeCost} /></div>}
         </div>
 
+        {/* AI Sub-Recipe Suggestions */}
+        {aiRecipeData && allRecipes && (
+          <AiSubRecipeSuggestions
+            aiRecipeData={aiRecipeData}
+            existingRecipes={allRecipes}
+            onLinkSubRecipe={handleLinkSubRecipe}
+            onDismiss={() => {}}
+          />
+        )}
+
+        {/* Sub-Recipes Section */}
+        <div className="rounded-xl border border-[#8b4513]/10 bg-white p-6 shadow-sm">
+          <div className="flex items-center justify-between">
+            <h3 className="text-base font-semibold text-[#3e2723]">
+              Sub-Recipes
+            </h3>
+            <button
+              type="button"
+              onClick={addSubRecipeRow}
+              className="flex items-center gap-1.5 rounded-lg border border-purple-300 px-3 py-1.5 text-sm font-medium text-purple-700 transition-all hover:bg-purple-50"
+            >
+              <Plus size={14} />
+              Add Sub-Recipe
+            </button>
+          </div>
+
+          {subRecipeRows.length === 0 ? (
+            <div className="mt-4 rounded-lg border-2 border-dashed border-purple-200 bg-purple-50/20 py-8 text-center text-sm text-gray-400">
+              No sub-recipes added yet. Use sub-recipes for components like fillings, frostings, or
+              pre-ferments that are their own recipes.
+            </div>
+          ) : (
+            <div className="mt-4 space-y-3">
+              {subRecipeRows.map((row, idx) => (
+                <div
+                  key={idx}
+                  className="flex items-start gap-3 rounded-lg border-l-4 border-purple-300 bg-purple-50/30 p-3"
+                >
+                  <div className="min-w-0 flex-1">
+                    <div className="relative">
+                      {row.subRecipeId ? (
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-medium text-[#3e2723]">
+                            {row.subRecipeName}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              updateSubRecipeRow(idx, 'subRecipeId', '');
+                              updateSubRecipeRow(idx, 'subRecipeName', '');
+                              setActiveSubRecipeIdx(idx);
+                              setSubRecipeSearch('');
+                            }}
+                            className="text-xs text-gray-400 hover:text-gray-600"
+                          >
+                            change
+                          </button>
+                        </div>
+                      ) : (
+                        <>
+                          <div className="relative">
+                            <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-gray-400" />
+                            <input
+                              type="text"
+                              value={activeSubRecipeIdx === idx ? subRecipeSearch : ''}
+                              onChange={(e) => {
+                                setSubRecipeSearch(e.target.value);
+                                setActiveSubRecipeIdx(idx);
+                              }}
+                              onFocus={() => {
+                                setActiveSubRecipeIdx(idx);
+                                if (!subRecipeSearch) setSubRecipeSearch('');
+                              }}
+                              placeholder="Search recipe..."
+                              className="w-full rounded-lg border border-gray-200 bg-white py-1.5 pl-8 pr-3 text-sm focus:border-purple-400 focus:outline-none focus:ring-1 focus:ring-purple-300/50"
+                            />
+                          </div>
+                          {activeSubRecipeIdx === idx && (
+                            <div className="absolute z-10 mt-1 max-h-48 w-64 overflow-y-auto rounded-lg border border-gray-200 bg-white shadow-lg">
+                              {filteredRecipesForSubRecipe.length === 0 ? (
+                                <div className="px-3 py-2 text-sm text-gray-400">
+                                  No recipes found
+                                </div>
+                              ) : (
+                                filteredRecipesForSubRecipe.slice(0, 20).map((r) => (
+                                  <button
+                                    key={r.id}
+                                    type="button"
+                                    onClick={() => selectSubRecipe(idx, r)}
+                                    className="flex w-full items-center justify-between px-3 py-2 text-left text-sm hover:bg-purple-50"
+                                  >
+                                    <span className="text-[#3e2723]">{r.name}</span>
+                                    <span className="text-xs text-gray-400">{r.category}</span>
+                                  </button>
+                                ))
+                              )}
+                            </div>
+                          )}
+                        </>
+                      )}
+                    </div>
+                  </div>
+                  <div className="w-24">
+                    <input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={row.quantity}
+                      onChange={(e) =>
+                        updateSubRecipeRow(idx, 'quantity', parseFloat(e.target.value) || 0)
+                      }
+                      className="w-full rounded-lg border border-gray-200 bg-white px-2 py-1.5 font-mono text-sm focus:border-purple-400 focus:outline-none focus:ring-1 focus:ring-purple-300/50"
+                      placeholder="1"
+                    />
+                  </div>
+                  <div className="w-28">
+                    <select
+                      value={row.unit}
+                      onChange={(e) => updateSubRecipeRow(idx, 'unit', e.target.value)}
+                      className="w-full rounded-lg border border-gray-200 bg-white px-2 py-1.5 text-sm focus:border-purple-400 focus:outline-none focus:ring-1 focus:ring-purple-300/50"
+                    >
+                      {SUB_RECIPE_UNIT_OPTIONS.map((u) => (
+                        <option key={u} value={u}>
+                          {u}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="w-32">
+                    <input
+                      type="text"
+                      value={row.note}
+                      onChange={(e) => updateSubRecipeRow(idx, 'note', e.target.value)}
+                      className="w-full rounded-lg border border-gray-200 bg-white px-2 py-1.5 text-sm focus:border-purple-400 focus:outline-none focus:ring-1 focus:ring-purple-300/50"
+                      placeholder="Note"
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => removeSubRecipeRow(idx)}
+                    className="mt-1 rounded-lg p-1 text-red-400 transition-all hover:bg-red-50 hover:text-red-600"
+                    title="Remove sub-recipe"
+                  >
+                    <Trash2 size={14} />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
         {/* Images Section */}
         {!isNew && (
           <div className="rounded-xl border border-[#8b4513]/10 bg-white p-6 shadow-sm">
@@ -894,6 +1186,42 @@ export function RecipeEditorPage() {
             )}
           </div>
         )}
+
+        {/* Storage Life Section */}
+        <div className="rounded-xl border border-[#8b4513]/10 bg-white p-6 shadow-sm">
+          <div className="flex items-center gap-2">
+            <Clock size={18} className="text-[#8b4513]" />
+            <h3 className="text-base font-semibold text-[#3e2723]">
+              Storage Life
+            </h3>
+          </div>
+          <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <DurationInput
+              label="Room Temperature"
+              value={storageLife.roomTempHours}
+              onChange={(v) => setStorageLife((s) => ({ ...s, roomTempHours: v }))}
+              placeholder="e.g. 24"
+            />
+            <DurationInput
+              label="Refrigerated"
+              value={storageLife.refrigeratedHours}
+              onChange={(v) => setStorageLife((s) => ({ ...s, refrigeratedHours: v }))}
+              placeholder="e.g. 72"
+            />
+            <DurationInput
+              label="Frozen"
+              value={storageLife.frozenHours}
+              onChange={(v) => setStorageLife((s) => ({ ...s, frozenHours: v }))}
+              placeholder="e.g. 720"
+            />
+            <DurationInput
+              label="After Thawing"
+              value={storageLife.thawedHours}
+              onChange={(v) => setStorageLife((s) => ({ ...s, thawedHours: v }))}
+              placeholder="e.g. 24"
+            />
+          </div>
+        </div>
 
         {/* Links Section */}
         <div className="rounded-xl border border-[#8b4513]/10 bg-white p-6 shadow-sm">

@@ -7,6 +7,7 @@ import { InventoryItemPackage } from './entities/inventory-item-package.entity';
 import { InventoryShipment } from './entities/inventory-shipment.entity';
 import { InventoryMovement } from './entities/inventory-movement.entity';
 import { Location } from './entities/location.entity';
+import { StorageCondition } from './entities/storage-condition.entity';
 import { InventoryService } from './inventory.service';
 import { InventoryController } from './inventory.controller';
 
@@ -20,6 +21,7 @@ import { InventoryController } from './inventory.controller';
       InventoryShipment,
       InventoryMovement,
       Location,
+      StorageCondition,
     ]),
   ],
   controllers: [InventoryController],
