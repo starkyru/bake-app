@@ -48,28 +48,39 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 /**
  * Syncs token between localStorage and the shared cookie on mount.
  * Enables cross-subdomain SSO: log in once at the hub, access all sub-apps.
+ *
+ * Prefers the cookie token over localStorage because the cookie represents the
+ * latest cross-app session (e.g. a fresh hub login), while localStorage may
+ * hold a stale token from a previous session on this specific subdomain.
  */
 function runTokenPassthrough(): string | null {
   const localToken = localStorage.getItem('token');
   const cookieToken = getSharedCookie();
 
-  const token = localToken || cookieToken;
+  const localValid = localToken ? !isTokenExpired(localToken) : false;
+  const cookieValid = cookieToken ? !isTokenExpired(cookieToken) : false;
 
-  // Clear expired tokens
-  if (token && isTokenExpired(token)) {
+  // Clean up expired tokens
+  if (localToken && !localValid) {
     localStorage.removeItem('token');
+  }
+  if (cookieToken && !cookieValid) {
     deleteSharedCookie();
-    return null;
   }
 
-  if (!localToken && cookieToken) {
-    localStorage.setItem('token', cookieToken);
-    return cookieToken;
-  } else if (localToken && !cookieToken) {
-    setSharedCookie(localToken);
+  // Prefer cookie (cross-app SSO source) over localStorage
+  const token = cookieValid ? cookieToken : localValid ? localToken : null;
+  if (!token) return null;
+
+  // Sync the valid token to both storage mechanisms
+  if (token !== localToken) {
+    localStorage.setItem('token', token);
+  }
+  if (token !== cookieToken) {
+    setSharedCookie(token);
   }
 
-  return localToken;
+  return token;
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
