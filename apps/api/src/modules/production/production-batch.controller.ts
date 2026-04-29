@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Put, Body, Param, Query, UseGuards, Request } from '@nestjs/common';
+import { Controller, Get, Post, Put, Body, Param, Query, UseGuards, Request, Inject, forwardRef } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { ProductionBatchService } from './production-batch.service';
 import { CreateProductionBatchDto, DiscardBatchDto, TransferBatchDto, ConsumeBatchDto } from './dto';
@@ -14,7 +14,7 @@ import { RecipesService } from '../recipes/recipes.service';
 export class ProductionBatchController {
   constructor(
     private batchService: ProductionBatchService,
-    private recipesService: RecipesService,
+    @Inject(forwardRef(() => RecipesService)) private recipesService: RecipesService,
   ) {}
 
   @Get()

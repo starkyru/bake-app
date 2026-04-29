@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, Inject, forwardRef } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { EventEmitter2 } from '@nestjs/event-emitter';
@@ -16,7 +16,7 @@ export class ProductionService {
     @InjectRepository(ProductionTask) private taskRepo: Repository<ProductionTask>,
     private eventEmitter: EventEmitter2,
     private batchService: ProductionBatchService,
-    private recipesService: RecipesService,
+    @Inject(forwardRef(() => RecipesService)) private recipesService: RecipesService,
   ) {}
 
   async findAll(date?: string, locationId?: string): Promise<ProductionPlan[]> {
@@ -112,8 +112,8 @@ export class ProductionService {
             }
           }
         }
-      } catch (error) {
-        console.error('Failed to create production batch:', error.message);
+      } catch (error: any) {
+        console.error('Failed to create production batch:', error?.message);
       }
     }
 
