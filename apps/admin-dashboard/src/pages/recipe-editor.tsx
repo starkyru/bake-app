@@ -11,6 +11,8 @@ import {
   Sparkles,
   X,
   Clock,
+  ChevronDown,
+  ChevronRight,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import type {
@@ -148,15 +150,42 @@ interface RecipeLinkRow {
   title: string;
 }
 
+interface PendingSubRecipeData {
+  name: string;
+  category: string;
+  yieldQuantity: string;
+  yieldUnit: string;
+  instructions: string;
+  ingredients: RecipeIngredientRow[];
+}
+
 interface SubRecipeRow {
   subRecipeId: string;
   subRecipeName: string;
   quantity: number;
   unit: string;
   note: string;
+  isPending?: boolean;
+  pendingData?: PendingSubRecipeData;
+  isExpanded?: boolean;
 }
 
-const SUB_RECIPE_UNIT_OPTIONS = ['batches', 'g', 'kg', 'ml', 'L', 'pcs'];
+const SUB_RECIPE_UNIT_OPTIONS = ['g', 'kg', 'ml', 'L', 'pcs', 'batches'];
+
+function calcDefaultUnit(ingredients: any[]): { unit: string; totalQty: number } {
+  let weightG = 0;
+  let volumeMl = 0;
+  const toG: Record<string, number> = { g: 1, kg: 1000, oz: 28.35, lb: 453.6 };
+  const toMl: Record<string, number> = { ml: 1, L: 1000, tbsp: 15, tsp: 5 };
+  for (const ing of ingredients) {
+    const qty = parseFloat(ing.quantity) || 0;
+    const u = ing.unit || 'g';
+    if (toG[u]) weightG += qty * toG[u];
+    else if (toMl[u]) volumeMl += qty * toMl[u];
+  }
+  if (volumeMl > weightG) return { unit: 'ml', totalQty: Math.round(weightG + volumeMl) || 1 };
+  return { unit: 'g', totalQty: Math.round(weightG + volumeMl) || 1 };
+}
 
 function extractYouTubeId(url: string): string | null {
   const match = url.match(
@@ -344,7 +373,7 @@ export function RecipeEditorPage() {
   const addSubRecipeRow = () => {
     setSubRecipeRows((rows) => [
       ...rows,
-      { subRecipeId: '', subRecipeName: '', quantity: 1, unit: 'batches', note: '' },
+      { subRecipeId: '', subRecipeName: '', quantity: 1, unit: 'g', note: '' },
     ]);
   };
 
@@ -367,10 +396,82 @@ export function RecipeEditorPage() {
   const updateSubRecipeRow = (
     idx: number,
     field: keyof SubRecipeRow,
-    value: string | number,
+    value: string | number | boolean,
   ) => {
     setSubRecipeRows((rows) =>
       rows.map((row, i) => (i === idx ? { ...row, [field]: value } : row)),
+    );
+  };
+
+  const updatePendingSubRecipeField = (
+    idx: number,
+    field: keyof PendingSubRecipeData,
+    value: any,
+  ) => {
+    setSubRecipeRows((rows) =>
+      rows.map((row, i) => {
+        if (i !== idx || !row.pendingData) return row;
+        const updated = { ...row.pendingData, [field]: value };
+        // Sync name and yield to the row level
+        const synced = { ...row, pendingData: updated };
+        if (field === 'name') synced.subRecipeName = value;
+        if (field === 'yieldQuantity' || field === 'yieldUnit') {
+          const { unit: u, totalQty } = calcDefaultUnit(updated.ingredients);
+          synced.quantity = parseFloat(updated.yieldQuantity) || totalQty;
+          synced.unit = updated.yieldUnit || u;
+        }
+        return synced;
+      }),
+    );
+  };
+
+  const addPendingIngredient = (subIdx: number) => {
+    setSubRecipeRows((rows) =>
+      rows.map((row, i) => {
+        if (i !== subIdx || !row.pendingData) return row;
+        return {
+          ...row,
+          pendingData: {
+            ...row.pendingData,
+            ingredients: [
+              ...row.pendingData.ingredients,
+              { ingredientId: '', ingredientName: '', quantity: '', unit: 'g' },
+            ],
+          },
+        };
+      }),
+    );
+  };
+
+  const removePendingIngredient = (subIdx: number, ingIdx: number) => {
+    setSubRecipeRows((rows) =>
+      rows.map((row, i) => {
+        if (i !== subIdx || !row.pendingData) return row;
+        return {
+          ...row,
+          pendingData: {
+            ...row.pendingData,
+            ingredients: row.pendingData.ingredients.filter((_, j) => j !== ingIdx),
+          },
+        };
+      }),
+    );
+  };
+
+  const updatePendingIngredient = (subIdx: number, ingIdx: number, field: string, value: any) => {
+    setSubRecipeRows((rows) =>
+      rows.map((row, i) => {
+        if (i !== subIdx || !row.pendingData) return row;
+        return {
+          ...row,
+          pendingData: {
+            ...row.pendingData,
+            ingredients: row.pendingData.ingredients.map((ing, j) =>
+              j === ingIdx ? { ...ing, [field]: value } : ing,
+            ),
+          },
+        };
+      }),
     );
   };
 
@@ -408,56 +509,57 @@ export function RecipeEditorPage() {
     });
   };
 
-  const handleCreateSubRecipe = async (suggestion: {
+  const handleCreateSubRecipe = (suggestion: {
     suggestedName: string;
     matchedIngredientNames: string[];
     matchedSteps?: string;
     ingredients: any[];
   }) => {
-    try {
-      const newRecipe = await createRecipe.mutateAsync({
-        name: suggestion.suggestedName,
-        category: 'other',
-        yieldQuantity: 1,
-        yieldUnit: 'batches',
-        instructions: suggestion.matchedSteps || '',
-        ingredients: suggestion.ingredients.map((ing: any) => ({
-          ingredientId: ing.ingredientId || '',
-          ingredientName: ing.ingredientName || '',
-          quantity: ing.quantity || 0,
-          unit: ing.unit || 'g',
-          note: ing.note,
-          isNew: ing.isNew,
-          ingredientCategory: ing.ingredientCategory,
-        })) as any,
-      });
+    const pendingIngredients: RecipeIngredientRow[] = suggestion.ingredients.map((ing: any) => ({
+      ingredientId: ing.ingredientId || '',
+      ingredientName: ing.ingredientName || '',
+      quantity: String(ing.quantity || 0),
+      unit: ing.unit || 'g',
+      note: ing.note,
+      isNew: ing.isNew,
+      suggestedCategory: ing.ingredientCategory,
+    }));
 
-      // Remove matched ingredients from the current recipe
-      const lowerMatched = new Set(
-        suggestion.matchedIngredientNames.map((n) => n.toLowerCase().trim()),
-      );
-      setIngredientRows((rows) =>
-        rows.filter(
-          (row) => !lowerMatched.has(row.ingredientName.toLowerCase().trim()),
-        ),
-      );
+    const { unit: defaultUnit, totalQty } = calcDefaultUnit(pendingIngredients);
 
-      // Add the newly created recipe as a sub-recipe
-      setSubRecipeRows((rows) => [
-        ...rows,
-        {
-          subRecipeId: newRecipe.id,
-          subRecipeName: newRecipe.name,
-          quantity: 1,
-          unit: 'batches',
-          note: '',
+    // Remove matched ingredients from the current recipe
+    const lowerMatched = new Set(
+      suggestion.matchedIngredientNames.map((n) => n.toLowerCase().trim()),
+    );
+    setIngredientRows((rows) =>
+      rows.filter(
+        (row) => !lowerMatched.has(row.ingredientName.toLowerCase().trim()),
+      ),
+    );
+
+    // Add as pending sub-recipe (not saved to DB yet)
+    setSubRecipeRows((rows) => [
+      ...rows,
+      {
+        subRecipeId: '',
+        subRecipeName: suggestion.suggestedName,
+        quantity: totalQty,
+        unit: defaultUnit,
+        note: '',
+        isPending: true,
+        isExpanded: true,
+        pendingData: {
+          name: suggestion.suggestedName,
+          category: 'other',
+          yieldQuantity: String(totalQty),
+          yieldUnit: defaultUnit,
+          instructions: suggestion.matchedSteps || '',
+          ingredients: pendingIngredients,
         },
-      ]);
+      },
+    ]);
 
-      toast.success(`Sub-recipe "${suggestion.suggestedName}" created`);
-    } catch {
-      toast.error('Failed to create sub-recipe');
-    }
+    toast.success(`Sub-recipe "${suggestion.suggestedName}" added — edit it below before saving`);
   };
 
   // Ingredient row management
@@ -578,7 +680,46 @@ export function RecipeEditorPage() {
         };
       });
 
-    const subRecipes = subRecipeRows
+    // Create pending sub-recipes first
+    const resolvedSubRecipeRows = [...subRecipeRows];
+    for (let i = 0; i < resolvedSubRecipeRows.length; i++) {
+      const sr = resolvedSubRecipeRows[i];
+      if (sr.isPending && sr.pendingData) {
+        try {
+          const pendingIngs = sr.pendingData.ingredients
+            .filter((r) => r.ingredientId || r.ingredientName || r.isNew)
+            .map((r) => ({
+              ingredientId: r.ingredientId,
+              ingredientName: r.ingredientName,
+              quantity: parseFloat(r.quantity) || 0,
+              unit: r.unit,
+              note: r.note?.trim() || undefined,
+              ...(r.isNew && { isNew: true, ingredientCategory: r.suggestedCategory || undefined }),
+            }));
+          const created = await createRecipe.mutateAsync({
+            name: sr.pendingData.name.trim(),
+            category: sr.pendingData.category || undefined,
+            yieldQuantity: parseFloat(sr.pendingData.yieldQuantity) || 1,
+            yieldUnit: sr.pendingData.yieldUnit,
+            instructions: sr.pendingData.instructions?.trim() || undefined,
+            ingredients: pendingIngs as any,
+          } as any);
+          resolvedSubRecipeRows[i] = {
+            ...sr,
+            subRecipeId: created.id,
+            subRecipeName: created.name,
+            isPending: false,
+            pendingData: undefined,
+          };
+        } catch {
+          toast.error(`Failed to create sub-recipe "${sr.pendingData.name}"`);
+          setSaving(false);
+          return;
+        }
+      }
+    }
+
+    const subRecipes = resolvedSubRecipeRows
       .filter((sr) => sr.subRecipeId)
       .map((sr) => ({
         subRecipeId: sr.subRecipeId,
@@ -1052,115 +1193,248 @@ export function RecipeEditorPage() {
               {subRecipeRows.map((row, idx) => (
                 <div
                   key={idx}
-                  className="flex items-start gap-3 rounded-lg border-l-4 border-purple-300 bg-purple-50/30 p-3"
+                  className={`rounded-lg border-l-4 ${row.isPending ? 'border-amber-400 bg-amber-50/30' : 'border-purple-300 bg-purple-50/30'} p-3`}
                 >
-                  <div className="min-w-0 flex-1">
-                    <div className="relative">
-                      {row.subRecipeId ? (
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm font-medium text-[#3e2723]">
-                            {row.subRecipeName}
-                          </span>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              updateSubRecipeRow(idx, 'subRecipeId', '');
-                              updateSubRecipeRow(idx, 'subRecipeName', '');
-                              setActiveSubRecipeIdx(idx);
-                              setSubRecipeSearch('');
-                            }}
-                            className="text-xs text-gray-400 hover:text-gray-600"
-                          >
-                            change
-                          </button>
-                        </div>
-                      ) : (
-                        <>
-                          <div className="relative">
-                            <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-gray-400" />
+                  {/* Header row */}
+                  <div className="flex items-start gap-3">
+                    {/* Name / Search */}
+                    <div className="min-w-0 flex-1">
+                      <div className="relative">
+                        {row.isPending ? (
+                          <div className="flex items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={() => updateSubRecipeRow(idx, 'isExpanded', !row.isExpanded)}
+                              className="text-gray-500 hover:text-gray-700"
+                            >
+                              {row.isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+                            </button>
                             <input
                               type="text"
-                              value={activeSubRecipeIdx === idx ? subRecipeSearch : ''}
+                              value={row.subRecipeName}
                               onChange={(e) => {
-                                setSubRecipeSearch(e.target.value);
-                                setActiveSubRecipeIdx(idx);
+                                updateSubRecipeRow(idx, 'subRecipeName', e.target.value);
+                                if (row.pendingData) updatePendingSubRecipeField(idx, 'name', e.target.value);
                               }}
-                              onFocus={() => {
-                                setActiveSubRecipeIdx(idx);
-                                if (!subRecipeSearch) setSubRecipeSearch('');
-                              }}
-                              placeholder="Search recipe..."
-                              className="w-full rounded-lg border border-gray-200 bg-white py-1.5 pl-8 pr-3 text-sm focus:border-purple-400 focus:outline-none focus:ring-1 focus:ring-purple-300/50"
+                              className="flex-1 rounded-lg border border-gray-200 bg-white px-2 py-1.5 text-sm font-medium focus:border-amber-400 focus:outline-none focus:ring-1 focus:ring-amber-300/50"
+                              placeholder="Sub-recipe name"
                             />
+                            <span className="shrink-0 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-700">
+                              NEW
+                            </span>
                           </div>
-                          {activeSubRecipeIdx === idx && (
-                            <div className="absolute z-10 mt-1 max-h-48 w-64 overflow-y-auto rounded-lg border border-gray-200 bg-white shadow-lg">
-                              {filteredRecipesForSubRecipe.length === 0 ? (
-                                <div className="px-3 py-2 text-sm text-gray-400">
-                                  No recipes found
-                                </div>
-                              ) : (
-                                filteredRecipesForSubRecipe.slice(0, 20).map((r) => (
-                                  <button
-                                    key={r.id}
-                                    type="button"
-                                    onClick={() => selectSubRecipe(idx, r)}
-                                    className="flex w-full items-center justify-between px-3 py-2 text-left text-sm hover:bg-purple-50"
-                                  >
-                                    <span className="text-[#3e2723]">{r.name}</span>
-                                    <span className="text-xs text-gray-400">{r.category}</span>
-                                  </button>
-                                ))
-                              )}
+                        ) : row.subRecipeId ? (
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-medium text-[#3e2723]">
+                              {row.subRecipeName}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                updateSubRecipeRow(idx, 'subRecipeId', '');
+                                updateSubRecipeRow(idx, 'subRecipeName', '');
+                                setActiveSubRecipeIdx(idx);
+                                setSubRecipeSearch('');
+                              }}
+                              className="text-xs text-gray-400 hover:text-gray-600"
+                            >
+                              change
+                            </button>
+                          </div>
+                        ) : (
+                          <>
+                            <div className="relative">
+                              <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-gray-400" />
+                              <input
+                                type="text"
+                                value={activeSubRecipeIdx === idx ? subRecipeSearch : ''}
+                                onChange={(e) => {
+                                  setSubRecipeSearch(e.target.value);
+                                  setActiveSubRecipeIdx(idx);
+                                }}
+                                onFocus={() => {
+                                  setActiveSubRecipeIdx(idx);
+                                  if (!subRecipeSearch) setSubRecipeSearch('');
+                                }}
+                                placeholder="Search recipe..."
+                                className="w-full rounded-lg border border-gray-200 bg-white py-1.5 pl-8 pr-3 text-sm focus:border-purple-400 focus:outline-none focus:ring-1 focus:ring-purple-300/50"
+                              />
                             </div>
-                          )}
-                        </>
-                      )}
+                            {activeSubRecipeIdx === idx && (
+                              <div className="absolute z-10 mt-1 max-h-48 w-64 overflow-y-auto rounded-lg border border-gray-200 bg-white shadow-lg">
+                                {filteredRecipesForSubRecipe.length === 0 ? (
+                                  <div className="px-3 py-2 text-sm text-gray-400">
+                                    No recipes found
+                                  </div>
+                                ) : (
+                                  filteredRecipesForSubRecipe.slice(0, 20).map((r) => (
+                                    <button
+                                      key={r.id}
+                                      type="button"
+                                      onClick={() => selectSubRecipe(idx, r)}
+                                      className="flex w-full items-center justify-between px-3 py-2 text-left text-sm hover:bg-purple-50"
+                                    >
+                                      <span className="text-[#3e2723]">{r.name}</span>
+                                      <span className="text-xs text-gray-400">{r.category}</span>
+                                    </button>
+                                  ))
+                                )}
+                              </div>
+                            )}
+                          </>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                  <div className="w-24">
-                    <input
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      value={row.quantity}
-                      onChange={(e) =>
-                        updateSubRecipeRow(idx, 'quantity', parseFloat(e.target.value) || 0)
-                      }
-                      className="w-full rounded-lg border border-gray-200 bg-white px-2 py-1.5 font-mono text-sm focus:border-purple-400 focus:outline-none focus:ring-1 focus:ring-purple-300/50"
-                      placeholder="1"
-                    />
-                  </div>
-                  <div className="w-28">
-                    <select
-                      value={row.unit}
-                      onChange={(e) => updateSubRecipeRow(idx, 'unit', e.target.value)}
-                      className="w-full rounded-lg border border-gray-200 bg-white px-2 py-1.5 text-sm focus:border-purple-400 focus:outline-none focus:ring-1 focus:ring-purple-300/50"
+                    <div className="w-24">
+                      <input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        value={row.quantity}
+                        onChange={(e) =>
+                          updateSubRecipeRow(idx, 'quantity', parseFloat(e.target.value) || 0)
+                        }
+                        className="w-full rounded-lg border border-gray-200 bg-white px-2 py-1.5 font-mono text-sm focus:border-purple-400 focus:outline-none focus:ring-1 focus:ring-purple-300/50"
+                        placeholder="1"
+                      />
+                    </div>
+                    <div className="w-28">
+                      <select
+                        value={row.unit}
+                        onChange={(e) => updateSubRecipeRow(idx, 'unit', e.target.value)}
+                        className="w-full rounded-lg border border-gray-200 bg-white px-2 py-1.5 text-sm focus:border-purple-400 focus:outline-none focus:ring-1 focus:ring-purple-300/50"
+                      >
+                        {SUB_RECIPE_UNIT_OPTIONS.map((u) => (
+                          <option key={u} value={u}>
+                            {u}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => removeSubRecipeRow(idx)}
+                      className="mt-1 rounded-lg p-1 text-red-400 transition-all hover:bg-red-50 hover:text-red-600"
+                      title="Remove sub-recipe"
                     >
-                      {SUB_RECIPE_UNIT_OPTIONS.map((u) => (
-                        <option key={u} value={u}>
-                          {u}
-                        </option>
-                      ))}
-                    </select>
+                      <Trash2 size={14} />
+                    </button>
                   </div>
-                  <div className="w-32">
-                    <input
-                      type="text"
-                      value={row.note}
-                      onChange={(e) => updateSubRecipeRow(idx, 'note', e.target.value)}
-                      className="w-full rounded-lg border border-gray-200 bg-white px-2 py-1.5 text-sm focus:border-purple-400 focus:outline-none focus:ring-1 focus:ring-purple-300/50"
-                      placeholder="Note"
-                    />
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => removeSubRecipeRow(idx)}
-                    className="mt-1 rounded-lg p-1 text-red-400 transition-all hover:bg-red-50 hover:text-red-600"
-                    title="Remove sub-recipe"
-                  >
-                    <Trash2 size={14} />
-                  </button>
+
+                  {/* Inline editor for pending sub-recipes */}
+                  {row.isPending && row.isExpanded && row.pendingData && (
+                    <div className="mt-3 space-y-3 border-t border-amber-200 pt-3">
+                      {/* Category + Yield */}
+                      <div className="grid grid-cols-3 gap-2">
+                        <div>
+                          <label className="mb-1 block text-[11px] font-medium text-gray-500">Category</label>
+                          <select
+                            value={row.pendingData.category}
+                            onChange={(e) => updatePendingSubRecipeField(idx, 'category', e.target.value)}
+                            className="w-full rounded-lg border border-gray-200 bg-white px-2 py-1.5 text-sm"
+                          >
+                            {CATEGORY_OPTIONS.map((c) => (
+                              <option key={c.value} value={c.value}>{c.label}</option>
+                            ))}
+                          </select>
+                        </div>
+                        <div>
+                          <label className="mb-1 block text-[11px] font-medium text-gray-500">Yield</label>
+                          <input
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            value={row.pendingData.yieldQuantity}
+                            onChange={(e) => updatePendingSubRecipeField(idx, 'yieldQuantity', e.target.value)}
+                            className="w-full rounded-lg border border-gray-200 bg-white px-2 py-1.5 font-mono text-sm"
+                          />
+                        </div>
+                        <div>
+                          <label className="mb-1 block text-[11px] font-medium text-gray-500">Yield unit</label>
+                          <select
+                            value={row.pendingData.yieldUnit}
+                            onChange={(e) => updatePendingSubRecipeField(idx, 'yieldUnit', e.target.value)}
+                            className="w-full rounded-lg border border-gray-200 bg-white px-2 py-1.5 text-sm"
+                          >
+                            {YIELD_UNIT_OPTIONS.map((u) => (
+                              <option key={u} value={u}>{u}</option>
+                            ))}
+                          </select>
+                        </div>
+                      </div>
+
+                      {/* Ingredients */}
+                      <div>
+                        <div className="mb-1 flex items-center justify-between">
+                          <label className="text-[11px] font-medium text-gray-500">Ingredients</label>
+                          <button
+                            type="button"
+                            onClick={() => addPendingIngredient(idx)}
+                            className="flex items-center gap-1 text-[11px] font-medium text-purple-600 hover:text-purple-800"
+                          >
+                            <Plus size={10} /> Add
+                          </button>
+                        </div>
+                        <div className="space-y-1">
+                          {row.pendingData.ingredients.map((ing, ingIdx) => (
+                            <div key={ingIdx} className="flex items-center gap-1.5">
+                              <input
+                                type="text"
+                                value={ing.ingredientName}
+                                onChange={(e) => updatePendingIngredient(idx, ingIdx, 'ingredientName', e.target.value)}
+                                className="min-w-0 flex-1 rounded border border-gray-200 bg-white px-2 py-1 text-xs"
+                                placeholder="Ingredient"
+                              />
+                              <input
+                                type="number"
+                                step="0.01"
+                                min="0"
+                                value={ing.quantity}
+                                onChange={(e) => updatePendingIngredient(idx, ingIdx, 'quantity', e.target.value)}
+                                className="w-16 rounded border border-gray-200 bg-white px-2 py-1 font-mono text-xs"
+                                placeholder="0"
+                              />
+                              <select
+                                value={ing.unit}
+                                onChange={(e) => updatePendingIngredient(idx, ingIdx, 'unit', e.target.value)}
+                                className="w-14 rounded border border-gray-200 bg-white px-1 py-1 text-xs"
+                              >
+                                {getCompatibleUnits(ing.unit).map((u) => (
+                                  <option key={u} value={u}>{u}</option>
+                                ))}
+                              </select>
+                              <input
+                                type="text"
+                                value={ing.note || ''}
+                                onChange={(e) => updatePendingIngredient(idx, ingIdx, 'note', e.target.value)}
+                                className="w-20 rounded border border-gray-200 bg-white px-2 py-1 text-xs"
+                                placeholder="note"
+                              />
+                              <button
+                                type="button"
+                                onClick={() => removePendingIngredient(idx, ingIdx)}
+                                className="p-0.5 text-red-400 hover:text-red-600"
+                              >
+                                <X size={12} />
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Instructions */}
+                      <div>
+                        <label className="mb-1 block text-[11px] font-medium text-gray-500">Instructions</label>
+                        <textarea
+                          value={row.pendingData.instructions}
+                          onChange={(e) => updatePendingSubRecipeField(idx, 'instructions', e.target.value)}
+                          rows={3}
+                          className="w-full rounded-lg border border-gray-200 bg-white px-2 py-1.5 text-xs leading-relaxed"
+                          placeholder="Steps for this sub-recipe..."
+                        />
+                      </div>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
