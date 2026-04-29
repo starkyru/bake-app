@@ -418,9 +418,10 @@ Return ONLY valid JSON, no markdown, no explanation.`,
 
   private async resolveNewIngredients(ingredients: CreateRecipeDto['ingredients']): Promise<CreateRecipeDto['ingredients']> {
     if (!ingredients) return [];
+    const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
     const resolved = [];
     for (const ing of ingredients) {
-      if (ing.isNew) {
+      if (ing.isNew || (ing.ingredientId && !UUID_REGEX.test(ing.ingredientId))) {
         // Find or create the category
         let categoryId: string | undefined;
         if (ing.ingredientCategory && ing.ingredientCategory !== 'Uncategorized') {
