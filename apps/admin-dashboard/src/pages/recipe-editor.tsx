@@ -408,6 +408,58 @@ export function RecipeEditorPage() {
     });
   };
 
+  const handleCreateSubRecipe = async (suggestion: {
+    suggestedName: string;
+    matchedIngredientNames: string[];
+    matchedSteps?: string;
+    ingredients: any[];
+  }) => {
+    try {
+      const newRecipe = await createRecipe.mutateAsync({
+        name: suggestion.suggestedName,
+        category: 'other',
+        yieldQuantity: 1,
+        yieldUnit: 'batches',
+        instructions: suggestion.matchedSteps || '',
+        ingredients: suggestion.ingredients.map((ing: any) => ({
+          ingredientId: ing.ingredientId || '',
+          ingredientName: ing.ingredientName || '',
+          quantity: ing.quantity || 0,
+          unit: ing.unit || 'g',
+          note: ing.note,
+          isNew: ing.isNew,
+          ingredientCategory: ing.ingredientCategory,
+        })) as any,
+      });
+
+      // Remove matched ingredients from the current recipe
+      const lowerMatched = new Set(
+        suggestion.matchedIngredientNames.map((n) => n.toLowerCase().trim()),
+      );
+      setIngredientRows((rows) =>
+        rows.filter(
+          (row) => !lowerMatched.has(row.ingredientName.toLowerCase().trim()),
+        ),
+      );
+
+      // Add the newly created recipe as a sub-recipe
+      setSubRecipeRows((rows) => [
+        ...rows,
+        {
+          subRecipeId: newRecipe.id,
+          subRecipeName: newRecipe.name,
+          quantity: 1,
+          unit: 'batches',
+          note: '',
+        },
+      ]);
+
+      toast.success(`Sub-recipe "${suggestion.suggestedName}" created`);
+    } catch {
+      toast.error('Failed to create sub-recipe');
+    }
+  };
+
   // Ingredient row management
   const addIngredientRow = () => {
     setIngredientRows((rows) => [
@@ -969,6 +1021,7 @@ export function RecipeEditorPage() {
             aiRecipeData={aiRecipeData}
             existingRecipes={allRecipes}
             onLinkSubRecipe={handleLinkSubRecipe}
+            onCreateSubRecipe={handleCreateSubRecipe}
             onDismiss={() => {}}
           />
         )}

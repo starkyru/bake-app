@@ -22,6 +22,12 @@ interface AiSubRecipeSuggestionsProps {
     existingRecipeId: string;
     matchedIngredientNames: string[];
   }) => void;
+  onCreateSubRecipe: (suggestion: {
+    suggestedName: string;
+    matchedIngredientNames: string[];
+    matchedSteps?: string;
+    ingredients: any[];
+  }) => void;
   onDismiss: (index: number) => void;
 }
 
@@ -29,6 +35,7 @@ export function AiSubRecipeSuggestions({
   aiRecipeData,
   existingRecipes,
   onLinkSubRecipe,
+  onCreateSubRecipe,
   onDismiss,
 }: AiSubRecipeSuggestionsProps) {
   const analyzeMutation = useSubRecipeSuggestions();
@@ -245,12 +252,35 @@ export function AiSubRecipeSuggestions({
                   )}
                 </div>
                 <div className="flex shrink-0 items-center gap-1">
-                  <span
-                    className="cursor-default rounded-md bg-gray-100 px-2.5 py-1.5 text-xs font-medium text-gray-400"
-                    title="Coming soon"
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setLinked((prev) => new Set(prev).add(s.originalIndex));
+                      onCreateSubRecipe({
+                        suggestedName: s.suggestedName || 'New Sub-Recipe',
+                        matchedIngredientNames: s.matchedIngredients,
+                        matchedSteps: s.matchedSteps,
+                        ingredients: (aiRecipeData?.ingredients || []).filter(
+                          (ing: any) =>
+                            s.matchedIngredients.some(
+                              (name) =>
+                                (ing.ingredientName || '')
+                                  .toLowerCase()
+                                  .includes(name.toLowerCase()) ||
+                                name
+                                  .toLowerCase()
+                                  .includes(
+                                    (ing.ingredientName || '').toLowerCase(),
+                                  ),
+                            ),
+                        ),
+                      });
+                    }}
+                    className="flex items-center gap-1 rounded-md bg-purple-600 px-2.5 py-1.5 text-xs font-medium text-white transition-colors hover:bg-purple-700"
                   >
+                    <ArrowRight size={12} />
                     Create Sub-Recipe
-                  </span>
+                  </button>
                   <button
                     type="button"
                     onClick={() => handleDismiss(s.originalIndex)}
