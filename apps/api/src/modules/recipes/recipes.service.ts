@@ -743,6 +743,8 @@ Your tasks:
 1. Check if any groups of ingredients in this recipe match an existing recipe from the database
 2. Identify steps/ingredient groups that could be extracted as reusable sub-recipes
 
+CRITICAL: Many recipes have the SAME ingredient appearing multiple times with different notes (e.g. "Sugar" for syrup, "Sugar" for custard, "Sugar" for meringue). You MUST use BOTH the ingredient name AND the note field to identify which specific ingredient entries belong to each sub-recipe. Do NOT group all entries with the same name together.
+
 Return a JSON object:
 {
   "suggestions": [
@@ -751,13 +753,17 @@ Return a JSON object:
       "existingRecipeId": "uuid (only for existing_match)",
       "existingRecipeName": "name (only for existing_match)",
       "suggestedName": "name for new sub-recipe (only for new_suggestion)",
-      "matchedIngredients": ["ingredient names that would move to this sub-recipe"],
+      "matchedIngredients": [
+        {"ingredientName": "Sugar", "quantity": 70, "unit": "g", "note": "for custard cream"}
+      ],
       "matchedSteps": "which instruction steps relate to this sub-recipe",
       "confidence": 0.0-1.0,
       "reason": "why this should be a sub-recipe"
     }
   ]
 }
+
+IMPORTANT: Each item in matchedIngredients must be a FULL object with ingredientName, quantity, unit, and note (if present). Copy the EXACT values from the recipe's ingredient list. This is essential for correctly identifying which specific ingredient entries belong to each sub-recipe when the same ingredient name appears multiple times.
 
 Only suggest splits that make practical sense for a bakery (e.g., cream, dough, ganache, syrup are common sub-recipes).
 Return ONLY valid JSON.`,

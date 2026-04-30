@@ -4,15 +4,34 @@ import { toast } from 'sonner';
 import type { Recipe } from '@bake-app/shared-types';
 import { useSubRecipeSuggestions } from '@bake-app/react/api-client';
 
+interface MatchedIngredient {
+  ingredientName: string;
+  quantity?: number;
+  unit?: string;
+  note?: string;
+}
+
 interface SubRecipeSuggestion {
   type: 'existing_match' | 'new_suggestion';
   existingRecipeId?: string;
   existingRecipeName?: string;
   suggestedName?: string;
-  matchedIngredients: string[];
+  matchedIngredients: (string | MatchedIngredient)[];
   matchedSteps?: string;
   confidence: number;
   reason: string;
+}
+
+function getIngredientName(item: string | MatchedIngredient): string {
+  return typeof item === 'string' ? item : item.ingredientName;
+}
+
+function getIngredientLabel(item: string | MatchedIngredient): string {
+  if (typeof item === 'string') return item;
+  const parts = [item.ingredientName];
+  if (item.quantity) parts.push(`${item.quantity}${item.unit || 'g'}`);
+  if (item.note) parts.push(`(${item.note})`);
+  return parts.join(' ');
 }
 
 interface AiSubRecipeSuggestionsProps {
@@ -20,13 +39,12 @@ interface AiSubRecipeSuggestionsProps {
   existingRecipes: Recipe[];
   onLinkSubRecipe: (suggestion: {
     existingRecipeId: string;
-    matchedIngredientNames: string[];
+    matchedIngredients: (string | MatchedIngredient)[];
   }) => void;
   onCreateSubRecipe: (suggestion: {
     suggestedName: string;
-    matchedIngredientNames: string[];
+    matchedIngredients: (string | MatchedIngredient)[];
     matchedSteps?: string;
-    ingredients: any[];
   }) => void;
   onDismiss: (index: number) => void;
 }
@@ -135,7 +153,7 @@ export function AiSubRecipeSuggestions({
     setLinked((prev) => new Set(prev).add(originalIndex));
     onLinkSubRecipe({
       existingRecipeId: suggestion.existingRecipeId,
-      matchedIngredientNames: suggestion.matchedIngredients,
+      matchedIngredients: suggestion.matchedIngredients,
     });
   };
 
@@ -181,12 +199,12 @@ export function AiSubRecipeSuggestions({
                     </div>
                     <p className="mt-1 text-xs text-gray-500">{s.reason}</p>
                     <div className="mt-1.5 flex flex-wrap gap-1">
-                      {s.matchedIngredients.map((name) => (
+                      {s.matchedIngredients.map((item, mi) => (
                         <span
-                          key={name}
+                          key={mi}
                           className="inline-flex rounded-full bg-purple-100 px-2 py-0.5 text-[10px] font-medium text-purple-700"
                         >
-                          {name}
+                          {getIngredientLabel(item)}
                         </span>
                       ))}
                     </div>
@@ -236,12 +254,12 @@ export function AiSubRecipeSuggestions({
                   </div>
                   <p className="mt-1 text-xs text-gray-500">{s.reason}</p>
                   <div className="mt-1.5 flex flex-wrap gap-1">
-                    {s.matchedIngredients.map((name) => (
+                    {s.matchedIngredients.map((item, mi) => (
                       <span
-                        key={name}
+                        key={mi}
                         className="inline-flex rounded-full bg-purple-100 px-2 py-0.5 text-[10px] font-medium text-purple-700"
                       >
-                        {name}
+                        {getIngredientLabel(item)}
                       </span>
                     ))}
                   </div>
@@ -258,22 +276,8 @@ export function AiSubRecipeSuggestions({
                       setLinked((prev) => new Set(prev).add(s.originalIndex));
                       onCreateSubRecipe({
                         suggestedName: s.suggestedName || 'New Sub-Recipe',
-                        matchedIngredientNames: s.matchedIngredients,
+                        matchedIngredients: s.matchedIngredients,
                         matchedSteps: s.matchedSteps,
-                        ingredients: (aiRecipeData?.ingredients || []).filter(
-                          (ing: any) =>
-                            s.matchedIngredients.some(
-                              (name) =>
-                                (ing.ingredientName || '')
-                                  .toLowerCase()
-                                  .includes(name.toLowerCase()) ||
-                                name
-                                  .toLowerCase()
-                                  .includes(
-                                    (ing.ingredientName || '').toLowerCase(),
-                                  ),
-                            ),
-                        ),
                       });
                     }}
                     className="flex items-center gap-1 rounded-md bg-purple-600 px-2.5 py-1.5 text-xs font-medium text-white transition-colors hover:bg-purple-700"

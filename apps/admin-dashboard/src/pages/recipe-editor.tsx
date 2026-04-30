@@ -475,21 +475,41 @@ export function RecipeEditorPage() {
     );
   };
 
+  // Helper: match ingredient row against AI-provided ingredient (name + note)
+  const matchesIngredient = (
+    row: RecipeIngredientRow,
+    item: string | { ingredientName: string; quantity?: number; unit?: string; note?: string },
+  ): boolean => {
+    if (typeof item === 'string') {
+      return row.ingredientName.toLowerCase().trim() === item.toLowerCase().trim();
+    }
+    const nameMatch = row.ingredientName.toLowerCase().trim() === item.ingredientName.toLowerCase().trim();
+    if (!nameMatch) return false;
+    // If AI provided a note, also match on note to disambiguate duplicate ingredient names
+    if (item.note) {
+      const rowNote = (row.note || '').toLowerCase().trim();
+      const itemNote = item.note.toLowerCase().trim();
+      return rowNote.includes(itemNote) || itemNote.includes(rowNote);
+    }
+    // If AI provided quantity, match on that too
+    if (item.quantity !== undefined) {
+      return parseFloat(row.quantity) === item.quantity;
+    }
+    return true;
+  };
+
   // AI sub-recipe suggestion handlers
   const handleLinkSubRecipe = (suggestion: {
     existingRecipeId: string;
-    matchedIngredientNames: string[];
+    matchedIngredients: (string | { ingredientName: string; quantity?: number; unit?: string; note?: string })[];
   }) => {
     const recipe = allRecipes?.find((r) => r.id === suggestion.existingRecipeId);
     if (!recipe) return;
 
-    // Remove matched ingredients from ingredient rows
-    const lowerMatched = new Set(
-      suggestion.matchedIngredientNames.map((n) => n.toLowerCase().trim()),
-    );
+    // Remove matched ingredients from ingredient rows (using name + note matching)
     setIngredientRows((rows) =>
       rows.filter(
-        (row) => !lowerMatched.has(row.ingredientName.toLowerCase().trim()),
+        (row) => !suggestion.matchedIngredients.some((item) => matchesIngredient(row, item)),
       ),
     );
 
@@ -502,7 +522,7 @@ export function RecipeEditorPage() {
           subRecipeId: recipe.id,
           subRecipeName: recipe.name,
           quantity: 1,
-          unit: 'batches',
+          unit: 'g',
           note: '',
         },
       ];
@@ -511,30 +531,48 @@ export function RecipeEditorPage() {
 
   const handleCreateSubRecipe = (suggestion: {
     suggestedName: string;
-    matchedIngredientNames: string[];
+    matchedIngredients: (string | { ingredientName: string; quantity?: number; unit?: string; note?: string })[];
     matchedSteps?: string;
-    ingredients: any[];
   }) => {
-    const pendingIngredients: RecipeIngredientRow[] = suggestion.ingredients.map((ing: any) => ({
-      ingredientId: ing.ingredientId || '',
-      ingredientName: ing.ingredientName || '',
-      quantity: String(ing.quantity || 0),
-      unit: ing.unit || 'g',
-      note: ing.note,
-      isNew: ing.isNew,
-      suggestedCategory: ing.ingredientCategory,
-    }));
+    // Build pending ingredients from AI-provided objects or from parent ingredient rows
+    const pendingIngredients: RecipeIngredientRow[] = [];
+    const toRemoveIndices = new Set<number>();
+
+    for (const item of suggestion.matchedIngredients) {
+      if (typeof item === 'object' && item.ingredientName) {
+        // AI provided full ingredient object — use it directly
+        pendingIngredients.push({
+          ingredientId: '',
+          ingredientName: item.ingredientName,
+          quantity: String(item.quantity || 0),
+          unit: item.unit || 'g',
+          note: item.note,
+          isNew: true,
+        });
+        // Mark matching row in parent for removal
+        const matchIdx = ingredientRows.findIndex((row, i) =>
+          !toRemoveIndices.has(i) && matchesIngredient(row, item),
+        );
+        if (matchIdx >= 0) toRemoveIndices.add(matchIdx);
+      } else {
+        // Fallback: just a name string — find first matching row
+        const name = typeof item === 'string' ? item : item.ingredientName;
+        const matchIdx = ingredientRows.findIndex((row, i) =>
+          !toRemoveIndices.has(i) && row.ingredientName.toLowerCase().trim() === name.toLowerCase().trim(),
+        );
+        if (matchIdx >= 0) {
+          const row = ingredientRows[matchIdx];
+          pendingIngredients.push({ ...row });
+          toRemoveIndices.add(matchIdx);
+        }
+      }
+    }
 
     const { unit: defaultUnit, totalQty } = calcDefaultUnit(pendingIngredients);
 
     // Remove matched ingredients from the current recipe
-    const lowerMatched = new Set(
-      suggestion.matchedIngredientNames.map((n) => n.toLowerCase().trim()),
-    );
     setIngredientRows((rows) =>
-      rows.filter(
-        (row) => !lowerMatched.has(row.ingredientName.toLowerCase().trim()),
-      ),
+      rows.filter((_, i) => !toRemoveIndices.has(i)),
     );
 
     // Add as pending sub-recipe (not saved to DB yet)
