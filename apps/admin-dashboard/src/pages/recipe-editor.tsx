@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, useCallback, useRef } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router';
 import {
   ImagePlus,
@@ -13,6 +13,9 @@ import {
   Clock,
   ChevronDown,
   ChevronRight,
+  GripVertical,
+  Upload,
+  Clipboard,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import type {
@@ -32,6 +35,7 @@ import {
   useRecipeCost,
   useUploadRecipeImage,
   useDeleteRecipeImage,
+  useReorderRecipeImages,
 } from '@bake-app/react/api-client';
 import {
   PageContainer,
@@ -194,6 +198,243 @@ function extractYouTubeId(url: string): string | null {
   return match?.[1] ?? null;
 }
 
+function RecipeImagesSection({
+  recipeId,
+  images,
+  uploadImage,
+  deleteImage,
+  reorderImages,
+}: {
+  recipeId: string;
+  images: RecipeImage[];
+  uploadImage: ReturnType<typeof useUploadRecipeImage>;
+  deleteImage: ReturnType<typeof useDeleteRecipeImage>;
+  reorderImages: ReturnType<typeof useReorderRecipeImages>;
+}) {
+  const [isDragOver, setIsDragOver] = useState(false);
+  const [dragIdx, setDragIdx] = useState<number | null>(null);
+  const [dropIdx, setDropIdx] = useState<number | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const sorted = useMemo(
+    () => [...images].sort((a, b) => a.sortOrder - b.sortOrder),
+    [images],
+  );
+
+  const handleFiles = useCallback(
+    (files: FileList | File[]) => {
+      Array.from(files).forEach((file) => {
+        if (!file.type.startsWith('image/')) return;
+        uploadImage.mutate(
+          { recipeId, file },
+          {
+            onSuccess: () => toast.success(`Uploaded ${file.name}`),
+            onError: () => toast.error(`Failed to upload ${file.name}`),
+          },
+        );
+      });
+    },
+    [recipeId, uploadImage],
+  );
+
+  // Clipboard paste handler
+  useEffect(() => {
+    const handler = (e: ClipboardEvent) => {
+      const items = e.clipboardData?.items;
+      if (!items) return;
+      const imageFiles: File[] = [];
+      for (const item of Array.from(items)) {
+        if (item.type.startsWith('image/')) {
+          const file = item.getAsFile();
+          if (file) imageFiles.push(file);
+        }
+      }
+      if (imageFiles.length > 0) {
+        e.preventDefault();
+        handleFiles(imageFiles);
+        toast.info(`Pasting ${imageFiles.length} image(s)...`);
+      }
+    };
+    document.addEventListener('paste', handler);
+    return () => document.removeEventListener('paste', handler);
+  }, [handleFiles]);
+
+  // Drop zone handlers
+  const onDragEnter = (e: React.DragEvent) => {
+    e.preventDefault();
+    if (e.dataTransfer.types.includes('Files')) setIsDragOver(true);
+  };
+  const onDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    if (e.currentTarget === e.target || !e.currentTarget.contains(e.relatedTarget as Node)) {
+      setIsDragOver(false);
+    }
+  };
+  const onDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'copy';
+  };
+  const onDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragOver(false);
+    if (e.dataTransfer.files.length > 0) {
+      handleFiles(e.dataTransfer.files);
+    }
+  };
+
+  // Image drag-to-reorder
+  const onImageDragStart = (e: React.DragEvent, idx: number) => {
+    setDragIdx(idx);
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', String(idx));
+  };
+  const onImageDragOver = (e: React.DragEvent, idx: number) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    setDropIdx(idx);
+  };
+  const onImageDragEnd = () => {
+    if (dragIdx !== null && dropIdx !== null && dragIdx !== dropIdx) {
+      const reordered = [...sorted];
+      const [moved] = reordered.splice(dragIdx, 1);
+      reordered.splice(dropIdx, 0, moved);
+      reorderImages.mutate(
+        { recipeId, imageIds: reordered.map((img) => img.id) },
+        {
+          onError: () => toast.error('Failed to reorder images'),
+        },
+      );
+    }
+    setDragIdx(null);
+    setDropIdx(null);
+  };
+
+  return (
+    <div
+      className={`rounded-xl border-2 ${isDragOver ? 'border-[#8b4513] bg-[#faf3e8]' : 'border-[#8b4513]/10 bg-white'} p-6 shadow-sm transition-colors`}
+      onDragEnter={onDragEnter}
+      onDragLeave={onDragLeave}
+      onDragOver={onDragOver}
+      onDrop={onDrop}
+    >
+      <div className="flex items-center justify-between">
+        <h3 className="text-base font-semibold text-[#3e2723]">Images</h3>
+        <div className="flex items-center gap-2">
+          <span className="hidden text-xs text-gray-400 sm:inline">
+            <Clipboard size={12} className="mr-1 inline" />
+            Paste from clipboard
+          </span>
+          <label className="flex cursor-pointer items-center gap-1.5 rounded-lg border border-[#8b4513]/20 px-3 py-1.5 text-sm font-medium text-[#8b4513] transition-all hover:bg-[#faf3e8]">
+            <ImagePlus size={14} />
+            Upload
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              multiple
+              className="hidden"
+              onChange={(e) => {
+                if (e.target.files) handleFiles(e.target.files);
+                e.target.value = '';
+              }}
+            />
+          </label>
+        </div>
+      </div>
+
+      {sorted.length === 0 ? (
+        <div
+          className="mt-4 flex cursor-pointer flex-col items-center gap-2 rounded-lg border-2 border-dashed border-gray-300 py-10 text-center transition-colors hover:border-[#8b4513]/40 hover:bg-[#faf3e8]/50"
+          onClick={() => fileInputRef.current?.click()}
+        >
+          <Upload size={28} className="text-gray-300" />
+          <p className="text-sm text-gray-400">
+            Drop images here, paste from clipboard, or click to upload
+          </p>
+          <p className="text-xs text-gray-300">
+            First image will be used as the recipe thumbnail
+          </p>
+        </div>
+      ) : (
+        <>
+          <p className="mt-2 text-xs text-gray-400">
+            Drag images to reorder. First image = thumbnail.
+          </p>
+          <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+            {sorted.map((img, idx) => (
+              <div
+                key={img.id}
+                draggable
+                onDragStart={(e) => onImageDragStart(e, idx)}
+                onDragOver={(e) => onImageDragOver(e, idx)}
+                onDragEnd={onImageDragEnd}
+                className={`group relative overflow-hidden rounded-lg border-2 transition-all ${
+                  dragIdx === idx
+                    ? 'scale-95 opacity-50 border-gray-300'
+                    : dropIdx === idx && dragIdx !== null
+                    ? 'border-[#8b4513] ring-2 ring-[#8b4513]/20'
+                    : idx === 0
+                    ? 'border-[#8b4513]/30 ring-1 ring-[#8b4513]/10'
+                    : 'border-gray-200'
+                } cursor-grab active:cursor-grabbing`}
+              >
+                <img
+                  src={`/api/uploads/recipes/${img.filename}`}
+                  alt={img.originalName}
+                  className="aspect-square w-full object-cover"
+                  draggable={false}
+                />
+                {/* Drag handle */}
+                <div className="absolute left-1 top-1 rounded bg-black/40 p-0.5 text-white opacity-0 transition-opacity group-hover:opacity-100">
+                  <GripVertical size={14} />
+                </div>
+                {/* Thumbnail badge */}
+                {idx === 0 && (
+                  <div className="absolute left-1 bottom-1 rounded bg-[#8b4513]/80 px-1.5 py-0.5 text-[10px] font-semibold text-white">
+                    COVER
+                  </div>
+                )}
+                {/* Delete button */}
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    deleteImage.mutate(
+                      { recipeId, imageId: img.id },
+                      {
+                        onSuccess: () => toast.success('Image deleted'),
+                        onError: () => toast.error('Failed to delete image'),
+                      },
+                    );
+                  }}
+                  className="absolute right-1 top-1 rounded-full bg-black/50 p-1 text-white opacity-0 transition-opacity group-hover:opacity-100 hover:bg-black/70"
+                  title="Delete image"
+                >
+                  <X size={14} />
+                </button>
+                <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/50 to-transparent p-2 opacity-0 transition-opacity group-hover:opacity-100">
+                  <p className="truncate text-xs text-white">{img.originalName}</p>
+                </div>
+              </div>
+            ))}
+            {/* Add more tile */}
+            <div
+              className="flex cursor-pointer flex-col items-center justify-center gap-1 rounded-lg border-2 border-dashed border-gray-200 py-6 text-gray-300 transition-colors hover:border-[#8b4513]/30 hover:text-[#8b4513]/50"
+              onClick={() => fileInputRef.current?.click()}
+            >
+              <Plus size={20} />
+              <span className="text-xs">Add</span>
+            </div>
+          </div>
+        </>
+      )}
+      {uploadImage.isPending && (
+        <div className="mt-2 text-center text-xs text-[#8b4513]">Uploading...</div>
+      )}
+    </div>
+  );
+}
+
 export function RecipeEditorPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -213,6 +454,7 @@ export function RecipeEditorPage() {
   const updateRecipe = useUpdateRecipe();
   const uploadImage = useUploadRecipeImage();
   const deleteImage = useDeleteRecipeImage();
+  const reorderImages = useReorderRecipeImages();
 
   // Form state
   const [name, setName] = useState('');
@@ -1481,75 +1723,13 @@ export function RecipeEditorPage() {
 
         {/* Images Section */}
         {!isNew && (
-          <div className="rounded-xl border border-[#8b4513]/10 bg-white p-6 shadow-sm">
-            <div className="flex items-center justify-between">
-              <h3 className="text-base font-semibold text-[#3e2723]">Images</h3>
-              <label className="flex cursor-pointer items-center gap-1.5 rounded-lg border border-[#8b4513]/20 px-3 py-1.5 text-sm font-medium text-[#8b4513] transition-all hover:bg-[#faf3e8]">
-                <ImagePlus size={14} />
-                Upload
-                <input
-                  type="file"
-                  accept="image/*"
-                  multiple
-                  className="hidden"
-                  onChange={(e) => {
-                    const files = e.target.files;
-                    if (!files) return;
-                    Array.from(files).forEach((file) => {
-                      uploadImage.mutate(
-                        { recipeId: id!, file },
-                        {
-                          onSuccess: () => toast.success(`Uploaded ${file.name}`),
-                          onError: () => toast.error(`Failed to upload ${file.name}`),
-                        },
-                      );
-                    });
-                    e.target.value = '';
-                  }}
-                />
-              </label>
-            </div>
-
-            {(!existingRecipe?.images || existingRecipe.images.length === 0) ? (
-              <div className="mt-4 rounded-lg border-2 border-dashed border-gray-200 py-8 text-center text-sm text-gray-400">
-                No images yet. Upload photos of the finished product or preparation steps.
-              </div>
-            ) : (
-              <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-                {(existingRecipe.images as RecipeImage[]).map((img) => (
-                  <div key={img.id} className="group relative overflow-hidden rounded-lg border border-gray-200">
-                    <img
-                      src={`/api/uploads/recipes/${img.filename}`}
-                      alt={img.originalName}
-                      className="aspect-square w-full object-cover"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => {
-                        deleteImage.mutate(
-                          { recipeId: id!, imageId: img.id },
-                          {
-                            onSuccess: () => toast.success('Image deleted'),
-                            onError: () => toast.error('Failed to delete image'),
-                          },
-                        );
-                      }}
-                      className="absolute right-1 top-1 rounded-full bg-black/50 p-1 text-white opacity-0 transition-opacity group-hover:opacity-100 hover:bg-black/70"
-                      title="Delete image"
-                    >
-                      <X size={14} />
-                    </button>
-                    <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/50 to-transparent p-2 opacity-0 transition-opacity group-hover:opacity-100">
-                      <p className="truncate text-xs text-white">{img.originalName}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-            {uploadImage.isPending && (
-              <div className="mt-2 text-center text-xs text-gray-400">Uploading...</div>
-            )}
-          </div>
+          <RecipeImagesSection
+            recipeId={id!}
+            images={(existingRecipe?.images as RecipeImage[]) || []}
+            uploadImage={uploadImage}
+            deleteImage={deleteImage}
+            reorderImages={reorderImages}
+          />
         )}
 
         {/* Storage Life Section */}

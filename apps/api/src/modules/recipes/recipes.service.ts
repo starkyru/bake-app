@@ -608,6 +608,16 @@ Return ONLY valid JSON, no markdown, no explanation.`,
     await this.imageRepo.remove(image);
   }
 
+  async reorderImages(recipeId: string, imageIds: string[]): Promise<void> {
+    await this.findOne(recipeId);
+    for (let i = 0; i < imageIds.length; i++) {
+      await this.imageRepo.update(
+        { id: imageIds[i], recipeId },
+        { sortOrder: i },
+      );
+    }
+  }
+
   // ── Sub-Recipe Management ──
 
   async validateNoCircularDependency(parentId: string, subRecipeId: string): Promise<void> {

@@ -128,4 +128,11 @@ export class RecipesController {
   deleteImage(@Param('id') id: string, @Param('imageId') imageId: string) {
     return this.recipesService.deleteImage(id, imageId);
   }
+
+  @Put(':id/images/reorder')
+  @RequirePermissions('recipes:update')
+  @ApiOperation({ summary: 'Reorder recipe images' })
+  reorderImages(@Param('id') id: string, @Body() body: { imageIds: string[] }) {
+    return this.recipesService.reorderImages(id, body.imageIds);
+  }
 }

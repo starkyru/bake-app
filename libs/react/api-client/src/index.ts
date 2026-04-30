@@ -78,6 +78,7 @@ export {
   useGenerateRecipeFromText,
   useUploadRecipeImage,
   useDeleteRecipeImage,
+  useReorderRecipeImages,
   useRecipeDependencyTree,
   useRecipeCompositeCost,
   useRecipeUsedIn,

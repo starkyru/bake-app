@@ -152,6 +152,17 @@ export function useDeleteRecipeImage() {
   });
 }
 
+export function useReorderRecipeImages() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ recipeId, imageIds }: { recipeId: string; imageIds: string[] }) =>
+      apiClient.put(`/v1/recipes/${recipeId}/images/reorder`, { imageIds }),
+    onSuccess: (_data, { recipeId }) => {
+      qc.invalidateQueries({ queryKey: recipeKeys.detail(recipeId) });
+    },
+  });
+}
+
 export function useRecipeDependencyTree(id: string) {
   return useQuery({
     queryKey: recipeKeys.dependencyTree(id),
